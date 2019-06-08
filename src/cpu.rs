@@ -1,13 +1,19 @@
 use crate::{addressing_modes::*, opcodes::*, util::to_u16};
 
+const FL_CARRY: u8 = 0b0000_0001;
+const FL_DECIMAL: u8 = 0b0000_1000;
+const FL_OVERFLOW: u8 = 0b0100_0000;
+const FL_SIGN: u8 = 0b1000_0000;
+const FL_ZERO: u8 = 0b0000_0010;
+
 pub struct Cpu<M: Mapper> {
-    pub(crate) pc: u16,    // Program Counter
-    pub(crate) sp: u8,     // Stack Pointer
-    pub(crate) acc: u8,    // Accumulator
-    pub(crate) x: u8,      // Index Register X
-    pub(crate) y: u8,      // Index Register Y
-    pub(crate) status: u8, // Processor Status Flags
-    mapper: M,             // Memory Mapper
+    pc: u16,    // Program Counter
+    sp: u8,     // Stack Pointer
+    acc: u8,    // Accumulator
+    x: u8,      // Index Register X
+    y: u8,      // Index Register Y
+    status: u8, // Processor Status Flags
+    mapper: M,  // Memory Mapper
 }
 
 impl<M: Mapper> Cpu<M> {
@@ -27,12 +33,20 @@ impl<M: Mapper> Cpu<M> {
         let opcode = self.fetch_pc();
 
         match opcode {
-            0x0a => Asl::execute::<Accumulator>(self),
             0x06 => Asl::execute::<ZeroPage>(self),
-            0x16 => Asl::execute::<ZeroPageX>(self),
+            0x0a => Asl::execute::<Accumulator>(self),
             0x0e => Asl::execute::<Absolute>(self),
+            0x16 => Asl::execute::<ZeroPageX>(self),
             0x1e => Asl::execute::<AbsoluteX>(self),
             0x4c => Jmp::execute::<Absolute>(self),
+            0x61 => Adc::execute::<IndexedIndirect>(self),
+            0x65 => Adc::execute::<ZeroPage>(self),
+            0x69 => Adc::execute::<Immediate>(self),
+            0x6d => Adc::execute::<Absolute>(self),
+            0x71 => Adc::execute::<IndirectIndexed>(self),
+            0x75 => Adc::execute::<ZeroPageX>(self),
+            0x79 => Adc::execute::<AbsoluteY>(self),
+            0x7d => Adc::execute::<AbsoluteX>(self),
             0x6c => Jmp::execute::<AbsoluteIndirect>(self),
             0x85 => Sta::execute::<ZeroPage>(self),
             0x95 => Sta::execute::<ZeroPageX>(self),
@@ -41,13 +55,48 @@ impl<M: Mapper> Cpu<M> {
             0x8d => Sta::execute::<Absolute>(self),
             0x9d => Sta::execute::<AbsoluteX>(self),
             0x99 => Sta::execute::<AbsoluteY>(self),
+            0xe1 => Sbc::execute::<IndexedIndirect>(self),
+            0xe5 => Sbc::execute::<ZeroPage>(self),
+            0xe9 => Sbc::execute::<Immediate>(self),
+            0xed => Sbc::execute::<Absolute>(self),
+            0xf1 => Sbc::execute::<IndirectIndexed>(self),
+            0xf5 => Sbc::execute::<ZeroPageX>(self),
+            0xf9 => Sbc::execute::<AbsoluteY>(self),
+            0xfd => Sbc::execute::<AbsoluteX>(self),
             _ => panic!("Unexpected opcode: {:0>2X}", opcode),
         }
     }
 
-    pub(crate) fn set_carry(&mut self, val: bool) {
-        const FL_CARRY: u8 = 0b0000_0001;
+    pub fn acc(&self) -> u8 {
+        self.acc
+    }
 
+    pub fn set_acc(&mut self, val: u8) {
+        self.acc = val
+    }
+
+    pub fn set_acc_and_apply_flags(&mut self, val: u8) {
+        self.apply_sign_and_zero_flags(val);
+        self.acc = val;
+    }
+
+    pub fn set_pc(&mut self, addr: u16) {
+        self.pc = addr;
+    }
+
+    pub fn x(&self) -> u8 {
+        self.x
+    }
+
+    pub fn y(&self) -> u8 {
+        self.y
+    }
+
+    pub fn carry_flag(&self) -> bool {
+        self.status & FL_CARRY != 0
+    }
+
+    pub(crate) fn set_carry(&mut self, val: bool) {
         if val {
             self.status |= FL_CARRY;
         } else {
@@ -55,9 +104,19 @@ impl<M: Mapper> Cpu<M> {
         }
     }
 
-    pub(crate) fn set_sign(&mut self, val: bool) {
-        const FL_SIGN: u8 = 0b1000_0000;
+    pub(crate) fn decimal_flag(&self) -> bool {
+        self.status & FL_DECIMAL > 0
+    }
 
+    pub fn set_overflow(&mut self, val: bool) {
+        if val {
+            self.status |= FL_OVERFLOW;
+        } else {
+            self.status &= !FL_OVERFLOW;
+        }
+    }
+
+    pub(crate) fn set_sign(&mut self, val: bool) {
         if val {
             self.status |= FL_SIGN;
         } else {
@@ -66,8 +125,6 @@ impl<M: Mapper> Cpu<M> {
     }
 
     pub(crate) fn set_zero(&mut self, val: bool) {
-        const FL_ZERO: u8 = 0b0000_0010;
-
         if val {
             self.status |= FL_ZERO;
         } else {

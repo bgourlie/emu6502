@@ -5,7 +5,7 @@ use crate::{
 
 pub trait AddressingMode<M: Mapper, O: Copy + Clone + std::fmt::Debug> {
     fn read(cpu: &mut Cpu<M>) -> O;
-    fn write(cpu: &mut Cpu<M>, data: u8) {}
+    fn write(_cpu: &mut Cpu<M>, data: u8) {}
     fn read_modify_write<F>(cpu: &mut Cpu<M>, modifier: F)
     where
         F: FnOnce(&mut Cpu<M>, O) -> u8,
@@ -64,7 +64,7 @@ pub struct AbsoluteX;
 impl MemoryAddressing for AbsoluteX {
     fn fetch_target_addr<M: Mapper>(cpu: &mut Cpu<M>) -> u16 {
         let base_addr = cpu.fetch_pc16();
-        base_addr.wrapping_add(u16::from(cpu.x))
+        base_addr.wrapping_add(u16::from(cpu.x()))
     }
 }
 
@@ -73,7 +73,7 @@ pub struct AbsoluteY;
 impl MemoryAddressing for AbsoluteY {
     fn fetch_target_addr<M: Mapper>(cpu: &mut Cpu<M>) -> u16 {
         let base_addr = cpu.fetch_pc16();
-        base_addr.wrapping_add(u16::from(cpu.y))
+        base_addr.wrapping_add(u16::from(cpu.y()))
     }
 }
 
@@ -81,11 +81,19 @@ pub struct Accumulator;
 
 impl<M: Mapper> AddressingMode<M, u8> for Accumulator {
     fn read(cpu: &mut Cpu<M>) -> u8 {
-        cpu.acc
+        cpu.acc()
     }
 
     fn write(cpu: &mut Cpu<M>, data: u8) {
-        cpu.acc = data;
+        cpu.set_acc(data);
+    }
+}
+
+pub struct Immediate;
+
+impl<M: Mapper> AddressingMode<M, u8> for Immediate {
+    fn read(cpu: &mut Cpu<M>) -> u8 {
+        cpu.fetch_pc()
     }
 }
 
@@ -101,7 +109,7 @@ pub struct ZeroPageX;
 
 impl MemoryAddressing for ZeroPageX {
     fn fetch_target_addr<M: Mapper>(cpu: &mut Cpu<M>) -> u16 {
-        u16::from(cpu.fetch_pc().wrapping_add(cpu.x))
+        u16::from(cpu.fetch_pc().wrapping_add(cpu.x()))
     }
 }
 
@@ -109,7 +117,7 @@ pub struct ZeroPageY;
 
 impl MemoryAddressing for ZeroPageY {
     fn fetch_target_addr<M: Mapper>(cpu: &mut Cpu<M>) -> u16 {
-        u16::from(cpu.fetch_pc().wrapping_add(cpu.y))
+        u16::from(cpu.fetch_pc().wrapping_add(cpu.y()))
     }
 }
 
@@ -136,7 +144,7 @@ pub struct IndexedIndirect;
 impl MemoryAddressing for IndexedIndirect {
     fn fetch_target_addr<M: Mapper>(cpu: &mut Cpu<M>) -> u16 {
         let indirect_addr = cpu.fetch_pc();
-        let base_addr = u16::from(indirect_addr.wrapping_add(cpu.x));
+        let base_addr = u16::from(indirect_addr.wrapping_add(cpu.x()));
         cpu.read16(base_addr)
     }
 }
@@ -146,7 +154,7 @@ pub struct IndirectIndexed;
 impl MemoryAddressing for IndirectIndexed {
     fn fetch_target_addr<M: Mapper>(cpu: &mut Cpu<M>) -> u16 {
         let indirect_addr = cpu.fetch_pc();
-        let y = cpu.y;
+        let y = cpu.y();
         let base_addr = cpu.read16_zp(indirect_addr);
         base_addr.wrapping_add(u16::from(y))
     }
