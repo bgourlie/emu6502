@@ -37,7 +37,7 @@ impl<M: Mapper, A: MemoryAddressing> AddressingMode<M, u8> for A {
 }
 
 impl<M: Mapper, A: MemoryAddressing> AddressingMode<M, ()> for A {
-    fn read(_cpu: &mut Cpu<M>) -> () {}
+    fn read(_cpu: &mut Cpu<M>) {}
 
     fn write(cpu: &mut Cpu<M>, data: u8) {
         let target = A::fetch_target_addr(cpu);
@@ -95,6 +95,12 @@ impl<M: Mapper> AddressingMode<M, u8> for Immediate {
     fn read(cpu: &mut Cpu<M>) -> u8 {
         cpu.fetch_pc()
     }
+}
+
+pub struct Implied;
+
+impl<M: Mapper> AddressingMode<M, ()> for Implied {
+    fn read(_cpu: &mut Cpu<M>) {}
 }
 
 pub struct ZeroPage;
