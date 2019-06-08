@@ -5,7 +5,7 @@ use crate::{
 
 pub trait AddressingMode<M: Mapper, O: Copy + Clone + std::fmt::Debug> {
     fn read(cpu: &mut Cpu<M>) -> O;
-    fn write(_cpu: &mut Cpu<M>, data: u8) {}
+    fn write(_cpu: &mut Cpu<M>, _data: u8) {}
     fn read_modify_write<F>(cpu: &mut Cpu<M>, modifier: F)
     where
         F: FnOnce(&mut Cpu<M>, O) -> u8,

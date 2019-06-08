@@ -55,6 +55,24 @@ impl<M: Mapper> Cpu<M> {
             0x8d => Sta::execute::<Absolute>(self),
             0x9d => Sta::execute::<AbsoluteX>(self),
             0x99 => Sta::execute::<AbsoluteY>(self),
+            0xa0 => Ldy::execute::<Immediate>(self),
+            0xa1 => Lda::execute::<IndirectIndexed>(self),
+            0xa2 => Ldx::execute::<Immediate>(self),
+            0xa4 => Ldy::execute::<ZeroPage>(self),
+            0xa5 => Lda::execute::<ZeroPage>(self),
+            0xa6 => Ldx::execute::<ZeroPage>(self),
+            0xa9 => Lda::execute::<Immediate>(self),
+            0xac => Ldy::execute::<Absolute>(self),
+            0xad => Lda::execute::<Absolute>(self),
+            0xae => Ldx::execute::<Absolute>(self),
+            0xb1 => Lda::execute::<IndirectIndexed>(self),
+            0xb4 => Ldy::execute::<ZeroPageX>(self),
+            0xb5 => Lda::execute::<ZeroPageX>(self),
+            0xb6 => Ldx::execute::<ZeroPageY>(self),
+            0xb9 => Lda::execute::<AbsoluteY>(self),
+            0xbc => Ldy::execute::<AbsoluteX>(self),
+            0xbd => Lda::execute::<AbsoluteX>(self),
+            0xbe => Ldx::execute::<AbsoluteY>(self),
             0xe1 => Sbc::execute::<IndexedIndirect>(self),
             0xe5 => Sbc::execute::<ZeroPage>(self),
             0xe9 => Sbc::execute::<Immediate>(self),
@@ -88,8 +106,16 @@ impl<M: Mapper> Cpu<M> {
         self.x
     }
 
+    pub fn set_x(&mut self, val: u8) {
+        self.x = val;
+    }
+
     pub fn y(&self) -> u8 {
         self.y
+    }
+
+    pub fn set_y(&mut self, val: u8) {
+        self.y = val;
     }
 
     pub fn carry_flag(&self) -> bool {

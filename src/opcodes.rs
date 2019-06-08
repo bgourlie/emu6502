@@ -64,6 +64,41 @@ impl<M: Mapper> Instruction<M> for Asl {
     }
 }
 
+pub struct Lda;
+
+impl<M: Mapper> Instruction<M> for Lda {
+    type Operand = u8;
+
+    fn execute<AM: AddressingMode<M, u8>>(cpu: &mut Cpu<M>) {
+        let val = AM::read(cpu);
+        cpu.set_acc_and_apply_flags(val);
+    }
+}
+
+pub struct Ldx;
+
+impl<M: Mapper> Instruction<M> for Ldx {
+    type Operand = u8;
+
+    fn execute<AM: AddressingMode<M, u8>>(cpu: &mut Cpu<M>) {
+        let val = AM::read(cpu);
+        cpu.set_x(val);
+        cpu.apply_sign_and_zero_flags(val);
+    }
+}
+
+pub struct Ldy;
+
+impl<M: Mapper> Instruction<M> for Ldy {
+    type Operand = u8;
+
+    fn execute<AM: AddressingMode<M, u8>>(cpu: &mut Cpu<M>) {
+        let val = AM::read(cpu);
+        cpu.set_y(val);
+        cpu.apply_sign_and_zero_flags(val);
+    }
+}
+
 pub struct Sbc;
 
 impl<M: Mapper> Instruction<M> for Sbc {
