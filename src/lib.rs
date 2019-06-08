@@ -1,3 +1,5 @@
+#![feature(const_generics)]
+
 mod addressing_modes;
 mod cpu;
 mod opcodes;

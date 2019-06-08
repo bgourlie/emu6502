@@ -161,7 +161,7 @@ impl<M: Mapper> Cpu<M> {
         self.y = val;
     }
 
-    pub fn carry_flag(&self) -> bool {
+    pub fn carry(&self) -> bool {
         self.status & FL_CARRY != 0
     }
 
@@ -193,12 +193,20 @@ impl<M: Mapper> Cpu<M> {
         }
     }
 
+    pub fn overflow(&self) -> bool {
+        self.status & FL_OVERFLOW != 0
+    }
+
     pub(crate) fn set_overflow(&mut self, val: bool) {
         if val {
             self.status |= FL_OVERFLOW;
         } else {
             self.status &= !FL_OVERFLOW;
         }
+    }
+
+    pub fn sign(&self) -> bool {
+        self.status & FL_SIGN != 0
     }
 
     pub(crate) fn set_sign(&mut self, val: bool) {
@@ -212,6 +220,10 @@ impl<M: Mapper> Cpu<M> {
     pub fn set_status(&mut self, val: u8) {
         const FL_ALWAYS_SET: u8 = FL_UNUSED | FL_BREAK;
         self.status = val | FL_ALWAYS_SET;
+    }
+
+    pub fn zero(&self) -> bool {
+        self.status & FL_ZERO != 0
     }
 
     pub(crate) fn set_zero(&mut self, val: bool) {

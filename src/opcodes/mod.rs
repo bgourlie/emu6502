@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use crate::{
     addressing_modes::*,
     cpu::{Cpu, Mapper},
@@ -11,12 +14,12 @@ pub trait Instruction<M: Mapper> {
 pub struct Adc;
 
 impl Adc {
-    fn execute<M: Mapper>(cpu: &mut Cpu<M>, lhs: u8, rhs: u8) {
+    fn adc<M: Mapper>(cpu: &mut Cpu<M>, lhs: u8, rhs: u8) {
         if cpu.decimal_mode() {
             panic!("Attempted decimal mode arithmetic");
         } else {
             // See http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-            let carry = if cpu.carry_flag() { 1 } else { 0 };
+            let carry = if cpu.carry() { 1 } else { 0 };
 
             // add using the native word size
             let res = carry + lhs as isize + rhs as isize;
@@ -44,7 +47,7 @@ impl<M: Mapper> Instruction<M> for Adc {
     fn execute<AM: AddressingMode<M, u8>>(cpu: &mut Cpu<M>) {
         let lhs = cpu.acc();
         let rhs = AM::read(cpu);
-        Self::execute(cpu, lhs, rhs);
+        Self::adc(cpu, lhs, rhs);
     }
 }
 
@@ -257,7 +260,7 @@ impl<M: Mapper> Instruction<M> for Sbc {
     fn execute<AM: AddressingMode<M, u8>>(cpu: &mut Cpu<M>) {
         let lhs = cpu.acc();
         let rhs = !AM::read(cpu);
-        Adc::execute(cpu, lhs, rhs)
+        Adc::adc(cpu, lhs, rhs)
     }
 }
 
