@@ -45,7 +45,7 @@ mod adc {
     #[test]
     fn flags_sign_and_zero_1() {
         let mut cpu = new_test_cpu();
-        Lda::execute::<Value<0>>(&mut cpu);
+        cpu.set_acc(0);
         Adc::execute::<Value<0>>(&mut cpu);
         assert_eq!(true, cpu.zero());
         assert_eq!(false, cpu.sign());
@@ -55,7 +55,7 @@ mod adc {
     #[test]
     fn flags_sign_and_zero_2() {
         let mut cpu = new_test_cpu();
-        Lda::execute::<Value<0>>(&mut cpu);
+        cpu.set_acc(0);
         Adc::execute::<Value<1>>(&mut cpu);
         assert_eq!(false, cpu.zero());
         assert_eq!(false, cpu.sign());
@@ -65,7 +65,7 @@ mod adc {
     #[test]
     fn flags_sign_and_zero_3() {
         let mut cpu = new_test_cpu();
-        Lda::execute::<Value<0>>(&mut cpu);
+        cpu.set_acc(0);
         Adc::execute::<Value<255>>(&mut cpu);
         assert_eq!(false, cpu.zero());
         assert_eq!(true, cpu.sign());
@@ -76,14 +76,14 @@ mod adc {
     ///
     /// The following tests check all permutations of the
     /// 6th and 7th bits of both operands, asserting that
-    /// the overflow and carry bit is set appROPriately.
+    /// the overflow and carry bit is set appropriately.
     ///
     /// A truth table for these tests can be found here:
     /// http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
     #[test]
     fn flags_carry_and_overflow_1() {
         let mut cpu = new_test_cpu();
-        Lda::execute::<Value<80>>(&mut cpu);
+        cpu.set_acc(80);
         Adc::execute::<Value<16>>(&mut cpu);
         assert_eq!(false, cpu.carry());
         assert_eq!(false, cpu.overflow());
@@ -93,7 +93,7 @@ mod adc {
     #[test]
     fn flags_carry_and_overflow_2() {
         let mut cpu = new_test_cpu();
-        Lda::execute::<Value<80>>(&mut cpu);
+        cpu.set_acc(80);
         Adc::execute::<Value<80>>(&mut cpu);
         assert_eq!(false, cpu.carry());
         assert_eq!(true, cpu.overflow());
@@ -103,7 +103,7 @@ mod adc {
     #[test]
     fn flags_carry_and_overflow_3() {
         let mut cpu = new_test_cpu();
-        Lda::execute::<Value<80>>(&mut cpu);
+        cpu.set_acc(80);
         Adc::execute::<Value<144>>(&mut cpu);
         assert_eq!(false, cpu.carry());
         assert_eq!(false, cpu.overflow());
@@ -113,7 +113,7 @@ mod adc {
     #[test]
     fn flags_carry_and_overflow_4() {
         let mut cpu = new_test_cpu();
-        Lda::execute::<Value<80>>(&mut cpu);
+        cpu.set_acc(80);
         Adc::execute::<Value<208>>(&mut cpu);
         assert_eq!(true, cpu.carry());
         assert_eq!(false, cpu.overflow());
@@ -123,7 +123,7 @@ mod adc {
     #[test]
     fn flags_carry_and_overflow_5() {
         let mut cpu = new_test_cpu();
-        Lda::execute::<Value<208>>(&mut cpu);
+        cpu.set_acc(208);
         Adc::execute::<Value<16>>(&mut cpu);
         assert_eq!(false, cpu.carry());
         assert_eq!(false, cpu.overflow());
@@ -133,7 +133,7 @@ mod adc {
     #[test]
     fn flags_carry_and_overflow_6() {
         let mut cpu = new_test_cpu();
-        Lda::execute::<Value<208>>(&mut cpu);
+        cpu.set_acc(208);
         Adc::execute::<Value<80>>(&mut cpu);
         assert_eq!(true, cpu.carry());
         assert_eq!(false, cpu.overflow());
@@ -143,7 +143,7 @@ mod adc {
     #[test]
     fn flags_carry_and_overflow_7() {
         let mut cpu = new_test_cpu();
-        Lda::execute::<Value<208>>(&mut cpu);
+        cpu.set_acc(208);
         Adc::execute::<Value<144>>(&mut cpu);
         assert_eq!(true, cpu.carry());
         assert_eq!(true, cpu.overflow());
@@ -153,7 +153,7 @@ mod adc {
     #[test]
     fn flags_carry_and_overflow_8() {
         let mut cpu = new_test_cpu();
-        Lda::execute::<Value<208>>(&mut cpu);
+        cpu.set_acc(208);
         Adc::execute::<Value<208>>(&mut cpu);
         assert_eq!(true, cpu.carry());
         assert_eq!(false, cpu.overflow());
