@@ -4,4 +4,3 @@ mod opcodes;
 mod util;
 
 pub use crate::cpu::{Cpu, Mapper};
-

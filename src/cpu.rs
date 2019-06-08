@@ -27,6 +27,11 @@ impl<M: Mapper> Cpu<M> {
         let opcode = self.fetch_pc();
 
         match opcode {
+            0x0a => Asl::execute::<Accumulator>(self),
+            0x06 => Asl::execute::<ZeroPage>(self),
+            0x16 => Asl::execute::<ZeroPageX>(self),
+            0x0e => Asl::execute::<Absolute>(self),
+            0x1e => Asl::execute::<AbsoluteX>(self),
             0x4c => Jmp::execute::<Absolute>(self),
             0x6c => Jmp::execute::<AbsoluteIndirect>(self),
             0x85 => Sta::execute::<ZeroPage>(self),
@@ -38,6 +43,41 @@ impl<M: Mapper> Cpu<M> {
             0x99 => Sta::execute::<AbsoluteY>(self),
             _ => panic!("Unexpected opcode: {:0>2X}", opcode),
         }
+    }
+
+    pub(crate) fn set_carry(&mut self, val: bool) {
+        const FL_CARRY: u8 = 0b0000_0001;
+
+        if val {
+            self.status |= FL_CARRY;
+        } else {
+            self.status &= !FL_CARRY;
+        }
+    }
+
+    pub(crate) fn set_sign(&mut self, val: bool) {
+        const FL_SIGN: u8 = 0b1000_0000;
+
+        if val {
+            self.status |= FL_SIGN;
+        } else {
+            self.status &= !FL_SIGN;
+        }
+    }
+
+    pub(crate) fn set_zero(&mut self, val: bool) {
+        const FL_ZERO: u8 = 0b0000_0010;
+
+        if val {
+            self.status |= FL_ZERO;
+        } else {
+            self.status &= !FL_ZERO;
+        }
+    }
+
+    pub(crate) fn apply_sign_and_zero_flags(&mut self, val: u8) {
+        self.set_sign(val & 0x80 > 0);
+        self.set_zero(val == 0);
     }
 
     pub(crate) fn fetch_pc(&mut self) -> u8 {
