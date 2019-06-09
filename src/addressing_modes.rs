@@ -1,14 +1,17 @@
-use crate::{
-    cpu::{Cpu, Mapper},
-    util::to_u16,
+use {
+    crate::{
+        cpu::{Cpu, Mapper},
+        util::to_u16,
+    },
+    std::fmt::Debug,
 };
 
-pub trait AddressingMode<M: Mapper, O: Copy + Clone + std::fmt::Debug> {
-    fn read(cpu: &mut Cpu<M>) -> O;
-    fn write(_cpu: &mut Cpu<M>, _data: u8) {}
+pub trait AddressingMode<M: Mapper, R: Copy + Clone + Debug, W: Copy + Clone + Debug> {
+    fn read(cpu: &mut Cpu<M>) -> R;
+    fn write(_cpu: &mut Cpu<M>, _data: W) {}
     fn read_modify_write<F>(cpu: &mut Cpu<M>, modifier: F)
     where
-        F: FnOnce(&mut Cpu<M>, O) -> u8,
+        F: FnOnce(&mut Cpu<M>, R) -> W,
     {
         let input = Self::read(cpu);
         let modified = modifier(cpu, input);
@@ -25,18 +28,29 @@ pub trait MemoryAddressing {
     }
 }
 
-impl<M: Mapper, A: MemoryAddressing> AddressingMode<M, u8> for A {
-    fn read(cpu: &mut Cpu<M>) -> u8 {
-        Self::read(cpu)
+impl<M: Mapper, A: MemoryAddressing> AddressingMode<M, (u16, u8), (u16, u8)> for A {
+    fn read(cpu: &mut Cpu<M>) -> (u16, u8) {
+        let addr = A::fetch_target_addr(cpu);
+        let val = cpu.read(addr);
+        (addr, val)
     }
 
-    fn write(cpu: &mut Cpu<M>, data: u8) {
-        let target = A::fetch_target_addr(cpu);
+    fn write(cpu: &mut Cpu<M>, data: (u16, u8)) {
+        let (target, data) = data;
         cpu.write(target, data);
     }
 }
 
-impl<M: Mapper, A: MemoryAddressing> AddressingMode<M, ()> for A {
+impl<M: Mapper, A: MemoryAddressing> AddressingMode<M, u8, ()> for A {
+    fn read(cpu: &mut Cpu<M>) -> u8 {
+        let addr = A::fetch_target_addr(cpu);
+        cpu.read(addr)
+    }
+
+    fn write(_cpu: &mut Cpu<M>, _data: ()) {}
+}
+
+impl<M: Mapper, A: MemoryAddressing> AddressingMode<M, (), u8> for A {
     fn read(_cpu: &mut Cpu<M>) {}
 
     fn write(cpu: &mut Cpu<M>, data: u8) {
@@ -53,7 +67,7 @@ impl MemoryAddressing for Absolute {
     }
 }
 
-impl<M: Mapper> AddressingMode<M, u16> for Absolute {
+impl<M: Mapper> AddressingMode<M, u16, ()> for Absolute {
     fn read(cpu: &mut Cpu<M>) -> u16 {
         Self::fetch_target_addr(cpu)
     }
@@ -79,7 +93,7 @@ impl MemoryAddressing for AbsoluteY {
 
 pub struct Accumulator;
 
-impl<M: Mapper> AddressingMode<M, u8> for Accumulator {
+impl<M: Mapper> AddressingMode<M, u8, u8> for Accumulator {
     fn read(cpu: &mut Cpu<M>) -> u8 {
         cpu.acc()
     }
@@ -89,9 +103,20 @@ impl<M: Mapper> AddressingMode<M, u8> for Accumulator {
     }
 }
 
+impl<M: Mapper> AddressingMode<M, (u16, u8), (u16, u8)> for Accumulator {
+    fn read(cpu: &mut Cpu<M>) -> (u16, u8) {
+        (0, cpu.acc())
+    }
+
+    fn write(cpu: &mut Cpu<M>, data: (u16, u8)) {
+        let (_, data) = data;
+        cpu.set_acc(data);
+    }
+}
+
 pub struct Immediate;
 
-impl<M: Mapper> AddressingMode<M, u8> for Immediate {
+impl<M: Mapper> AddressingMode<M, u8, ()> for Immediate {
     fn read(cpu: &mut Cpu<M>) -> u8 {
         cpu.fetch_pc()
     }
@@ -99,7 +124,7 @@ impl<M: Mapper> AddressingMode<M, u8> for Immediate {
 
 pub struct Implied;
 
-impl<M: Mapper> AddressingMode<M, ()> for Implied {
+impl<M: Mapper> AddressingMode<M, (), ()> for Implied {
     fn read(_cpu: &mut Cpu<M>) {}
 }
 
@@ -129,7 +154,7 @@ impl MemoryAddressing for ZeroPageY {
 
 pub struct AbsoluteIndirect;
 
-impl<M: Mapper> AddressingMode<M, u16> for AbsoluteIndirect {
+impl<M: Mapper> AddressingMode<M, u16, ()> for AbsoluteIndirect {
     fn read(cpu: &mut Cpu<M>) -> u16 {
         let indirect_target = cpu.fetch_pc16();
         let target_low = cpu.read(indirect_target);

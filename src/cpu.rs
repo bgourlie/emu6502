@@ -98,9 +98,13 @@ impl<M: Mapper> Cpu<M> {
             0xbc => Ldy::execute::<AbsoluteX>(self),
             0xbd => Lda::execute::<AbsoluteX>(self),
             0xbe => Ldx::execute::<AbsoluteY>(self),
+            0xce => Dec::execute::<Absolute>(self),
+            0xc6 => Dec::execute::<ZeroPage>(self),
             0xca => Dex::execute::<Implied>(self),
             0xc8 => Iny::execute::<Implied>(self),
+            0xd6 => Dec::execute::<ZeroPageX>(self),
             0xd8 => Cld::execute::<Implied>(self),
+            0xde => Dec::execute::<AbsoluteX>(self),
             0xe1 => Sbc::execute::<IndexedIndirect>(self),
             0xe5 => Sbc::execute::<ZeroPage>(self),
             0xe8 => Inx::execute::<Implied>(self),
@@ -240,7 +244,7 @@ impl<M: Mapper> Cpu<M> {
     }
 
     pub(crate) fn fetch_pc(&mut self) -> u8 {
-        let data = self.mapper.peek(self.pc);
+        let data = self.mapper.peek_mut(self.pc);
         self.pc += 1;
         data
     }
@@ -252,12 +256,12 @@ impl<M: Mapper> Cpu<M> {
     }
 
     pub(crate) fn read(&mut self, addr: u16) -> u8 {
-        self.mapper.peek(addr)
+        self.mapper.peek_mut(addr)
     }
 
     pub(crate) fn read16(&mut self, addr: u16) -> u16 {
-        let low = self.mapper.peek(addr);
-        let high = self.mapper.peek(addr.wrapping_add(1));
+        let low = self.mapper.peek_mut(addr);
+        let high = self.mapper.peek_mut(addr.wrapping_add(1));
         to_u16(low, high)
     }
 
@@ -300,5 +304,8 @@ impl<M: Mapper> Cpu<M> {
 
 pub trait Mapper {
     fn peek(&self, addr: u16) -> u8;
+    fn peek_mut(&mut self, addr: u16) -> u8 {
+        self.peek(addr)
+    }
     fn poke(&mut self, addr: u16, value: u8);
 }
