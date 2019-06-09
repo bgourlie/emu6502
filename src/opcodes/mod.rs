@@ -1,15 +1,33 @@
 #[cfg(test)]
 mod tests;
 
-use crate::{
-    addressing_modes::*,
-    cpu::{Cpu, Mapper},
+use {
+    crate::{
+        addressing_modes::*,
+        cpu::{Cpu, Mapper},
+    },
+    std::fmt::Debug,
 };
 
-pub trait Instruction<M: Mapper> {
-    type Read: Copy + Clone + std::fmt::Debug;
-    type Write: Copy + Clone + std::fmt::Debug;
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>);
+pub trait Instruction<M: Mapper, R: Copy + Clone + Debug, W: Copy + Clone + Debug> {
+    fn execute<AM: AddressingMode<M, R, W>>(cpu: &mut Cpu<M>);
+}
+
+pub trait Branch<M: Mapper>: Instruction<M, i8, ()> {
+    fn condition(cpu: &mut Cpu<M>) -> bool;
+
+    fn branch<AM: AddressingMode<M, i8, ()>>(cpu: &mut Cpu<M>) {
+        if Self::condition(cpu) {
+            let rel_addr = AM::read(cpu);
+            cpu.set_pc((i32::from(cpu.pc()) + i32::from(rel_addr)) as u16);
+        }
+    }
+}
+
+impl<M: Mapper, B: Branch<M>> Instruction<M, i8, ()> for B {
+    fn execute<AM: AddressingMode<M, i8, ()>>(cpu: &mut Cpu<M>) {
+        B::branch::<AM>(cpu)
+    }
 }
 
 pub struct Adc;
@@ -42,11 +60,8 @@ impl Adc {
     }
 }
 
-impl<M: Mapper> Instruction<M> for Adc {
-    type Read = u8;
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, u8, ()> for Adc {
+    fn execute<AM: AddressingMode<M, u8, ()>>(cpu: &mut Cpu<M>) {
         let lhs = cpu.acc();
         let rhs = AM::read(cpu);
         Self::adc(cpu, lhs, rhs);
@@ -55,11 +70,8 @@ impl<M: Mapper> Instruction<M> for Adc {
 
 pub struct And;
 
-impl<M: Mapper> Instruction<M> for And {
-    type Read = u8;
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, u8, ()> for And {
+    fn execute<AM: AddressingMode<M, u8, ()>>(cpu: &mut Cpu<M>) {
         let lhs = cpu.acc();
         let rhs = AM::read(cpu);
         let res = lhs & rhs;
@@ -69,11 +81,8 @@ impl<M: Mapper> Instruction<M> for And {
 
 pub struct Asl;
 
-impl<M: Mapper> Instruction<M> for Asl {
-    type Read = (u16, u8);
-    type Write = (u16, u8);
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (u16, u8), (u16, u8)> for Asl {
+    fn execute<AM: AddressingMode<M, (u16, u8), (u16, u8)>>(cpu: &mut Cpu<M>) {
         AM::read_modify_write(cpu, |cpu, (addr, val)| {
             let carry = (val & 0b1000_0000) > 0;
             let res = val << 1;
@@ -86,11 +95,8 @@ impl<M: Mapper> Instruction<M> for Asl {
 
 pub struct Bit;
 
-impl<M: Mapper> Instruction<M> for Bit {
-    type Read = u8;
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, u8, ()> for Bit {
+    fn execute<AM: AddressingMode<M, u8, ()>>(cpu: &mut Cpu<M>) {
         let lhs = cpu.acc();
         let rhs = AM::read(cpu);
         let res = lhs & rhs;
@@ -101,57 +107,50 @@ impl<M: Mapper> Instruction<M> for Bit {
     }
 }
 
+pub struct Bpl;
+
+impl<M: Mapper> Branch<M> for Bpl {
+    fn condition(cpu: &mut Cpu<M>) -> bool {
+        !cpu.sign()
+    }
+}
+
 pub struct Clc;
 
-impl<M: Mapper> Instruction<M> for Clc {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Clc {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         cpu.set_carry(false);
     }
 }
 
 pub struct Cld;
 
-impl<M: Mapper> Instruction<M> for Cld {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Cld {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         cpu.set_decimal_mode(false);
     }
 }
 
 pub struct Cli;
 
-impl<M: Mapper> Instruction<M> for Cli {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Cli {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         cpu.set_interrupt_disable(false);
     }
 }
 
 pub struct Clv;
 
-impl<M: Mapper> Instruction<M> for Clv {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Clv {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         cpu.set_overflow(false);
     }
 }
 
 pub struct Dec;
 
-impl<M: Mapper> Instruction<M> for Dec {
-    type Read = (u16, u8);
-    type Write = (u16, u8);
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (u16, u8), (u16, u8)> for Dec {
+    fn execute<AM: AddressingMode<M, (u16, u8), (u16, u8)>>(cpu: &mut Cpu<M>) {
         AM::read_modify_write(cpu, |cpu, (addr, val)| {
             let res = val.wrapping_sub(1);
             cpu.apply_sign_and_zero_flags(res);
@@ -162,11 +161,8 @@ impl<M: Mapper> Instruction<M> for Dec {
 
 pub struct Dex;
 
-impl<M: Mapper> Instruction<M> for Dex {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Dex {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         let val = cpu.x().wrapping_sub(1);
         cpu.set_x(val);
         cpu.apply_sign_and_zero_flags(val);
@@ -175,11 +171,8 @@ impl<M: Mapper> Instruction<M> for Dex {
 
 pub struct Dey;
 
-impl<M: Mapper> Instruction<M> for Dey {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Dey {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         let val = cpu.y().wrapping_sub(1);
         cpu.set_y(val);
         cpu.apply_sign_and_zero_flags(val);
@@ -188,11 +181,8 @@ impl<M: Mapper> Instruction<M> for Dey {
 
 pub struct Inc;
 
-impl<M: Mapper> Instruction<M> for Inc {
-    type Read = (u16, u8);
-    type Write = (u16, u8);
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (u16, u8), (u16, u8)> for Inc {
+    fn execute<AM: AddressingMode<M, (u16, u8), (u16, u8)>>(cpu: &mut Cpu<M>) {
         AM::read_modify_write(cpu, |cpu, (addr, val)| {
             let res = val.wrapping_add(1);
             cpu.apply_sign_and_zero_flags(res);
@@ -203,11 +193,8 @@ impl<M: Mapper> Instruction<M> for Inc {
 
 pub struct Inx;
 
-impl<M: Mapper> Instruction<M> for Inx {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Inx {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         let val = cpu.x().wrapping_add(1);
         cpu.set_x(val);
         cpu.apply_sign_and_zero_flags(val);
@@ -216,11 +203,8 @@ impl<M: Mapper> Instruction<M> for Inx {
 
 pub struct Iny;
 
-impl<M: Mapper> Instruction<M> for Iny {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Iny {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         let val = cpu.y().wrapping_add(1);
         cpu.set_y(val);
         cpu.apply_sign_and_zero_flags(val);
@@ -229,11 +213,8 @@ impl<M: Mapper> Instruction<M> for Iny {
 
 pub struct Lda;
 
-impl<M: Mapper> Instruction<M> for Lda {
-    type Read = u8;
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, u8, ()> for Lda {
+    fn execute<AM: AddressingMode<M, u8, ()>>(cpu: &mut Cpu<M>) {
         let val = AM::read(cpu);
         cpu.set_acc_and_apply_flags(val);
     }
@@ -241,11 +222,8 @@ impl<M: Mapper> Instruction<M> for Lda {
 
 pub struct Ldx;
 
-impl<M: Mapper> Instruction<M> for Ldx {
-    type Read = u8;
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, u8, ()> for Ldx {
+    fn execute<AM: AddressingMode<M, u8, ()>>(cpu: &mut Cpu<M>) {
         let val = AM::read(cpu);
         cpu.set_x(val);
         cpu.apply_sign_and_zero_flags(val);
@@ -254,11 +232,8 @@ impl<M: Mapper> Instruction<M> for Ldx {
 
 pub struct Ldy;
 
-impl<M: Mapper> Instruction<M> for Ldy {
-    type Read = u8;
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, u8, ()> for Ldy {
+    fn execute<AM: AddressingMode<M, u8, ()>>(cpu: &mut Cpu<M>) {
         let val = AM::read(cpu);
         cpu.set_y(val);
         cpu.apply_sign_and_zero_flags(val);
@@ -267,31 +242,22 @@ impl<M: Mapper> Instruction<M> for Ldy {
 
 pub struct Nop;
 
-impl<M: Mapper> Instruction<M> for Nop {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(_cpu: &mut Cpu<M>) {}
+impl<M: Mapper> Instruction<M, (), ()> for Nop {
+    fn execute<AM: AddressingMode<M, (), ()>>(_cpu: &mut Cpu<M>) {}
 }
 
 pub struct Pha;
 
-impl<M: Mapper> Instruction<M> for Pha {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Pha {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         cpu.push_stack(cpu.acc())
     }
 }
 
 pub struct Php;
 
-impl<M: Mapper> Instruction<M> for Php {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Php {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         let stat = cpu.status();
         cpu.push_stack(stat)
     }
@@ -299,11 +265,8 @@ impl<M: Mapper> Instruction<M> for Php {
 
 pub struct Pla;
 
-impl<M: Mapper> Instruction<M> for Pla {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Pla {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         let val = cpu.pop_stack();
         cpu.set_acc_and_apply_flags(val);
     }
@@ -311,11 +274,8 @@ impl<M: Mapper> Instruction<M> for Pla {
 
 pub struct Plp;
 
-impl<M: Mapper> Instruction<M> for Plp {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Plp {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         let val = cpu.pop_stack();
         cpu.set_status(val);
     }
@@ -323,11 +283,8 @@ impl<M: Mapper> Instruction<M> for Plp {
 
 pub struct Rol;
 
-impl<M: Mapper> Instruction<M> for Rol {
-    type Read = (u16, u8);
-    type Write = (u16, u8);
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (u16, u8), (u16, u8)> for Rol {
+    fn execute<AM: AddressingMode<M, (u16, u8), (u16, u8)>>(cpu: &mut Cpu<M>) {
         AM::read_modify_write(cpu, |cpu, (addr, val)| {
             let carry_set = cpu.carry();
             let carry = (val & 0x80) != 0;
@@ -345,11 +302,8 @@ impl<M: Mapper> Instruction<M> for Rol {
 
 pub struct Ror;
 
-impl<M: Mapper> Instruction<M> for Ror {
-    type Read = (u16, u8);
-    type Write = (u16, u8);
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (u16, u8), (u16, u8)> for Ror {
+    fn execute<AM: AddressingMode<M, (u16, u8), (u16, u8)>>(cpu: &mut Cpu<M>) {
         AM::read_modify_write(cpu, |cpu, (addr, val)| {
             let carry_set = cpu.carry();
             let carry = (val & 0x1) != 0;
@@ -367,11 +321,8 @@ impl<M: Mapper> Instruction<M> for Ror {
 
 pub struct Rts;
 
-impl<M: Mapper> Instruction<M> for Rts {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Rts {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         let pc = cpu.pop_stack16();
         cpu.set_pc(pc.wrapping_add(1));
     }
@@ -379,11 +330,8 @@ impl<M: Mapper> Instruction<M> for Rts {
 
 pub struct Sbc;
 
-impl<M: Mapper> Instruction<M> for Sbc {
-    type Read = u8;
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, u8, ()> for Sbc {
+    fn execute<AM: AddressingMode<M, u8, ()>>(cpu: &mut Cpu<M>) {
         let lhs = cpu.acc();
         let rhs = !AM::read(cpu);
         Adc::adc(cpu, lhs, rhs)
@@ -392,55 +340,40 @@ impl<M: Mapper> Instruction<M> for Sbc {
 
 pub struct Sec;
 
-impl<M: Mapper> Instruction<M> for Sec {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Sec {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         cpu.set_carry(true);
     }
 }
 
 pub struct Sed;
 
-impl<M: Mapper> Instruction<M> for Sed {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Sed {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         cpu.set_decimal_mode(true);
     }
 }
 
 pub struct Sei;
 
-impl<M: Mapper> Instruction<M> for Sei {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Sei {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         cpu.set_interrupt_disable(true);
     }
 }
 
 pub struct Sta;
 
-impl<M: Mapper> Instruction<M> for Sta {
-    type Read = ();
-    type Write = u8;
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), u8> for Sta {
+    fn execute<AM: AddressingMode<M, (), u8>>(cpu: &mut Cpu<M>) {
         AM::write(cpu, cpu.acc())
     }
 }
 
 pub struct Tax;
 
-impl<M: Mapper> Instruction<M> for Tax {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Tax {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         let x = cpu.acc();
         cpu.set_x(x);
         cpu.apply_sign_and_zero_flags(x);
@@ -449,11 +382,8 @@ impl<M: Mapper> Instruction<M> for Tax {
 
 pub struct Tay;
 
-impl<M: Mapper> Instruction<M> for Tay {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Tay {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         let y = cpu.acc();
         cpu.set_y(y);
         cpu.apply_sign_and_zero_flags(y);
@@ -462,11 +392,8 @@ impl<M: Mapper> Instruction<M> for Tay {
 
 pub struct Tsx;
 
-impl<M: Mapper> Instruction<M> for Tsx {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Tsx {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         let x = cpu.sp();
         cpu.set_x(x);
         cpu.apply_sign_and_zero_flags(x);
@@ -475,11 +402,8 @@ impl<M: Mapper> Instruction<M> for Tsx {
 
 pub struct Txa;
 
-impl<M: Mapper> Instruction<M> for Txa {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Txa {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         let acc = cpu.x();
         cpu.set_acc(acc);
         cpu.apply_sign_and_zero_flags(acc);
@@ -488,22 +412,16 @@ impl<M: Mapper> Instruction<M> for Txa {
 
 pub struct Txs;
 
-impl<M: Mapper> Instruction<M> for Txs {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Txs {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         cpu.set_sp(cpu.x());
     }
 }
 
 pub struct Tya;
 
-impl<M: Mapper> Instruction<M> for Tya {
-    type Read = ();
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, (), ()> for Tya {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         let acc = cpu.y();
         cpu.set_acc(acc);
         cpu.apply_sign_and_zero_flags(acc);
@@ -512,11 +430,8 @@ impl<M: Mapper> Instruction<M> for Tya {
 
 pub struct Jmp;
 
-impl<M: Mapper> Instruction<M> for Jmp {
-    type Read = u16;
-    type Write = ();
-
-    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+impl<M: Mapper> Instruction<M, u16, ()> for Jmp {
+    fn execute<AM: AddressingMode<M, u16, ()>>(cpu: &mut Cpu<M>) {
         let target = AM::read(cpu);
         cpu.set_pc(target);
     }

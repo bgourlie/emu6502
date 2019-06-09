@@ -190,3 +190,11 @@ impl MemoryAddressing for IndirectIndexed {
         base_addr.wrapping_add(u16::from(y))
     }
 }
+
+pub struct Relative;
+
+impl<M: Mapper> AddressingMode<M, i8, ()> for Relative {
+    fn read(cpu: &mut Cpu<M>) -> i8 {
+        cpu.fetch_pc() as i8
+    }
+}

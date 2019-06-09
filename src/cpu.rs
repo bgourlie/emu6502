@@ -45,6 +45,7 @@ impl<M: Mapper> Cpu<M> {
             0x08 => Php::execute::<Implied>(self),
             0x0a => Asl::execute::<Accumulator>(self),
             0x0e => Asl::execute::<Absolute>(self),
+            0x10 => Bpl::execute::<Relative>(self),
             0x16 => Asl::execute::<ZeroPageX>(self),
             0x18 => Clc::execute::<Implied>(self),
             0x1e => Asl::execute::<AbsoluteX>(self),
@@ -231,6 +232,10 @@ impl<M: Mapper> Cpu<M> {
         } else {
             self.status &= !FL_OVERFLOW;
         }
+    }
+
+    pub fn pc(&self) -> u16 {
+        self.pc
     }
 
     pub fn sign(&self) -> bool {
