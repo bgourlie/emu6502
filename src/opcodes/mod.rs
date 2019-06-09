@@ -155,6 +155,21 @@ impl<M: Mapper> Instruction<M> for Dey {
     }
 }
 
+pub struct Inc;
+
+impl<M: Mapper> Instruction<M> for Inc {
+    type Read = (u16, u8);
+    type Write = (u16, u8);
+
+    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+        AM::read_modify_write(cpu, |cpu, (addr, val)| {
+            let res = val.wrapping_add(1);
+            cpu.apply_sign_and_zero_flags(res);
+            (addr, res)
+        })
+    }
+}
+
 pub struct Inx;
 
 impl<M: Mapper> Instruction<M> for Inx {
@@ -272,6 +287,50 @@ impl<M: Mapper> Instruction<M> for Plp {
     fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
         let val = cpu.pop_stack();
         cpu.set_status(val);
+    }
+}
+
+pub struct Rol;
+
+impl<M: Mapper> Instruction<M> for Rol {
+    type Read = (u16, u8);
+    type Write = (u16, u8);
+
+    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+        AM::read_modify_write(cpu, |cpu, (addr, val)| {
+            let carry_set = cpu.carry();
+            let carry = (val & 0x80) != 0;
+            let res = if carry_set {
+                (val << 1) | 0x1
+            } else {
+                val << 1
+            };
+            cpu.set_carry(carry);
+            cpu.apply_sign_and_zero_flags(res);
+            (addr, res)
+        });
+    }
+}
+
+pub struct Ror;
+
+impl<M: Mapper> Instruction<M> for Ror {
+    type Read = (u16, u8);
+    type Write = (u16, u8);
+
+    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+        AM::read_modify_write(cpu, |cpu, (addr, val)| {
+            let carry_set = cpu.carry();
+            let carry = (val & 0x1) != 0;
+            let res = if carry_set {
+                (val >> 1) | 0x80
+            } else {
+                val >> 1
+            };
+            cpu.set_carry(carry);
+            cpu.apply_sign_and_zero_flags(res);
+            (addr, res)
+        });
     }
 }
 

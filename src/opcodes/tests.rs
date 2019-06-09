@@ -1,9 +1,10 @@
 use {
-    crate::{addressing_modes::AddressingMode, opcodes::*, Cpu, Mapper},
-    std::{
-        cell::RefCell,
-        rc::Rc
-    }
+    crate::{
+        addressing_modes::{AddressingMode, Implied},
+        opcodes::*,
+        Cpu, Mapper,
+    },
+    std::{cell::RefCell, rc::Rc},
 };
 
 type Memory = Rc<RefCell<[u8; 0xffff]>>;
@@ -31,7 +32,7 @@ struct Value<const VALUE: u8>;
 
 impl<M: Mapper, const VALUE: u8> AddressingMode<M, u8, ()> for Value<{ VALUE }> {
     fn read(_cpu: &mut Cpu<M>) -> u8 {
-        { VALUE }
+        {VALUE}
     }
 }
 
@@ -54,10 +55,10 @@ fn new_test_cpu() -> (Cpu<TestMapper>, Memory) {
     (Cpu::new(mapper), memory)
 }
 
-mod adc {
+mod adc_sbc {
     use super::*;
     #[test]
-    fn flags_sign_and_zero_1() {
+    fn adc_flags_sign_and_zero_1() {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(0);
         Adc::execute::<Value<0>>(&mut cpu);
@@ -67,7 +68,7 @@ mod adc {
     }
 
     #[test]
-    fn flags_sign_and_zero_2() {
+    fn adc_flags_sign_and_zero_2() {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(0);
         Adc::execute::<Value<1>>(&mut cpu);
@@ -77,7 +78,7 @@ mod adc {
     }
 
     #[test]
-    fn flags_sign_and_zero_3() {
+    fn adc_flags_sign_and_zero_3() {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(0);
         Adc::execute::<Value<255>>(&mut cpu);
@@ -87,7 +88,7 @@ mod adc {
     }
 
     #[test]
-    fn flags_carry_and_overflow_1() {
+    fn adc_flags_carry_and_overflow_1() {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(80);
         Adc::execute::<Value<16>>(&mut cpu);
@@ -97,7 +98,7 @@ mod adc {
     }
 
     #[test]
-    fn flags_carry_and_overflow_2() {
+    fn adc_flags_carry_and_overflow_2() {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(80);
         Adc::execute::<Value<80>>(&mut cpu);
@@ -107,7 +108,7 @@ mod adc {
     }
 
     #[test]
-    fn flags_carry_and_overflow_3() {
+    fn adc_flags_carry_and_overflow_3() {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(80);
         Adc::execute::<Value<144>>(&mut cpu);
@@ -117,7 +118,7 @@ mod adc {
     }
 
     #[test]
-    fn flags_carry_and_overflow_4() {
+    fn adc_flags_carry_and_overflow_4() {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(80);
         Adc::execute::<Value<208>>(&mut cpu);
@@ -127,7 +128,7 @@ mod adc {
     }
 
     #[test]
-    fn flags_carry_and_overflow_5() {
+    fn adc_flags_carry_and_overflow_5() {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(208);
         Adc::execute::<Value<16>>(&mut cpu);
@@ -137,7 +138,7 @@ mod adc {
     }
 
     #[test]
-    fn flags_carry_and_overflow_6() {
+    fn adc_flags_carry_and_overflow_6() {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(208);
         Adc::execute::<Value<80>>(&mut cpu);
@@ -147,7 +148,7 @@ mod adc {
     }
 
     #[test]
-    fn flags_carry_and_overflow_7() {
+    fn adc_flags_carry_and_overflow_7() {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(208);
         Adc::execute::<Value<144>>(&mut cpu);
@@ -157,7 +158,7 @@ mod adc {
     }
 
     #[test]
-    fn flags_carry_and_overflow_8() {
+    fn adc_flags_carry_and_overflow_8() {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(208);
         Adc::execute::<Value<208>>(&mut cpu);
@@ -165,77 +166,9 @@ mod adc {
         assert_eq!(false, cpu.overflow());
         assert_eq!(160, cpu.acc());
     }
-}
-
-mod dex {
-    use super::*;
-
-    fn dec_base_1<F>(dec: F)
-    where
-        F: Fn(&mut Cpu<TestMapper>, Memory, u8) -> u8,
-    {
-        let (mut cpu, mem) = new_test_cpu();
-        let val = dec(&mut cpu, mem, 1);
-        assert_eq!(0, val);
-        assert_eq!(true, cpu.zero());
-        assert_eq!(false, cpu.sign());
-    }
-
-    fn dec_base_2<F>(dec: F)
-    where
-        F: Fn(&mut Cpu<TestMapper>, Memory, u8) -> u8,
-    {
-        let (mut cpu, mem) = new_test_cpu();
-        let val = dec(&mut cpu, mem, 2);
-        assert_eq!(1, val);
-        assert_eq!(false, cpu.zero());
-        assert_eq!(false, cpu.sign());
-    }
-
-    fn dec_base_3<F>(dec: F)
-    where
-        F: Fn(&mut Cpu<TestMapper>, Memory, u8) -> u8,
-    {
-        let (mut cpu, mem) = new_test_cpu();
-        let val = dec(&mut cpu, mem, 254);
-        assert_eq!(-3, val as i8);
-        assert_eq!(false, cpu.zero());
-        assert_eq!(true, cpu.sign());
-    }
 
     #[test]
-    fn dec_test1() {
-        dec_base_1(|ref mut cpu, ref mem, val| {
-            mem.borrow_mut()[0x6666] = val;
-            Dec::execute::<Address<0x6666>>(cpu);
-            mem.borrow()[0x6666]
-        });
-    }
-
-    #[test]
-    fn dec_test2() {
-        dec_base_2(|ref mut cpu, ref mem, val| {
-            mem.borrow_mut()[0x6666] = val;
-            Dec::execute::<Address<0x6666>>(cpu);
-            mem.borrow()[0x6666]
-        });
-    }
-
-    #[test]
-    fn dec_test3() {
-        dec_base_3(|ref mut cpu, ref mem, val| {
-            mem.borrow_mut()[0x6666] = val;
-            Dec::execute::<Address<0x6666>>(cpu);
-            mem.borrow()[0x6666]
-        });
-    }
-}
-
-mod sbc {
-    use super::*;
-
-    #[test]
-    fn flags_sign_and_zero_1() {
+    fn sbc_flags_sign_and_zero_1() {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(0);
         cpu.set_carry(true);
@@ -246,7 +179,7 @@ mod sbc {
     }
 
     #[test]
-    fn flags_sign_and_zero_2() {
+    fn sbc_flags_sign_and_zero_2() {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(1);
         cpu.set_carry(true);
@@ -257,7 +190,7 @@ mod sbc {
     }
 
     #[test]
-    fn flags_sign_and_zero_3() {
+    fn sbc_flags_sign_and_zero_3() {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(0);
         cpu.set_carry(true);
@@ -323,7 +256,7 @@ mod sbc {
     }
 
     #[test]
-    fn flags_carry_and_overflow_6() {
+    fn sbc_flags_carry_and_overflow_6() {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(208);
         cpu.set_carry(true);
@@ -334,7 +267,7 @@ mod sbc {
     }
 
     #[test]
-    fn flags_carry_and_overflow_7() {
+    fn sbc_flags_carry_and_overflow_7() {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(208);
         cpu.set_carry(true);
@@ -345,7 +278,7 @@ mod sbc {
     }
 
     #[test]
-    fn flags_carry_and_overflow_8() {
+    fn sbc_flags_carry_and_overflow_8() {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(208);
         cpu.set_carry(true);
@@ -354,4 +287,389 @@ mod sbc {
         assert_eq!(false, cpu.overflow());
         assert_eq!(160, cpu.acc());
     }
+}
+
+mod increment_decrement {
+    use super::*;
+
+    fn dec_base_1<F>(dec: F)
+    where
+        F: Fn(&mut Cpu<TestMapper>, Memory, u8) -> u8,
+    {
+        let (mut cpu, mem) = new_test_cpu();
+        let val = dec(&mut cpu, mem, 1);
+        assert_eq!(0, val);
+        assert_eq!(true, cpu.zero());
+        assert_eq!(false, cpu.sign());
+    }
+
+    fn dec_base_2<F>(dec: F)
+    where
+        F: Fn(&mut Cpu<TestMapper>, Memory, u8) -> u8,
+    {
+        let (mut cpu, mem) = new_test_cpu();
+        let val = dec(&mut cpu, mem, 2);
+        assert_eq!(1, val);
+        assert_eq!(false, cpu.zero());
+        assert_eq!(false, cpu.sign());
+    }
+
+    fn dec_base_3<F>(dec: F)
+    where
+        F: Fn(&mut Cpu<TestMapper>, Memory, u8) -> u8,
+    {
+        let (mut cpu, mem) = new_test_cpu();
+        let val = dec(&mut cpu, mem, 254);
+        assert_eq!(-3, val as i8);
+        assert_eq!(false, cpu.zero());
+        assert_eq!(true, cpu.sign());
+    }
+
+    fn inc_base_1<F>(inc: F)
+    where
+        F: Fn(&mut Cpu<TestMapper>, Memory, u8) -> u8,
+    {
+        let (mut cpu, mem) = new_test_cpu();
+        let val = inc(&mut cpu, mem, 1);
+        assert_eq!(2, val);
+        assert_eq!(false, cpu.zero());
+        assert_eq!(false, cpu.sign());
+    }
+
+    fn inc_base_2<F>(inc: F)
+    where
+        F: Fn(&mut Cpu<TestMapper>, Memory, u8) -> u8,
+    {
+        let (mut cpu, mem) = new_test_cpu();
+        let val = inc(&mut cpu, mem, 255);
+        assert_eq!(0, val);
+        assert_eq!(true, cpu.zero());
+        assert_eq!(false, cpu.sign());
+    }
+
+    fn inc_base_3<F>(inc: F)
+    where
+        F: Fn(&mut Cpu<TestMapper>, Memory, u8) -> u8,
+    {
+        let (mut cpu, mem) = new_test_cpu();
+        let val = inc(&mut cpu, mem, 254);
+        assert_eq!(-1, val as i8);
+        assert_eq!(false, cpu.zero());
+        assert_eq!(true, cpu.sign());
+    }
+
+    #[test]
+    fn dec_test1() {
+        dec_base_1(|ref mut cpu, ref mem, val| {
+            mem.borrow_mut()[0x6666] = val;
+            Dec::execute::<Address<0x6666>>(cpu);
+            mem.borrow()[0x6666]
+        });
+    }
+
+    #[test]
+    fn dec_test2() {
+        dec_base_2(|ref mut cpu, ref mem, val| {
+            mem.borrow_mut()[0x6666] = val;
+            Dec::execute::<Address<0x6666>>(cpu);
+            mem.borrow()[0x6666]
+        });
+    }
+
+    #[test]
+    fn dec_test3() {
+        dec_base_3(|ref mut cpu, ref mem, val| {
+            mem.borrow_mut()[0x6666] = val;
+            Dec::execute::<Address<0x6666>>(cpu);
+            mem.borrow()[0x6666]
+        });
+    }
+
+    #[test]
+    fn dex_test1() {
+        dec_base_1(|ref mut cpu, ref _mem, val| {
+            cpu.set_x(val);
+            Dex::execute::<Implied>(cpu);
+            cpu.x()
+        });
+    }
+
+    #[test]
+    fn dex_test2() {
+        dec_base_2(|ref mut cpu, ref _mem, val| {
+            cpu.set_x(val);
+            Dex::execute::<Implied>(cpu);
+            cpu.x()
+        });
+    }
+
+    #[test]
+    fn dex_test3() {
+        dec_base_3(|ref mut cpu, ref _mem, val| {
+            cpu.set_x(val);
+            Dex::execute::<Implied>(cpu);
+            cpu.x()
+        });
+    }
+
+    #[test]
+    fn dey_test1() {
+        dec_base_1(|ref mut cpu, ref _mem, val| {
+            cpu.set_y(val);
+            Dey::execute::<Implied>(cpu);
+            cpu.y()
+        });
+    }
+
+    #[test]
+    fn dey_test2() {
+        dec_base_2(|ref mut cpu, ref _mem, val| {
+            cpu.set_y(val);
+            Dey::execute::<Implied>(cpu);
+            cpu.y()
+        });
+    }
+
+    #[test]
+    fn dey_test3() {
+        dec_base_3(|ref mut cpu, ref _mem, val| {
+            cpu.set_y(val);
+            Dey::execute::<Implied>(cpu);
+            cpu.y()
+        });
+    }
+
+    #[test]
+    fn inc_test1() {
+        inc_base_1(|ref mut cpu, ref mem, val| {
+            mem.borrow_mut()[0x6666] = val;
+            Inc::execute::<Address<0x6666>>(cpu);
+            mem.borrow()[0x6666]
+        });
+    }
+
+    #[test]
+    fn inc_test2() {
+        inc_base_2(|ref mut cpu, ref mem, val| {
+            mem.borrow_mut()[0x6666] = val;
+            Inc::execute::<Address<0x6666>>(cpu);
+            mem.borrow()[0x6666]
+        });
+    }
+
+    #[test]
+    fn inc_test3() {
+        inc_base_3(|ref mut cpu, ref mem, val| {
+            mem.borrow_mut()[0x6666] = val;
+            Inc::execute::<Address<0x6666>>(cpu);
+            mem.borrow()[0x6666]
+        });
+    }
+
+    #[test]
+    fn iny_test1() {
+        inc_base_1(|ref mut cpu, ref _mem, val| {
+            cpu.set_y(val);
+            Iny::execute::<Implied>(cpu);
+            cpu.y()
+        });
+    }
+
+    #[test]
+    fn iny_test2() {
+        inc_base_2(|ref mut cpu, ref _mem, val| {
+            cpu.set_y(val);
+            Iny::execute::<Implied>(cpu);
+            cpu.y()
+        });
+    }
+
+    #[test]
+    fn iny_test3() {
+        inc_base_3(|ref mut cpu, ref _mem, val| {
+            cpu.set_y(val);
+            Iny::execute::<Implied>(cpu);
+            cpu.y()
+        });
+    }
+
+    #[test]
+    fn inx_test1() {
+        inc_base_1(|ref mut cpu, ref _mem, val| {
+            cpu.set_x(val);
+            Inx::execute::<Implied>(cpu);
+            cpu.x()
+        });
+    }
+
+    #[test]
+    fn inx_test2() {
+        inc_base_2(|ref mut cpu, ref _mem, val| {
+            cpu.set_x(val);
+            Inx::execute::<Implied>(cpu);
+            cpu.x()
+        });
+    }
+
+    #[test]
+    fn inx_test3() {
+        inc_base_3(|ref mut cpu, ref _mem, val| {
+            cpu.set_x(val);
+            Inx::execute::<Implied>(cpu);
+            cpu.x()
+        });
+    }
+}
+
+mod shifts {
+    use super::*;
+
+    fn shift_left_base_1<F>(do_shift: F)
+    where
+        F: Fn(&mut Cpu<TestMapper>, Memory, u8) -> (u8, bool),
+    {
+        const VAL: u8 = 0b10000001;
+        let (mut cpu, mem) = new_test_cpu();
+
+        cpu.set_carry(true);
+        let (result, rotate) = do_shift(&mut cpu, mem, VAL);
+
+        if rotate {
+            assert_eq!(0b00000011, result);
+        } else {
+            assert_eq!(0b00000010, result);
+        }
+
+        assert_eq!(false, cpu.sign());
+        assert_eq!(true, cpu.carry());
+        assert_eq!(false, cpu.zero());
+    }
+
+    fn shift_left_base_2<F>(do_shift: F)
+    where
+        F: Fn(&mut Cpu<TestMapper>, Memory, u8) -> (u8, bool),
+    {
+        const VAL: u8 = 0b01000000;
+        let (mut cpu, mem) = new_test_cpu();
+
+        let (result, _) = do_shift(&mut cpu, mem, VAL);
+
+        assert_eq!(0b10000000, result);
+        assert_eq!(true, cpu.sign());
+        assert_eq!(false, cpu.carry());
+        assert_eq!(false, cpu.zero());
+    }
+
+    fn shift_left_base_3<F>(do_shift: F)
+    where
+        F: Fn(&mut Cpu<TestMapper>, Memory, u8) -> (u8, bool),
+    {
+        const VAL: u8 = 0b00000000;
+        let (mut cpu, mem) = new_test_cpu();
+
+        let (result, _) = do_shift(&mut cpu, mem, VAL);
+
+        assert_eq!(0b00000000, result);
+        assert_eq!(false, cpu.sign());
+        assert_eq!(false, cpu.carry());
+        assert_eq!(true, cpu.zero());
+    }
+
+    fn shift_right_base_1<F>(do_shift: F)
+    where
+        F: Fn(&mut Cpu<TestMapper>, Memory, u8) -> (u8, bool),
+    {
+        const VAL: u8 = 0b10000001;
+
+        let (mut cpu, mem) = new_test_cpu();
+
+        cpu.set_carry(true);
+        let (result, rotate) = do_shift(&mut cpu, mem, VAL);
+
+        if rotate {
+            assert_eq!(0b11000000, result);
+            assert_eq!(true, cpu.sign());
+        } else {
+            assert_eq!(0b01000000, result);
+            assert_eq!(false, cpu.sign());
+        }
+
+        assert_eq!(true, cpu.carry());
+        assert_eq!(false, cpu.zero());
+    }
+
+    fn shift_right_base_2<F>(do_shift: F)
+    where
+        F: Fn(&mut Cpu<TestMapper>, Memory, u8) -> (u8, bool),
+    {
+        const VAL: u8 = 0b01000000;
+
+        let (mut cpu, mem) = new_test_cpu();
+
+        let (result, _) = do_shift(&mut cpu, mem, VAL);
+
+        assert_eq!(0b00100000, result);
+        assert_eq!(false, cpu.sign());
+        assert_eq!(false, cpu.carry());
+        assert_eq!(false, cpu.zero());
+    }
+
+    fn shift_right_base_3<F>(do_shift: F)
+    where
+        F: Fn(&mut Cpu<TestMapper>, Memory, u8) -> (u8, bool),
+    {
+        const VAL: u8 = 0b00000000;
+
+        let (mut cpu, mem) = new_test_cpu();
+
+        let (result, _) = do_shift(&mut cpu, mem, VAL);
+
+        assert_eq!(0b00000000, result);
+        assert_eq!(false, cpu.sign());
+        assert_eq!(false, cpu.carry());
+        assert_eq!(true, cpu.zero());
+    }
+
+    fn rol(cpu: &mut Cpu<TestMapper>, mem: Memory, val: u8) -> (u8, bool) {
+        mem.borrow_mut()[0x6666] = val;
+        Rol::execute::<Address<0x6666>>(cpu);
+        (mem.borrow()[0x6666], true)
+    }
+
+    #[test]
+    fn rol_1() {
+        shift_left_base_1(rol);
+    }
+
+    #[test]
+    fn rol_2() {
+        shift_left_base_2(rol);
+    }
+
+    #[test]
+    fn rol_3() {
+        shift_left_base_3(rol);
+    }
+
+    fn ror(cpu: &mut Cpu<TestMapper>, mem: Memory, val: u8) -> (u8, bool) {
+        mem.borrow_mut()[0x6666] = val;
+        Ror::execute::<Address<0x6666>>(cpu);
+        (mem.borrow()[0x6666], true)
+    }
+
+    #[test]
+    fn ror_1() {
+        shift_right_base_1(ror);
+    }
+
+    #[test]
+    fn ror_2() {
+        shift_right_base_2(ror);
+    }
+
+    #[test]
+    fn ror_3() {
+        shift_right_base_3(ror);
+    }
+
 }
