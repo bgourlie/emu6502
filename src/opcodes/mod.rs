@@ -53,6 +53,20 @@ impl<M: Mapper> Instruction<M> for Adc {
     }
 }
 
+pub struct And;
+
+impl<M: Mapper> Instruction<M> for And {
+    type Read = u8;
+    type Write = ();
+
+    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+        let lhs = cpu.acc();
+        let rhs = AM::read(cpu);
+        let res = lhs & rhs;
+        cpu.set_acc_and_apply_flags(res);
+    }
+}
+
 pub struct Asl;
 
 impl<M: Mapper> Instruction<M> for Asl {
@@ -67,6 +81,23 @@ impl<M: Mapper> Instruction<M> for Asl {
             cpu.apply_sign_and_zero_flags(res);
             (addr, res)
         });
+    }
+}
+
+pub struct Bit;
+
+impl<M: Mapper> Instruction<M> for Bit {
+    type Read = u8;
+    type Write = ();
+
+    fn execute<AM: AddressingMode<M, Self::Read, Self::Write>>(cpu: &mut Cpu<M>) {
+        let lhs = cpu.acc();
+        let rhs = AM::read(cpu);
+        let res = lhs & rhs;
+
+        cpu.set_zero(res == 0);
+        cpu.set_overflow(rhs & 0x40 != 0);
+        cpu.set_sign(rhs & 0x80 > 0);
     }
 }
 

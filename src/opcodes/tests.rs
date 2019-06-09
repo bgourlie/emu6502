@@ -49,6 +49,12 @@ impl<M: Mapper, const ADDR: u16> AddressingMode<M, (u16, u8), (u16, u8)> for Add
     }
 }
 
+impl<M: Mapper, const ADDR: u16> AddressingMode<M, u8, ()> for Address<{ ADDR }> {
+    fn read(cpu: &mut Cpu<M>) -> u8 {
+        cpu.read({ ADDR })
+    }
+}
+
 fn new_test_cpu() -> (Cpu<TestMapper>, Memory) {
     let memory = Rc::new(RefCell::new([0; 0xffff]));
     let mapper = TestMapper::new(memory.clone());
@@ -671,5 +677,94 @@ mod shifts {
     fn ror_3() {
         shift_right_base_3(ror);
     }
+}
 
+mod bitwise {
+    use super::*;
+
+    #[test]
+    fn and1() {
+        let (mut cpu, mem) = new_test_cpu();
+        cpu.set_acc(0);
+        mem.borrow_mut()[0x6666] = 255;
+        And::execute::<Address<0x6666>>(&mut cpu);
+        assert_eq!(0, cpu.acc());
+        assert_eq!(true, cpu.zero());
+        assert_eq!(false, cpu.sign());
+    }
+
+    #[test]
+    fn and2() {
+        let (mut cpu, mem) = new_test_cpu();
+        cpu.set_acc(0b11110000_u8);
+        mem.borrow_mut()[0x6666] = 0b10101010;
+        And::execute::<Address<0x6666>>(&mut cpu);
+        assert_eq!(0b10100000, cpu.acc());
+        assert_eq!(false, cpu.zero());
+        assert_eq!(true, cpu.sign());
+
+    }
+
+    #[test]
+    fn bit_zero_flag_behavior1() {
+        let (mut cpu, mem) = new_test_cpu();
+        cpu.set_acc(0);
+        mem.borrow_mut()[0x6666] = 0;
+        Bit::execute::<Address<0x6666>>(&mut cpu);
+        assert_eq!(true, cpu.zero());
+    }
+
+    #[test]
+    fn bit_zero_flag_behavior2() {
+        let (mut cpu, mem) = new_test_cpu();
+        cpu.set_acc(0b11110000);
+        mem.borrow_mut()[0x6666] = 0b00001111_u8;
+        Bit::execute::<Address<0x6666>>(&mut cpu);
+        assert_eq!(true, cpu.zero());
+    }
+
+    #[test]
+    fn bit_zero_flag_behavior3() {
+        let (mut cpu, mem) = new_test_cpu();
+        cpu.set_acc(0b00111100);
+        mem.borrow_mut()[0x6666] = 0b00011000;
+        Bit::execute::<Address<0x6666>>(&mut cpu);
+        assert_eq!(false, cpu.zero());
+    }
+
+    #[test]
+    fn bit_sign_flag_behavior1() {
+        let (mut cpu, mem) = new_test_cpu();
+        cpu.set_acc(0);
+        mem.borrow_mut()[0x6666] = 0b01111111;
+        Bit::execute::<Address<0x6666>>(&mut cpu);
+        assert_eq!(false, cpu.sign());
+    }
+
+    #[test]
+    fn bit_sign_flag_behavior2() {
+        let (mut cpu, mem) = new_test_cpu();
+        cpu.set_acc(0);
+        mem.borrow_mut()[0x6666] = 0b10000000;
+        Bit::execute::<Address<0x6666>>(&mut cpu);
+        assert_eq!(true, cpu.sign());
+    }
+
+    #[test]
+    fn bit_overflow_flag_behavior1() {
+        let (mut cpu, mem) = new_test_cpu();
+        cpu.set_acc(0);
+        mem.borrow_mut()[0x6666] = 0b10111111;
+        Bit::execute::<Address<0x6666>>(&mut cpu);
+        assert_eq!(false, cpu.overflow());
+    }
+
+    #[test]
+    fn bit_overflow_flag_behavior2() {
+        let (mut cpu, mem) = new_test_cpu();
+        cpu.set_acc(0);
+        mem.borrow_mut()[0x6666] = 0b01000000;
+        Bit::execute::<Address<0x6666>>(&mut cpu);
+        assert_eq!(true, cpu.overflow());
+    }
 }
