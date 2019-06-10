@@ -155,6 +155,22 @@ impl<M: Mapper> Branch<M> for Bpl {
     }
 }
 
+pub struct Brk;
+
+impl<M: Mapper> Instruction<M, (), ()> for Brk {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
+        const BRK_VECTOR: u16 = 0xfffe;
+        let pc = cpu.pc().wrapping_add(1);
+        cpu.set_pc(pc);
+        let status = cpu.status();
+        cpu.push_stack16(pc);
+        cpu.push_stack(status);
+        let irq_handler = cpu.read16(BRK_VECTOR);
+        cpu.set_pc(irq_handler);
+        cpu.set_interrupt_disable(true);
+    }
+}
+
 pub struct Bvc;
 
 impl<M: Mapper> Branch<M> for Bvc {
@@ -459,6 +475,22 @@ pub struct Sta;
 impl<M: Mapper> Instruction<M, (), u8> for Sta {
     fn execute<AM: AddressingMode<M, (), u8>>(cpu: &mut Cpu<M>) {
         AM::write(cpu, cpu.acc())
+    }
+}
+
+pub struct Stx;
+
+impl<M: Mapper> Instruction<M, (), u8> for Stx {
+    fn execute<AM: AddressingMode<M, (), u8>>(cpu: &mut Cpu<M>) {
+        AM::write(cpu, cpu.x())
+    }
+}
+
+pub struct Sty;
+
+impl<M: Mapper> Instruction<M, (), u8> for Sty {
+    fn execute<AM: AddressingMode<M, (), u8>>(cpu: &mut Cpu<M>) {
+        AM::write(cpu, cpu.y())
     }
 }
 

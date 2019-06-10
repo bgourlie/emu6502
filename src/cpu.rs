@@ -41,6 +41,7 @@ impl<M: Mapper> Cpu<M> {
         let opcode = self.fetch_pc();
 
         match opcode {
+            0x00 => Brk::execute::<Implied>(self),
             0x01 => Ora::execute::<IndexedIndirect>(self),
             0x05 => Ora::execute::<ZeroPage>(self),
             0x09 => Ora::execute::<Immediate>(self),
@@ -111,13 +112,19 @@ impl<M: Mapper> Cpu<M> {
             0x7e => Ror::execute::<AbsoluteX>(self),
             0x7d => Adc::execute::<AbsoluteX>(self),
             0x81 => Sta::execute::<IndexedIndirect>(self),
+            0x84 => Sty::execute::<ZeroPage>(self),
             0x85 => Sta::execute::<ZeroPage>(self),
+            0x86 => Stx::execute::<ZeroPage>(self),
             0x88 => Dey::execute::<Implied>(self),
             0x8a => Txa::execute::<Implied>(self),
+            0x8c => Sty::execute::<Absolute>(self),
             0x8d => Sta::execute::<Absolute>(self),
+            0x8e => Stx::execute::<Absolute>(self),
             0x90 => Bcc::execute::<Relative>(self),
             0x91 => Sta::execute::<IndirectIndexed>(self),
+            0x94 => Sty::execute::<ZeroPageX>(self),
             0x95 => Sta::execute::<ZeroPageX>(self),
+            0x96 => Stx::execute::<ZeroPageY>(self),
             0x98 => Tya::execute::<Implied>(self),
             0x99 => Sta::execute::<AbsoluteY>(self),
             0x9a => Txs::execute::<Implied>(self),

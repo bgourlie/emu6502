@@ -49,6 +49,14 @@ impl<M: Mapper, const ADDR: u16> AddressingMode<M, (u16, u8), (u16, u8)> for Add
     }
 }
 
+impl<M: Mapper, const ADDR: u16> AddressingMode<M, (), u8> for Address<{ ADDR }> {
+    fn read(_cpu: &mut Cpu<M>) -> () {}
+
+    fn write(cpu: &mut Cpu<M>, data: u8) {
+        cpu.write({ ADDR }, data);
+    }
+}
+
 struct RelativeAddress<const ADDR: i8>;
 
 impl<M: Mapper, const ADDR: i8> AddressingMode<M, i8, ()> for RelativeAddress<{ ADDR }> {
@@ -742,6 +750,130 @@ mod increment_decrement {
     }
 }
 
+mod loads_and_stores {
+    use super::*;
+
+    #[test]
+    fn lda_value_set() {
+        let (mut cpu, _) = new_test_cpu();
+        Lda::execute::<Value<0xff>>(&mut cpu);
+        assert_eq!(0xff, cpu.acc());
+    }
+
+    #[test]
+    fn lda_flags_sign_and_zero_1() {
+        let (mut cpu, _) = new_test_cpu();
+        Lda::execute::<Value<0>>(&mut cpu);
+        assert_eq!(true, cpu.zero());
+        assert_eq!(false, cpu.sign());
+    }
+
+    #[test]
+    fn lda_flags_sign_and_zero_2() {
+        let (mut cpu, _) = new_test_cpu();
+        Lda::execute::<Value<1>>(&mut cpu);
+        assert_eq!(false, cpu.zero());
+        assert_eq!(false, cpu.sign());
+    }
+
+    #[test]
+    fn lda_flags_sign_and_zero_3() {
+        let (mut cpu, _) = new_test_cpu();
+        Lda::execute::<Value<0x80>>(&mut cpu);
+        assert_eq!(false, cpu.zero());
+        assert_eq!(true, cpu.sign());
+    }
+
+    #[test]
+    fn ldx_value_set() {
+        let (mut cpu, _) = new_test_cpu();
+        Ldx::execute::<Value<0xff>>(&mut cpu);
+        assert_eq!(0xff, cpu.x());
+    }
+
+    #[test]
+    fn ldx_flags_sign_and_zero_1() {
+        let (mut cpu, _) = new_test_cpu();
+        Ldx::execute::<Value<0>>(&mut cpu);
+        assert_eq!(true, cpu.zero());
+        assert_eq!(false, cpu.sign());
+    }
+
+    #[test]
+    fn ldx_flags_sign_and_zero_2() {
+        let (mut cpu, _) = new_test_cpu();
+        Ldx::execute::<Value<1>>(&mut cpu);
+        assert_eq!(false, cpu.zero());
+        assert_eq!(false, cpu.sign());
+    }
+
+    #[test]
+    fn ldx_flags_sign_and_zero_3() {
+        let (mut cpu, _) = new_test_cpu();
+        Ldx::execute::<Value<0x80>>(&mut cpu);
+        assert_eq!(false, cpu.zero());
+        assert_eq!(true, cpu.sign());
+    }
+
+    #[test]
+    fn ldy_value_set() {
+        let (mut cpu, _) = new_test_cpu();
+        Ldy::execute::<Value<0xff>>(&mut cpu);
+        assert_eq!(0xff, cpu.y());
+    }
+
+    #[test]
+    fn ldy_flags_sign_and_zero_1() {
+        let (mut cpu, _) = new_test_cpu();
+        Ldy::execute::<Value<0>>(&mut cpu);
+        assert_eq!(true, cpu.zero());
+        assert_eq!(false, cpu.sign());
+    }
+
+    #[test]
+    fn ldy_flags_sign_and_zero_2() {
+        let (mut cpu, _) = new_test_cpu();
+        Ldy::execute::<Value<0x1>>(&mut cpu);
+        assert_eq!(false, cpu.zero());
+        assert_eq!(false, cpu.sign());
+    }
+
+    #[test]
+    fn ldy_flags_sign_and_zero_3() {
+        let (mut cpu, _) = new_test_cpu();
+        Ldy::execute::<Value<0x80>>(&mut cpu);
+        assert_eq!(false, cpu.zero());
+        assert_eq!(true, cpu.sign());
+    }
+
+    #[test]
+    fn sta() {
+        let (mut cpu, mem) = new_test_cpu();
+        mem.borrow_mut()[0x6666] = 0;
+        cpu.set_acc(0xff);
+        Sta::execute::<Address<0x6666>>(&mut cpu);
+        assert_eq!(0xff, mem.borrow()[0x6666]);
+    }
+
+    #[test]
+    fn stx() {
+        let (mut cpu, mem) = new_test_cpu();
+        mem.borrow_mut()[0x6666] = 0;
+        cpu.set_x(0xff);
+        Stx::execute::<Address<0x6666>>(&mut cpu);
+        assert_eq!(0xff, mem.borrow()[0x6666]);
+    }
+
+    #[test]
+    fn sty() {
+        let (mut cpu, mem) = new_test_cpu();
+        mem.borrow_mut()[0x6666] = 0;
+        cpu.set_y(0xff);
+        Sty::execute::<Address<0x6666>>(&mut cpu);
+        assert_eq!(0xff, mem.borrow()[0x6666]);
+    }
+}
+
 mod shifts {
     use super::*;
 
@@ -850,6 +982,28 @@ mod shifts {
         assert_eq!(false, cpu.carry());
         assert_eq!(true, cpu.zero());
     }
+
+    fn asl(cpu: &mut Cpu<TestMapper>, mem: Memory, val: u8) -> (u8, bool) {
+        mem.borrow_mut()[0x6666] = val;
+        Asl::execute::<Address<0x6666>>(cpu);
+        (mem.borrow()[0x6666], false)
+    }
+
+    #[test]
+    fn asl_1() {
+        shift_left_base_1(asl);
+    }
+
+    #[test]
+    fn asl_2() {
+        shift_left_base_2(asl);
+    }
+
+    #[test]
+    fn asl_3() {
+        shift_left_base_3(asl);
+    }
+
 
     fn rol(cpu: &mut Cpu<TestMapper>, mem: Memory, val: u8) -> (u8, bool) {
         mem.borrow_mut()[0x6666] = val;
