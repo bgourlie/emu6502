@@ -899,10 +899,9 @@ mod bitwise {
 
     #[test]
     fn and1() {
-        let (mut cpu, mem) = new_test_cpu();
+        let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(0);
-        mem.borrow_mut()[0x6666] = 255;
-        And::execute::<Address<0x6666>>(&mut cpu);
+        And::execute::<Value<255>>(&mut cpu);
         assert_eq!(0, cpu.acc());
         assert_eq!(true, cpu.zero());
         assert_eq!(false, cpu.sign());
@@ -910,75 +909,87 @@ mod bitwise {
 
     #[test]
     fn and2() {
-        let (mut cpu, mem) = new_test_cpu();
+        let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(0b11110000_u8);
-        mem.borrow_mut()[0x6666] = 0b10101010;
-        And::execute::<Address<0x6666>>(&mut cpu);
+        And::execute::<Value<0b10101010>>(&mut cpu);
         assert_eq!(0b10100000, cpu.acc());
         assert_eq!(false, cpu.zero());
         assert_eq!(true, cpu.sign());
     }
 
     #[test]
-    fn bit_zero_flag_behavior1() {
-        let (mut cpu, mem) = new_test_cpu();
+    fn ora1() {
+        let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(0);
-        mem.borrow_mut()[0x6666] = 0;
-        Bit::execute::<Address<0x6666>>(&mut cpu);
+        Ora::execute::<Value<0b11111111>>(&mut cpu);
+        assert_eq!(0b11111111, cpu.acc());
+        assert_eq!(false, cpu.zero());
+        assert_eq!(true, cpu.sign());
+    }
+
+    #[test]
+    fn ora2() {
+        let (mut cpu, _) = new_test_cpu();
+        cpu.set_acc(0b11110000_u8);
+        Ora::execute::<Value<0b10101010>>(&mut cpu);
+        assert_eq!(0b11111010, cpu.acc());
+        assert_eq!(false, cpu.zero());
+        assert_eq!(true, cpu.sign());
+    }
+
+    #[test]
+    fn bit_zero_flag_behavior1() {
+        let (mut cpu, _) = new_test_cpu();
+        cpu.set_acc(0);
+        Bit::execute::<Value<0>>(&mut cpu);
         assert_eq!(true, cpu.zero());
     }
 
     #[test]
     fn bit_zero_flag_behavior2() {
-        let (mut cpu, mem) = new_test_cpu();
+        let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(0b11110000);
-        mem.borrow_mut()[0x6666] = 0b00001111_u8;
-        Bit::execute::<Address<0x6666>>(&mut cpu);
+        Bit::execute::<Value<0b00001111>>(&mut cpu);
         assert_eq!(true, cpu.zero());
     }
 
     #[test]
     fn bit_zero_flag_behavior3() {
-        let (mut cpu, mem) = new_test_cpu();
+        let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(0b00111100);
-        mem.borrow_mut()[0x6666] = 0b00011000;
-        Bit::execute::<Address<0x6666>>(&mut cpu);
+        Bit::execute::<Value<0b00011000>>(&mut cpu);
         assert_eq!(false, cpu.zero());
     }
 
     #[test]
     fn bit_sign_flag_behavior1() {
-        let (mut cpu, mem) = new_test_cpu();
+        let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(0);
-        mem.borrow_mut()[0x6666] = 0b01111111;
-        Bit::execute::<Address<0x6666>>(&mut cpu);
+        Bit::execute::<Value<0b01111111>>(&mut cpu);
         assert_eq!(false, cpu.sign());
     }
 
     #[test]
     fn bit_sign_flag_behavior2() {
-        let (mut cpu, mem) = new_test_cpu();
+        let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(0);
-        mem.borrow_mut()[0x6666] = 0b10000000;
-        Bit::execute::<Address<0x6666>>(&mut cpu);
+        Bit::execute::<Value<0b10000000>>(&mut cpu);
         assert_eq!(true, cpu.sign());
     }
 
     #[test]
     fn bit_overflow_flag_behavior1() {
-        let (mut cpu, mem) = new_test_cpu();
+        let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(0);
-        mem.borrow_mut()[0x6666] = 0b10111111;
-        Bit::execute::<Address<0x6666>>(&mut cpu);
+        Bit::execute::<Value<0b10111111>>(&mut cpu);
         assert_eq!(false, cpu.overflow());
     }
 
     #[test]
     fn bit_overflow_flag_behavior2() {
-        let (mut cpu, mem) = new_test_cpu();
+        let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(0);
-        mem.borrow_mut()[0x6666] = 0b01000000;
-        Bit::execute::<Address<0x6666>>(&mut cpu);
+        Bit::execute::<Value<0b01000000>>(&mut cpu);
         assert_eq!(true, cpu.overflow());
     }
 }

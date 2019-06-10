@@ -41,13 +41,21 @@ impl<M: Mapper> Cpu<M> {
         let opcode = self.fetch_pc();
 
         match opcode {
+            0x01 => Ora::execute::<IndexedIndirect>(self),
+            0x05 => Ora::execute::<ZeroPage>(self),
+            0x09 => Ora::execute::<Immediate>(self),
+            0x0d => Ora::execute::<Absolute>(self),
             0x06 => Asl::execute::<ZeroPage>(self),
             0x08 => Php::execute::<Implied>(self),
             0x0a => Asl::execute::<Accumulator>(self),
             0x0e => Asl::execute::<Absolute>(self),
             0x10 => Bpl::execute::<Relative>(self),
+            0x11 => Ora::execute::<IndirectIndexed>(self),
+            0x15 => Ora::execute::<ZeroPageX>(self),
             0x16 => Asl::execute::<ZeroPageX>(self),
             0x18 => Clc::execute::<Implied>(self),
+            0x19 => Ora::execute::<AbsoluteY>(self),
+            0x1d => Ora::execute::<AbsoluteX>(self),
             0x1e => Asl::execute::<AbsoluteX>(self),
             0x21 => And::execute::<IndexedIndirect>(self),
             0x24 => Bit::execute::<ZeroPage>(self),

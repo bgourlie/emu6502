@@ -302,6 +302,17 @@ impl<M: Mapper> Instruction<M, (), ()> for Nop {
     fn execute<AM: AddressingMode<M, (), ()>>(_cpu: &mut Cpu<M>) {}
 }
 
+pub struct Ora;
+
+impl<M: Mapper> Instruction<M, u8, ()> for Ora {
+    fn execute<AM: AddressingMode<M, u8, ()>>(cpu: &mut Cpu<M>) {
+        let lhs = cpu.acc();
+        let rhs = AM::read(cpu);
+        let res = lhs | rhs;
+        cpu.set_acc_and_apply_flags(res);
+    }
+}
+
 pub struct Pha;
 
 impl<M: Mapper> Instruction<M, (), ()> for Pha {
