@@ -892,6 +892,28 @@ mod shifts {
     fn ror_3() {
         shift_right_base_3(ror);
     }
+
+    fn lsr(cpu: &mut Cpu<TestMapper>, mem: Memory, val: u8) -> (u8, bool) {
+        mem.borrow_mut()[0x6666] = val;
+        Lsr::execute::<Address<0x6666>>(cpu);
+        (mem.borrow()[0x6666], false)
+    }
+
+    #[test]
+    fn lsr_1() {
+        shift_right_base_1(lsr);
+    }
+
+    #[test]
+    fn lsr_2() {
+        shift_right_base_2(lsr);
+    }
+
+    #[test]
+    fn lsr_3() {
+        shift_right_base_3(lsr);
+    }
+
 }
 
 mod bitwise {

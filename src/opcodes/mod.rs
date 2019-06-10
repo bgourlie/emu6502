@@ -307,6 +307,20 @@ impl<M: Mapper> Instruction<M, u8, ()> for Ldy {
     }
 }
 
+pub struct Lsr;
+
+impl<M: Mapper> Instruction<M, (u16, u8), (u16, u8)> for Lsr {
+    fn execute<AM: AddressingMode<M, (u16, u8), (u16, u8)>>(cpu: &mut Cpu<M>) {
+        AM::read_modify_write(cpu, |cpu, (addr, val)| {
+            let carry = (val & 0x1) > 0;
+            let res = val >> 1 ;
+            cpu.set_carry(carry);
+            cpu.apply_sign_and_zero_flags(res);
+            (addr, res)
+        });
+    }
+}
+
 pub struct Nop;
 
 impl<M: Mapper> Instruction<M, (), ()> for Nop {
