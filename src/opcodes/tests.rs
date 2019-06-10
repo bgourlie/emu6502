@@ -52,7 +52,7 @@ impl<M: Mapper, const ADDR: u16> AddressingMode<M, (u16, u8), (u16, u8)> for Add
 struct RelativeAddress<const ADDR: i8>;
 
 impl<M: Mapper, const ADDR: i8> AddressingMode<M, i8, ()> for RelativeAddress<{ ADDR }> {
-    fn read(cpu: &mut Cpu<M>) -> i8 {
+    fn read(_cpu: &mut Cpu<M>) -> i8 {
         { ADDR }
     }
 }
@@ -125,6 +125,153 @@ mod branch {
     fn bpl_no_branch() {
         test_no_branch::<Bpl, _>(|ref mut cpu| {
             cpu.set_sign(true);
+        });
+    }
+    
+    #[test]
+    fn bcc_not_crossing_page_boundary_positive_offset() {
+        test_branch_not_crossing_page_boundary_positive_offset::<Bcc, _>(|ref mut cpu| {
+            cpu.set_carry(false);
+        });
+    }
+
+    #[test]
+    fn bcc_not_crossing_page_boundary_negative_offset() {
+        test_branch_not_crossing_page_boundary_negative_offset::<Bcc, _>(|ref mut cpu| {
+            cpu.set_carry(false);
+        });
+    }
+
+    #[test]
+    fn bcc_no_branch() {
+        test_no_branch::<Bcc, _>(|ref mut cpu| {
+            cpu.set_carry(true);
+        });
+    }
+
+    #[test]
+    fn bcs_not_crossing_page_boundary_positive_rel_addr() {
+        test_branch_not_crossing_page_boundary_positive_offset::<Bcs, _>(|ref mut cpu| {
+            cpu.set_carry(true);
+        });
+    }
+
+    #[test]
+    fn bcs_not_crossing_page_boundary_negative_rel_addr() {
+        test_branch_not_crossing_page_boundary_negative_offset::<Bcs, _>(|ref mut cpu| {
+            cpu.set_carry(true);
+        });
+    }
+
+    #[test]
+    fn bcs_no_branch() {
+        test_no_branch::<Bcs, _>(|ref mut cpu| {
+            cpu.set_carry(false);
+        });
+    }
+
+    #[test]
+    fn beq_not_crossing_page_boundary_positive_offset() {
+        test_branch_not_crossing_page_boundary_positive_offset::<Beq, _>(|ref mut cpu| {
+            cpu.set_zero(true);
+        });
+    }
+
+    #[test]
+    fn beq_not_crossing_page_boundary_negative_offset() {
+        test_branch_not_crossing_page_boundary_negative_offset::<Beq, _>(|ref mut cpu| {
+            cpu.set_zero(true);
+        });
+    }
+
+    #[test]
+    fn beq_no_branch() {
+        test_no_branch::<Beq, _>(|ref mut cpu| {
+            cpu.set_zero(false);
+        });
+    }
+
+    #[test]
+    fn bmi_not_crossing_page_boundary_positive_offset() {
+        test_branch_not_crossing_page_boundary_positive_offset::<Bmi, _>(|ref mut cpu| {
+            cpu.set_sign(true);
+        });
+    }
+
+    #[test]
+    fn bmi_not_crossing_page_boundary_negative_offset() {
+        test_branch_not_crossing_page_boundary_negative_offset::<Bmi, _>(|ref mut cpu| {
+            cpu.set_sign(true);
+        });
+    }
+
+    #[test]
+    fn bmi_no_branch() {
+        test_no_branch::<Bmi, _>(|ref mut cpu| {
+            cpu.set_sign(false);
+        });
+    }
+
+    #[test]
+    fn bne_not_crossing_page_boundary_positive_offset() {
+        test_branch_not_crossing_page_boundary_positive_offset::<Bne, _>(|ref mut cpu| {
+            cpu.set_zero(false);
+        });
+    }
+
+    #[test]
+    fn bne_not_crossing_page_boundary_negative_offset() {
+        test_branch_not_crossing_page_boundary_negative_offset::<Bne, _>(|ref mut cpu| {
+            cpu.set_zero(false);
+        });
+    }
+
+    #[test]
+    fn bne_no_branch() {
+        test_no_branch::<Bne, _>(|ref mut cpu| {
+            cpu.set_zero(true);
+        });
+    }
+
+    #[test]
+    fn bvc_not_crossing_page_boundary_positive_offset() {
+        test_branch_not_crossing_page_boundary_positive_offset::<Bvc, _>(|ref mut cpu| {
+            cpu.set_overflow(false);
+        });
+    }
+
+    #[test]
+    fn bvc_not_crossing_page_boundary_negative_offset() {
+        test_branch_not_crossing_page_boundary_negative_offset::<Bvc, _>(|ref mut cpu| {
+            cpu.set_overflow(false);
+        });
+    }
+
+    #[test]
+    fn bvc_no_branch() {
+        test_no_branch::<Bvc, _>(|ref mut cpu| {
+            cpu.set_overflow(true);
+        });
+    }
+
+    #[test]
+    fn bvs_not_crossing_page_boundary_positive_offset() {
+        test_branch_not_crossing_page_boundary_positive_offset::<Bvs, _>(|ref mut cpu| {
+            cpu.set_overflow(true);
+        });
+    }
+
+    #[test]
+    fn bvs_not_crossing_page_boundary_negative_offset() {
+        test_branch_not_crossing_page_boundary_negative_offset::<Bvs, _>(|ref mut cpu| {
+            cpu.set_overflow(true);
+        });
+    }
+
+    #[test]
+    fn bvs_no_branch() {
+        test_no_branch::<Bvs, _>(|ref mut cpu| {
+            cpu.set_overflow(false);
         });
     }
 }

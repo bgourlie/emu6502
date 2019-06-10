@@ -14,7 +14,7 @@ pub trait Instruction<M: Mapper, R: Copy + Clone + Debug, W: Copy + Clone + Debu
 }
 
 pub trait Branch<M: Mapper>: Instruction<M, i8, ()> {
-    fn condition(cpu: &mut Cpu<M>) -> bool;
+    fn condition(cpu: &Cpu<M>) -> bool;
 
     fn branch<AM: AddressingMode<M, i8, ()>>(cpu: &mut Cpu<M>) {
         if Self::condition(cpu) {
@@ -107,11 +107,67 @@ impl<M: Mapper> Instruction<M, u8, ()> for Bit {
     }
 }
 
+pub struct Bcc;
+
+impl<M: Mapper> Branch<M> for Bcc {
+    fn condition(cpu: &Cpu<M>) -> bool {
+        !cpu.carry()
+    }
+}
+
+pub struct Bcs;
+
+impl<M: Mapper> Branch<M> for Bcs {
+    fn condition(cpu: &Cpu<M>) -> bool {
+        cpu.carry()
+    }
+}
+
+pub struct Beq;
+
+impl<M: Mapper> Branch<M> for Beq {
+    fn condition(cpu: &Cpu<M>) -> bool {
+        cpu.zero()
+    }
+}
+
+pub struct Bmi;
+
+impl<M: Mapper> Branch<M> for Bmi {
+    fn condition(cpu: &Cpu<M>) -> bool {
+        cpu.sign()
+    }
+}
+
+pub struct Bne;
+
+impl<M: Mapper> Branch<M> for Bne {
+    fn condition(cpu: &Cpu<M>) -> bool {
+        !cpu.zero()
+    }
+}
+
 pub struct Bpl;
 
 impl<M: Mapper> Branch<M> for Bpl {
-    fn condition(cpu: &mut Cpu<M>) -> bool {
+    fn condition(cpu: &Cpu<M>) -> bool {
         !cpu.sign()
+    }
+}
+
+pub struct Bvc;
+
+impl<M: Mapper> Branch<M> for Bvc {
+    fn condition(cpu: &Cpu<M>) -> bool {
+        !cpu.overflow()
+    }
+}
+
+pub struct Bvs;
+
+impl<M: Mapper> Branch<M> for Bvs {
+    fn condition(cpu: &Cpu<M>) -> bool {
+        cpu.overflow()
     }
 }
 
