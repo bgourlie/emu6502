@@ -71,22 +71,60 @@ fn new_test_cpu() -> (Cpu<TestMapper>, Memory) {
 
 mod branch {
     use super::*;
-    fn test_branch_not_crossing_page_boundary_positive_offset<B, F>(setup_and_branch: F)
+    fn test_branch_not_crossing_page_boundary_positive_offset<B, F>(setup: F)
     where
         B: Branch<TestMapper>,
         F: Fn(&mut Cpu<TestMapper>),
     {
-        let (mut cpu, _mem) = new_test_cpu();
+        let (mut cpu, _) = new_test_cpu();
         cpu.set_pc(43656);
-        setup_and_branch(&mut cpu);
+        setup(&mut cpu);
         B::execute::<RelativeAddress<5>>(&mut cpu);
         assert_eq!(43661, cpu.pc());
+    }
+
+    fn test_branch_not_crossing_page_boundary_negative_offset<B, F>(setup: F)
+        where
+            B: Branch<TestMapper>,
+            F: Fn(&mut Cpu<TestMapper>),
+    {
+        let (mut cpu, _) = new_test_cpu();
+        cpu.set_pc(43656);
+        setup(&mut cpu);
+        B::execute::<RelativeAddress<-1>>(&mut cpu);
+        assert_eq!(43655, cpu.pc());
+    }
+
+    fn test_no_branch<B, F>(setup: F)
+        where
+            B: Branch<TestMapper>,
+            F: Fn(&mut Cpu<TestMapper>),
+    {
+        let (mut cpu, _) = new_test_cpu();
+        cpu.set_pc(30);
+        setup(&mut cpu);
+        B::execute::<RelativeAddress<-20>>(&mut cpu);
+        assert_eq!(30, cpu.pc());
     }
 
     #[test]
     fn bpl_not_crossing_page_boundary_positive_offset() {
         test_branch_not_crossing_page_boundary_positive_offset::<Bpl, _>(|ref mut cpu| {
             cpu.set_sign(false);
+        });
+    }
+
+    #[test]
+    fn bpl_not_crossing_page_boundary_negative_offset() {
+        test_branch_not_crossing_page_boundary_negative_offset::<Bpl, _>(|ref mut cpu| {
+            cpu.set_sign(false);
+        });
+    }
+
+    #[test]
+    fn bpl_no_branch() {
+        test_no_branch::<Bpl, _>(|ref mut cpu| {
+            cpu.set_sign(true);
         });
     }
 }
