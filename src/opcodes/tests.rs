@@ -938,6 +938,26 @@ mod bitwise {
     }
 
     #[test]
+    fn eor1() {
+        let (mut cpu, _) = new_test_cpu();
+        cpu.set_acc(0b00001111);
+        Eor::execute::<Value<0b11111111>>(&mut cpu);
+        assert_eq!(0b11110000, cpu.acc());
+        assert_eq!(false, cpu.zero());
+        assert_eq!(true, cpu.sign());
+    }
+
+    #[test]
+    fn eor2() {
+        let (mut cpu, _) = new_test_cpu();
+        cpu.set_acc(0b11110000_u8);
+        Eor::execute::<Value<0b10101010>>(&mut cpu);
+        assert_eq!(0b01011010, cpu.acc());
+        assert_eq!(false, cpu.zero());
+        assert_eq!(false, cpu.sign());
+    }
+
+    #[test]
     fn bit_zero_flag_behavior1() {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_acc(0);

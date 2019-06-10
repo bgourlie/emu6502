@@ -235,6 +235,17 @@ impl<M: Mapper> Instruction<M, (), ()> for Dey {
     }
 }
 
+pub struct Eor;
+
+impl<M: Mapper> Instruction<M, u8, ()> for Eor {
+    fn execute<AM: AddressingMode<M, u8, ()>>(cpu: &mut Cpu<M>) {
+        let rhs = AM::read(cpu);
+        let lhs = cpu.acc();
+        let res = lhs ^ rhs;
+        cpu.set_acc_and_apply_flags(res);
+    }
+}
+
 pub struct Inc;
 
 impl<M: Mapper> Instruction<M, (u16, u8), (u16, u8)> for Inc {
