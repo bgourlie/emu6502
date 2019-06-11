@@ -294,6 +294,17 @@ impl<M: Mapper> Instruction<M, (), ()> for Iny {
     }
 }
 
+pub struct Jsr;
+
+
+impl<M: Mapper> Instruction<M, u16, ()> for Jsr {
+    fn execute<AM: AddressingMode<M, u16, ()>>(cpu: &mut Cpu<M>) {
+        let loc = AM::read(cpu);
+        cpu.push_stack16(cpu.pc().wrapping_sub(1));
+        cpu.set_pc(loc);
+    }
+}
+
 pub struct Lda;
 
 impl<M: Mapper> Instruction<M, u8, ()> for Lda {

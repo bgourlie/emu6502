@@ -57,6 +57,12 @@ impl<M: Mapper, const ADDR: u16> AddressingMode<M, (), u8> for Address<{ ADDR }>
     }
 }
 
+impl<M: Mapper, const ADDR: u16> AddressingMode<M, u16, ()> for Address<{ ADDR }> {
+    fn read(_cpu: &mut Cpu<M>) -> u16 {
+        { ADDR }
+    }
+}
+
 struct RelativeAddress<const ADDR: i8>;
 
 impl<M: Mapper, const ADDR: i8> AddressingMode<M, i8, ()> for RelativeAddress<{ ADDR }> {
@@ -1187,5 +1193,38 @@ mod bitwise {
         cpu.set_acc(0);
         Bit::execute::<Value<0b01000000>>(&mut cpu);
         assert_eq!(true, cpu.overflow());
+    }
+}
+
+mod jumps_and_returns {
+    use super::*;
+
+    #[test]
+    fn jmp() {
+        let (mut cpu, _) = new_test_cpu();
+        Jmp::execute::<Address<0xbeef>>(&mut cpu);
+        assert_eq!(0xbeef, cpu.pc());
+    }
+
+    #[test]
+    fn jsr() {
+        let (mut cpu, _) = new_test_cpu();
+        cpu.set_sp(0xff);
+        cpu.set_pc(0x102);
+        Jsr::execute::<Address<0xbeef>>(&mut cpu);
+        assert_eq!(0xfd, cpu.sp());
+        let pushed_pc = cpu.pop_stack16();
+        assert_eq!(0xbeef, cpu.pc());
+        assert_eq!(0x101, pushed_pc);
+    }
+
+    #[test]
+    fn rts() {
+        let (mut cpu, _) = new_test_cpu();
+        let pc = 0xfffe;
+        cpu.set_sp(0xff);
+        cpu.push_stack16(pc);
+        Rts::execute::<Implied>(&mut cpu);
+        assert_eq!(0xffff, cpu.pc());
     }
 }

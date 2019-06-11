@@ -58,6 +58,7 @@ impl<M: Mapper> Cpu<M> {
             0x19 => Ora::execute::<AbsoluteY>(self),
             0x1d => Ora::execute::<AbsoluteX>(self),
             0x1e => Asl::execute::<AbsoluteX>(self),
+            0x20 => Jsr::execute::<Absolute>(self),
             0x21 => And::execute::<IndexedIndirect>(self),
             0x24 => Bit::execute::<ZeroPage>(self),
             0x25 => And::execute::<ZeroPage>(self),
