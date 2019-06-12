@@ -77,6 +77,7 @@ impl<M: Mapper> Cpu<M> {
             0x39 => And::execute::<AbsoluteY>(self),
             0x3d => And::execute::<AbsoluteX>(self),
             0x3e => Rol::execute::<AbsoluteX>(self),
+            0x40 => Rti::execute::<Implied>(self),
             0x41 => Eor::execute::<IndexedIndirect>(self),
             0x45 => Eor::execute::<ZeroPage>(self),
             0x46 => Lsr::execute::<ZeroPage>(self),

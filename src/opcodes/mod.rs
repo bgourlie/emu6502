@@ -438,6 +438,17 @@ impl<M: Mapper> Instruction<M, (u16, u8), (u16, u8)> for Ror {
     }
 }
 
+pub struct Rti;
+
+impl<M: Mapper> Instruction<M, (), ()> for Rti {
+    fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
+        let stat = cpu.pop_stack();
+        let pc = cpu.pop_stack16();
+        cpu.set_status(stat);
+        cpu.set_pc(pc);
+    }
+}
+
 pub struct Rts;
 
 impl<M: Mapper> Instruction<M, (), ()> for Rts {

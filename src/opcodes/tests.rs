@@ -7,7 +7,7 @@ use {
     std::{cell::RefCell, rc::Rc},
 };
 
-type Memory = Rc<RefCell<[u8; 0xffff]>>;
+type Memory = Rc<RefCell<[u8; 0x10000]>>;
 
 struct TestMapper {
     memory: Memory,
@@ -78,7 +78,7 @@ impl<M: Mapper, const ADDR: u16> AddressingMode<M, u8, ()> for Address<{ ADDR }>
 }
 
 fn new_test_cpu() -> (Cpu<TestMapper>, Memory) {
-    let memory = Rc::new(RefCell::new([0; 0xffff]));
+    let memory = Rc::new(RefCell::new([0; 0x10000]));
     let mapper = TestMapper::new(memory.clone());
     (Cpu::new(mapper), memory)
 }
@@ -1226,5 +1226,30 @@ mod jumps_and_returns {
         cpu.push_stack16(pc);
         Rts::execute::<Implied>(&mut cpu);
         assert_eq!(0xffff, cpu.pc());
+    }
+
+    #[test]
+    fn rti() {
+        let (mut cpu, _) = new_test_cpu();
+        cpu.push_stack16(0xbeef);
+        cpu.push_stack(0b11011010);
+        Rti::execute::<Implied>(&mut cpu);
+        assert_eq!(0xbeef, cpu.pc());
+        assert_eq!(0b11111010, cpu.status());
+    }
+
+    #[test]
+    fn brk() {
+        let (mut cpu, mem) = new_test_cpu();
+        mem.borrow_mut()[0xfffe] = 0xef;
+        mem.borrow_mut()[0xffff] = 0xbe;
+        cpu.set_pc(0xdeac);
+        cpu.set_status(0b11011010);
+
+        Brk::execute::<Implied>(&mut cpu);
+        assert_eq!(0b11111110, cpu.status());
+        assert_eq!(0xbeef, cpu.pc());
+        assert_eq!(0b11111010, cpu.pop_stack());
+        assert_eq!(0xdead, cpu.pop_stack16());
     }
 }
