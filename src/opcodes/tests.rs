@@ -1253,3 +1253,63 @@ mod jumps_and_returns {
         assert_eq!(0xdead, cpu.pop_stack16());
     }
 }
+
+mod set_and_clear_instructions {
+    use super::*;
+
+    #[test]
+    fn sei() {
+        let (mut cpu, _) = new_test_cpu();
+        cpu.set_interrupt_disable(false);
+        Sei::execute::<Implied>(&mut cpu);
+        assert_eq!(true, cpu.interrupt_disable());
+    }
+
+    #[test]
+    fn clc() {
+        let (mut cpu, _) = new_test_cpu();
+        cpu.set_carry(true);
+        Clc::execute::<Implied>(&mut cpu);
+        assert_eq!(false, cpu.carry());
+    }
+
+    #[test]
+    fn cld() {
+        let (mut cpu, _) = new_test_cpu();
+        cpu.set_decimal_mode(true);
+        Cld::execute::<Implied>(&mut cpu);
+        assert_eq!(false, cpu.decimal_mode());
+    }
+
+    #[test]
+    fn cli() {
+        let (mut cpu, _) = new_test_cpu();
+        cpu.set_interrupt_disable(true);
+        Cli::execute::<Implied>(&mut cpu);
+        assert_eq!(false, cpu.interrupt_disable());
+    }
+
+    #[test]
+    fn clv() {
+        let (mut cpu, _) = new_test_cpu();
+        cpu.set_overflow(true);
+        Clv::execute::<Implied>(&mut cpu);
+        assert_eq!(false, cpu.overflow());
+    }
+
+    #[test]
+    fn sec() {
+        let (mut cpu, _) = new_test_cpu();
+        cpu.set_carry(false);
+        Sec::execute::<Implied>(&mut cpu);
+        assert_eq!(true, cpu.carry());
+    }
+
+    #[test]
+    fn sed() {
+        let (mut cpu, _) = new_test_cpu();
+        cpu.set_decimal_mode(false);
+        Sed::execute::<Implied>(&mut cpu);
+        assert_eq!(true, cpu.decimal_mode());
+    }
+}

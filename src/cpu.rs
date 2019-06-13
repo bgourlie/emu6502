@@ -251,6 +251,10 @@ impl<M: Mapper> Cpu<M> {
         }
     }
 
+    pub fn interrupt_disable(&self) -> bool {
+        self.status & FL_INTERRUPT_DISABLE > 0
+    }
+
     pub(crate) fn set_interrupt_disable(&mut self, val: bool) {
         if val {
             self.status |= FL_INTERRUPT_DISABLE;
@@ -347,7 +351,6 @@ impl<M: Mapper> Cpu<M> {
         self.sp = self.sp.wrapping_sub(1);
     }
 
-    #[allow(dead_code)]
     pub(crate) fn push_stack16(&mut self, value: u16) {
         let (low, high) = from_u16(value);
         self.push_stack(high);
