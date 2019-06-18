@@ -1,7 +1,8 @@
 [workspace]
 
 members = [
-  "emu6502"
+  "emu6502",
+  "disasm6502"
 ]
 
 [profile.release]
