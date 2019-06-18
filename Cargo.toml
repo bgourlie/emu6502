@@ -1,7 +1,17 @@
-[package]
-name = "emu6502"
-version = "0.1.0"
-authors = ["W. Brian Gourlie <bgourlie@gmail.com>"]
-edition = "2018"
+[workspace]
 
-[dependencies]
+members = [
+  "emu6502"
+]
+
+[profile.release]
+opt-level = 3
+lto = true
+debug = true
+debug-assertions = false
+
+[profile.bench]
+opt-level = 3
+lto = true
+debug = false
+debug-assertions = false
