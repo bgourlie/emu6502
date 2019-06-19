@@ -391,8 +391,7 @@ pub struct Disassembler<'a, R: ReadBytesExt + Seek> {
     rom: &'a mut R,
     decoded_bytes: BitSet,
     pc_start: u16,
-    branch_target_stack: Vec<u16>,
-    routine_stack: Vec<u16>,
+    unexplored: Vec<u16>,
 }
 
 impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
@@ -404,8 +403,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
             rom,
             pc_start,
             decoded_bytes: BitSet::new(),
-            branch_target_stack: Vec::new(),
-            routine_stack: Vec::new(),
+            unexplored: Vec::new(),
         })
     }
 
@@ -414,16 +412,9 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
             let opcode_location = self.cur_pointer()?;
 
             if self.decoded_bytes.contains(opcode_location as usize) {
-                if let Some(next_opcode_location) = self.branch_target_stack.pop() {
+                if let Some(next_opcode_location) = self.unexplored.pop() {
                     info!(
                         "Already decoded {:04X}. Moving to branch target {:04X}",
-                        opcode_location, next_opcode_location
-                    );
-                    self.jump_to(next_opcode_location)?;
-                    next_opcode_location
-                } else if let Some(next_opcode_location) = self.routine_stack.pop() {
-                    info!(
-                        "Already decoded {:04X}. Moving to routine at {:04X}",
                         opcode_location, next_opcode_location
                     );
                     self.jump_to(next_opcode_location)?;
@@ -463,7 +454,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
                             "Pushed branch target onto return stack: {:04X}",
                             self.display_address(target_address)
                         );
-                        self.branch_target_stack.push(target_address as u16);
+                        self.unexplored.push(target_address as u16);
                     }
 
                     Ok(Operand::Relative(rel_addr))
@@ -476,7 +467,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
 
                         // We subtract the pc_start to map from address space to assembly
                         // stream position.
-                        self.routine_stack.push(addr as u16 - self.pc_start);
+                        self.unexplored.push(addr as u16 - self.pc_start);
                     }
                     Ok(Operand::Absolute(addr))
                 }
@@ -488,7 +479,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
                 AddressingMode::Implied => match opcode {
                     Opcode::Brk => Ok(Operand::BreakByte(self.read_u8()?)),
                     Opcode::Rts => {
-                        if let Some(next_routine) = self.routine_stack.pop() {
+                        if let Some(next_routine) = self.unexplored.pop() {
                             info!(
                                 "End subroutine, popped next routine at {:04X}",
                                 self.display_address(next_routine)
