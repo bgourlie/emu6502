@@ -32,7 +32,9 @@ struct Value<const VALUE: u8>;
 
 impl<M: Mapper, const VALUE: u8> AddressingMode<M, u8, ()> for Value<{ VALUE }> {
     fn read(_cpu: &mut Cpu<M>) -> u8 {
-        { VALUE }
+        {
+            VALUE
+        }
     }
 }
 
@@ -59,7 +61,9 @@ impl<M: Mapper, const ADDR: u16> AddressingMode<M, (), u8> for Address<{ ADDR }>
 
 impl<M: Mapper, const ADDR: u16> AddressingMode<M, u16, ()> for Address<{ ADDR }> {
     fn read(_cpu: &mut Cpu<M>) -> u16 {
-        { ADDR }
+        {
+            ADDR
+        }
     }
 }
 
@@ -67,7 +71,9 @@ struct RelativeAddress<const ADDR: i8>;
 
 impl<M: Mapper, const ADDR: i8> AddressingMode<M, i8, ()> for RelativeAddress<{ ADDR }> {
     fn read(_cpu: &mut Cpu<M>) -> i8 {
-        { ADDR }
+        {
+            ADDR
+        }
     }
 }
 
@@ -98,9 +104,9 @@ mod branch {
     }
 
     fn test_branch_not_crossing_page_boundary_negative_offset<B, F>(setup: F)
-        where
-            B: Branch<TestMapper>,
-            F: Fn(&mut Cpu<TestMapper>),
+    where
+        B: Branch<TestMapper>,
+        F: Fn(&mut Cpu<TestMapper>),
     {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_pc(43656);
@@ -110,9 +116,9 @@ mod branch {
     }
 
     fn test_no_branch<B, F>(setup: F)
-        where
-            B: Branch<TestMapper>,
-            F: Fn(&mut Cpu<TestMapper>),
+    where
+        B: Branch<TestMapper>,
+        F: Fn(&mut Cpu<TestMapper>),
     {
         let (mut cpu, _) = new_test_cpu();
         cpu.set_pc(30);
@@ -141,7 +147,7 @@ mod branch {
             cpu.set_sign(true);
         });
     }
-    
+
     #[test]
     fn bcc_not_crossing_page_boundary_positive_offset() {
         test_branch_not_crossing_page_boundary_positive_offset::<Bcc, _>(|ref mut cpu| {
@@ -1009,7 +1015,6 @@ mod shifts {
     fn asl_3() {
         shift_left_base_3(asl);
     }
-
 
     fn rol(cpu: &mut Cpu<TestMapper>, mem: Memory, val: u8) -> (u8, bool) {
         mem.borrow_mut()[0x6666] = val;

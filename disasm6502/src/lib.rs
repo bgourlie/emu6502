@@ -411,7 +411,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
         let opcode_location = {
             let opcode_location = self.cur_pointer()?;
 
-            if self.decoded_bytes.contains(opcode_location as usize) {
+            if self.is_decoded(opcode_location) {
                 if let Some(next_opcode_location) = self.unexplored.pop() {
                     info!(
                         "Already decoded {:04X}. Moving to branch target {:04X}",
@@ -449,7 +449,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
                         }
                     }?;
 
-                    if !self.decoded_bytes.contains(target_address as usize) {
+                    if !self.is_decoded(target_address) {
                         info!(
                             "Pushed branch target onto return stack: {:04X}",
                             self.display_address(target_address)
@@ -462,7 +462,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
                 AddressingMode::Accumulator => Ok(Operand::Accumulator),
                 AddressingMode::Absolute => {
                     let addr = self.read_u16()?;
-                    if opcode == Opcode::Jsr && !self.decoded_bytes.contains(addr as usize) {
+                    if opcode == Opcode::Jsr && !self.is_decoded(addr) {
                         info!("Pushed routine pointer onto routine stack: {:04X}", addr);
 
                         // We subtract the pc_start to map from address space to assembly
@@ -504,25 +504,33 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
 
     fn read_u8(&mut self) -> Result<u8, Error> {
         let cur_pointer = self.cur_pointer()?;
-        self.decoded_bytes.insert(usize::from(cur_pointer));
+        self.mark_decoded(cur_pointer);
         Ok(self.rom.read_u8()?)
     }
 
     fn read_i8(&mut self) -> Result<i8, Error> {
         let cur_pointer = self.cur_pointer()?;
-        self.decoded_bytes.insert(usize::from(cur_pointer));
+        self.mark_decoded(cur_pointer);
         Ok(self.rom.read_i8()?)
     }
 
     fn read_u16(&mut self) -> Result<u16, Error> {
         let cur_pointer = self.cur_pointer()?;
-        self.decoded_bytes.insert(usize::from(cur_pointer));
+        self.mark_decoded(cur_pointer);
         if self.valid_address(u64::from(cur_pointer) + 1) {
-            self.decoded_bytes.insert(usize::from(cur_pointer + 1));
+            self.mark_decoded(cur_pointer + 1);
             Ok(self.rom.read_u16::<LittleEndian>()?)
         } else {
             Err(DisassemblyError::ReadOutOfBounds.into())
         }
+    }
+
+    fn mark_decoded(&mut self, addr: u16) {
+        self.decoded_bytes.insert(usize::from(addr));
+    }
+
+    fn is_decoded(&self, addr: u16) -> bool {
+        self.decoded_bytes.contains(usize::from(addr))
     }
 
     fn cur_pointer(&mut self) -> Result<u16, Error> {
