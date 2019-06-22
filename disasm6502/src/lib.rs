@@ -408,93 +408,101 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
     }
 
     pub fn read(&mut self) -> Result<Option<(u16, Instruction)>, Error> {
-        let opcode_location = {
-            let opcode_location = self.cur_pointer()?;
-
-            if self.is_decoded(opcode_location) {
-                if let Some(next_opcode_location) = self.unexplored.pop() {
-                    info!(
-                        "Already decoded {:04X}. Moving to branch target {:04X}",
-                        opcode_location, next_opcode_location
-                    );
-                    self.jump_to(next_opcode_location)?;
-                    next_opcode_location
-                } else {
-                    return Ok(None);
-                }
-            } else {
-                opcode_location
-            }
-        };
-
-        let opcode_index = self.read_u8()? as usize;
-        if let Some((opcode, addressing_mode)) = OPCODES[opcode_index] {
-            let operand: Result<Operand, Error> = match addressing_mode {
-                AddressingMode::IndirectIndexed => Ok(Operand::IndirectIndexed(self.read_u8()?)),
-                AddressingMode::Indirect => Ok(Operand::Indirect(self.read_u16()?)),
-                AddressingMode::IndexedIndirect => Ok(Operand::IndexedIndirect(self.read_u8()?)),
-                AddressingMode::Immediate => Ok(Operand::Immediate(self.read_u8()?)),
-                AddressingMode::Relative => {
-                    let rel_addr = self.read_i8()?;
-
-                    let target_address = {
-                        let addr = self.cur_pointer()? as isize + rel_addr as isize;
-
-                        if addr < 0 || addr >= std::u16::MAX as isize {
-                            Err(DisassemblyError::BranchOutOfBounds {
-                                branch_location: opcode_location as u16,
-                            })
-                        } else {
-                            Ok(addr as u16)
-                        }
-                    }?;
-
-                    if !self.is_decoded(target_address) {
-                        info!(
-                            "Pushed branch target onto return stack: {:04X}",
-                            self.display_address(target_address)
-                        );
-                        self.unexplored.push(target_address as u16);
+        if let Some(opcode_location) = self.next_opcode_location()? {
+            let opcode_index = self.read_u8()? as usize;
+            if let Some((opcode, addressing_mode)) = OPCODES[opcode_index] {
+                let operand: Result<Operand, Error> = match addressing_mode {
+                    AddressingMode::IndirectIndexed => {
+                        Ok(Operand::IndirectIndexed(self.read_u8()?))
                     }
-
-                    Ok(Operand::Relative(rel_addr))
-                }
-                AddressingMode::Accumulator => Ok(Operand::Accumulator),
-                AddressingMode::Absolute => {
-                    let addr = self.read_u16()?;
-                    if opcode == Opcode::Jsr && !self.is_decoded(addr) {
-                        info!("Pushed routine pointer onto routine stack: {:04X}", addr);
-
-                        // We subtract the pc_start to map from address space to assembly
-                        // stream position.
-                        self.unexplored.push(addr as u16 - self.pc_start);
+                    AddressingMode::Indirect => Ok(Operand::Indirect(self.read_u16()?)),
+                    AddressingMode::IndexedIndirect => {
+                        Ok(Operand::IndexedIndirect(self.read_u8()?))
                     }
-                    Ok(Operand::Absolute(addr))
-                }
-                AddressingMode::AbsoluteX => Ok(Operand::AbsoluteX(self.read_u16()?)),
-                AddressingMode::AbsoluteY => Ok(Operand::AbsoluteY(self.read_u16()?)),
-                AddressingMode::ZeroPage => Ok(Operand::ZeroPage(self.read_u8()?)),
-                AddressingMode::ZeroPageX => Ok(Operand::ZeroPageX(self.read_u8()?)),
-                AddressingMode::ZeroPageY => Ok(Operand::ZeroPageY(self.read_u8()?)),
-                AddressingMode::Implied => match opcode {
-                    Opcode::Brk => Ok(Operand::BreakByte(self.read_u8()?)),
-                    Opcode::Rts => {
-                        if let Some(next_routine) = self.unexplored.pop() {
+                    AddressingMode::Immediate => Ok(Operand::Immediate(self.read_u8()?)),
+                    AddressingMode::Relative => {
+                        let rel_addr = self.read_i8()?;
+
+                        let target_address = {
+                            let addr = self.cur_pointer()? as isize + rel_addr as isize;
+
+                            if addr < 0 || addr >= std::u16::MAX as isize {
+                                Err(DisassemblyError::BranchOutOfBounds {
+                                    branch_location: opcode_location as u16,
+                                })
+                            } else {
+                                Ok(addr as u16)
+                            }
+                        }?;
+
+                        if !self.is_decoded(target_address) {
                             info!(
-                                "End subroutine, popped next routine at {:04X}",
-                                self.display_address(next_routine)
+                                "Pushed branch target onto return stack: {:04X}",
+                                self.display_address(target_address)
                             );
-                            self.jump_to(next_routine)?;
+                            self.unexplored.push(target_address as u16);
                         }
-                        Ok(Operand::Implied)
-                    }
-                    _ => Ok(Operand::Implied),
-                },
-            };
 
-            Ok(Some((opcode_location, Instruction::new(opcode, operand?))))
+                        Ok(Operand::Relative(rel_addr))
+                    }
+                    AddressingMode::Accumulator => Ok(Operand::Accumulator),
+                    AddressingMode::Absolute => {
+                        let addr = self.read_u16()?;
+                        if opcode == Opcode::Jsr && !self.is_decoded(addr) {
+                            info!("Pushed routine pointer onto routine stack: {:04X}", addr);
+
+                            // We subtract the pc_start to map from address space to assembly
+                            // stream position.
+                            self.unexplored.push(addr as u16 - self.pc_start);
+                        }
+                        Ok(Operand::Absolute(addr))
+                    }
+                    AddressingMode::AbsoluteX => Ok(Operand::AbsoluteX(self.read_u16()?)),
+                    AddressingMode::AbsoluteY => Ok(Operand::AbsoluteY(self.read_u16()?)),
+                    AddressingMode::ZeroPage => Ok(Operand::ZeroPage(self.read_u8()?)),
+                    AddressingMode::ZeroPageX => Ok(Operand::ZeroPageX(self.read_u8()?)),
+                    AddressingMode::ZeroPageY => Ok(Operand::ZeroPageY(self.read_u8()?)),
+                    AddressingMode::Implied => match opcode {
+                        Opcode::Brk => Ok(Operand::BreakByte(self.read_u8()?)),
+                        Opcode::Rts => {
+                            if let Some(next_routine) = self.unexplored.pop() {
+                                info!(
+                                    "End subroutine, popped next routine at {:04X}",
+                                    self.display_address(next_routine)
+                                );
+                                self.jump_to(next_routine)?;
+                            }
+                            Ok(Operand::Implied)
+                        }
+                        _ => Ok(Operand::Implied),
+                    },
+                };
+
+                Ok(Some((opcode_location, Instruction::new(opcode, operand?))))
+            } else {
+                Err(DisassemblyError::IllegalOpcode { opcode_location }.into())
+            }
         } else {
-            Err(DisassemblyError::IllegalOpcode { opcode_location }.into())
+            Ok(None)
+        }
+    }
+
+    fn next_opcode_location(&mut self) -> Result<Option<u16>, Error> {
+        let opcode_location = self.cur_pointer()?;
+
+        if self.is_decoded(opcode_location) {
+            if let Some(next_opcode_location) = self.unexplored.pop() {
+                info!(
+                    "Already decoded {:04X}. Moving to {:04X}",
+                    opcode_location, next_opcode_location
+                );
+                self.jump_to(next_opcode_location)?;
+                Ok(Some(next_opcode_location))
+            } else {
+                Ok(None)
+            }
+        } else {
+            Ok(Some(opcode_location))
         }
     }
 
