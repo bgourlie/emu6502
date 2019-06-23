@@ -408,7 +408,7 @@ impl Offset {
     fn to_address_space_offset(&self, stream_offset: u16) -> Result<u16, Error> {
         match *self {
             Offset::Stream(addr) => {
-                if usize::from(addr) + usize::from(stream_offset) > usize::from(std::u16::MAX) {
+                if usize::from(addr) + usize::from(stream_offset) < usize::from(std::u16::MAX) {
                     Ok(addr + stream_offset)
                 } else {
                     Err(DisassemblyError::OffsetOutOfBounds.into())
