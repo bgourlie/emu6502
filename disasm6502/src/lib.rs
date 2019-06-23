@@ -4,7 +4,7 @@ use {
     bit_set::BitSet,
     byteorder::{LittleEndian, ReadBytesExt},
     failure::{Error, Fail},
-    log::{info, trace},
+    log::info,
     std::io::{Seek, SeekFrom},
 };
 
@@ -289,8 +289,8 @@ enum DisassemblyError {
     #[fail(display = "Branch out of bounds: {:X?}", branch_location)]
     BranchOutOfBounds { branch_location: u16 },
 
-    #[fail(display = "Read out of bounds")]
-    ReadOutOfBounds,
+    #[fail(display = "Offset out of bounds")]
+    OffsetOutOfBounds,
 
     #[fail(display = "Illegal opcode: {:X?}", opcode_location)]
     IllegalOpcode { opcode_location: u16 },
@@ -387,28 +387,70 @@ impl Instruction {
     }
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+enum Offset {
+    Stream(u16),
+    AddressSpace(u16),
+}
+
+impl std::ops::Add<u16> for Offset {
+    type Output = Self;
+
+    fn add(self, rhs: u16) -> Self::Output {
+        match self {
+            Offset::Stream(addr) => Offset::Stream(addr + rhs),
+            Offset::AddressSpace(addr) => Offset::AddressSpace(addr + rhs),
+        }
+    }
+}
+
+impl Offset {
+    fn to_address_space_offset(&self, stream_offset: u16) -> Result<u16, Error> {
+        match *self {
+            Offset::Stream(addr) => {
+                if usize::from(addr) + usize::from(stream_offset) > usize::from(std::u16::MAX) {
+                    Ok(addr + stream_offset)
+                } else {
+                    Err(DisassemblyError::OffsetOutOfBounds.into())
+                }
+            }
+            Offset::AddressSpace(addr) => Ok(addr),
+        }
+    }
+
+    fn to_stream_offset(&self, stream_offset: u16) -> Result<u16, Error> {
+        match *self {
+            Offset::Stream(addr) => Ok(addr),
+            Offset::AddressSpace(addr) => {
+                if addr as isize - (stream_offset as isize) < 0 {
+                    Err(DisassemblyError::OffsetOutOfBounds.into())
+                } else {
+                    Ok(addr - stream_offset)
+                }
+            }
+        }
+    }
+}
+
 pub struct Disassembler<'a, R: ReadBytesExt + Seek> {
     rom: &'a mut R,
     decoded_bytes: BitSet,
-    pc_start: u16,
-    unexplored: Vec<u16>,
+    start_offset: u16,
+    unexplored: Vec<Offset>,
 }
 
 impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
-    pub fn new(rom: &'a mut R, decode_start: u16, pc_start: u16) -> Result<Self, Error> {
-        trace!("{}", rom.stream_position()?);
-        rom.seek(SeekFrom::Start(u64::from(decode_start)))?;
-
-        Ok(Disassembler {
+    pub fn new(rom: &'a mut R, pc_start: u16) -> Self {
+        Disassembler {
             rom,
-            pc_start,
+            start_offset: pc_start,
             decoded_bytes: BitSet::new(),
             unexplored: Vec::new(),
-        })
+        }
     }
 
     pub fn read(&mut self) -> Result<Option<(u16, Instruction)>, Error> {
-        if let Some(opcode_location) = self.next_opcode_location()? {
+        if let Some(opcode_offset) = self.next_opcode_offset()? {
             let opcode_index = self.read_u8()? as usize;
             if let Some((opcode, addressing_mode)) = OPCODES[opcode_index] {
                 let operand: Result<Operand, Error> = match addressing_mode {
@@ -421,41 +463,46 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
                     }
                     AddressingMode::Immediate => Ok(Operand::Immediate(self.read_u8()?)),
                     AddressingMode::Relative => {
-                        let rel_addr = self.read_i8()?;
+                        let relative_offset = self.read_i8()?;
 
-                        let target_address = {
-                            let addr = self.cur_pointer()? as isize + rel_addr as isize;
+                        let target_offset: Result<Offset, Error> = {
+                            let addr = self.cur_offset()?.to_stream_offset(self.start_offset)?
+                                as isize
+                                + relative_offset as isize;
 
                             if addr < 0 || addr >= std::u16::MAX as isize {
                                 Err(DisassemblyError::BranchOutOfBounds {
-                                    branch_location: opcode_location as u16,
-                                })
+                                    branch_location: self.to_address_space_offset(opcode_offset)?,
+                                }
+                                .into())
                             } else {
-                                Ok(addr as u16)
+                                Ok(Offset::Stream(addr as u16))
                             }
-                        }?;
+                        };
 
-                        if !self.is_decoded(target_address) {
+                        let target_offset = target_offset?;
+
+                        if !self.is_decoded(target_offset)? {
                             info!(
                                 "Pushed branch target onto return stack: {:04X}",
-                                self.display_address(target_address)
+                                self.to_address_space_offset(target_offset)?
                             );
-                            self.unexplored.push(target_address as u16);
+                            self.unexplored.push(target_offset);
                         }
 
-                        Ok(Operand::Relative(rel_addr))
+                        Ok(Operand::Relative(relative_offset))
                     }
                     AddressingMode::Accumulator => Ok(Operand::Accumulator),
                     AddressingMode::Absolute => {
-                        let addr = self.read_u16()?;
-                        if opcode == Opcode::Jsr && !self.is_decoded(addr) {
-                            info!("Pushed routine pointer onto routine stack: {:04X}", addr);
-
-                            // We subtract the pc_start to map from address space to assembly
-                            // stream position.
-                            self.unexplored.push(addr as u16 - self.pc_start);
+                        let addr = Offset::AddressSpace(self.read_u16()?);
+                        if opcode == Opcode::Jsr && !self.is_decoded(addr)? {
+                            info!(
+                                "Pushed routine pointer onto routine stack: {:04X}",
+                                self.to_address_space_offset(addr)?
+                            );
+                            self.unexplored.push(addr);
                         }
-                        Ok(Operand::Absolute(addr))
+                        Ok(Operand::Absolute(self.to_address_space_offset(addr)?))
                     }
                     AddressingMode::AbsoluteX => Ok(Operand::AbsoluteX(self.read_u16()?)),
                     AddressingMode::AbsoluteY => Ok(Operand::AbsoluteY(self.read_u16()?)),
@@ -468,7 +515,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
                             if let Some(next_routine) = self.unexplored.pop() {
                                 info!(
                                     "End subroutine, popped next routine at {:04X}",
-                                    self.display_address(next_routine)
+                                    self.to_address_space_offset(next_routine)?
                                 );
                                 self.jump_to(next_routine)?;
                             }
@@ -478,23 +525,38 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
                     },
                 };
 
-                Ok(Some((opcode_location, Instruction::new(opcode, operand?))))
+                Ok(Some((
+                    self.to_address_space_offset(opcode_offset)?,
+                    Instruction::new(opcode, operand?),
+                )))
             } else {
-                Err(DisassemblyError::IllegalOpcode { opcode_location }.into())
+                Err(DisassemblyError::IllegalOpcode {
+                    opcode_location: self.to_address_space_offset(opcode_offset)?,
+                }
+                .into())
             }
         } else {
             Ok(None)
         }
     }
 
-    fn next_opcode_location(&mut self) -> Result<Option<u16>, Error> {
-        let opcode_location = self.cur_pointer()?;
+    fn to_stream_offset(&self, offset: Offset) -> Result<u16, Error> {
+        offset.to_stream_offset(self.start_offset)
+    }
 
-        if self.is_decoded(opcode_location) {
+    fn to_address_space_offset(&self, offset: Offset) -> Result<u16, Error> {
+        offset.to_address_space_offset(self.start_offset)
+    }
+
+    fn next_opcode_offset(&mut self) -> Result<Option<Offset>, Error> {
+        let opcode_location = self.cur_offset()?;
+
+        if self.is_decoded(opcode_location)? {
             if let Some(next_opcode_location) = self.unexplored.pop() {
                 info!(
                     "Already decoded {:04X}. Moving to {:04X}",
-                    opcode_location, next_opcode_location
+                    self.to_address_space_offset(opcode_location)?,
+                    self.to_address_space_offset(next_opcode_location)?
                 );
                 self.jump_to(next_opcode_location)?;
                 Ok(Some(next_opcode_location))
@@ -506,56 +568,49 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
         }
     }
 
-    fn jump_to(&mut self, addr: u16) -> Result<u64, std::io::Error> {
-        self.rom.seek(SeekFrom::Start(u64::from(addr)))
+    fn jump_to(&mut self, addr: Offset) -> Result<(), Error> {
+        self.rom
+            .seek(SeekFrom::Start(u64::from(self.to_stream_offset(addr)?)))?;
+        Ok(())
     }
 
     fn read_u8(&mut self) -> Result<u8, Error> {
-        let cur_pointer = self.cur_pointer()?;
-        self.mark_decoded(cur_pointer);
+        let cur_pointer = self.cur_offset()?;
+        self.mark_decoded(cur_pointer)?;
         Ok(self.rom.read_u8()?)
     }
 
     fn read_i8(&mut self) -> Result<i8, Error> {
-        let cur_pointer = self.cur_pointer()?;
-        self.mark_decoded(cur_pointer);
+        let cur_pointer = self.cur_offset()?;
+        self.mark_decoded(cur_pointer)?;
         Ok(self.rom.read_i8()?)
     }
 
     fn read_u16(&mut self) -> Result<u16, Error> {
-        let cur_pointer = self.cur_pointer()?;
-        self.mark_decoded(cur_pointer);
-        if self.valid_address(u64::from(cur_pointer) + 1) {
-            self.mark_decoded(cur_pointer + 1);
-            Ok(self.rom.read_u16::<LittleEndian>()?)
-        } else {
-            Err(DisassemblyError::ReadOutOfBounds.into())
-        }
+        let cur_pointer = self.cur_offset()?;
+        self.mark_decoded(cur_pointer)?;
+        self.mark_decoded(cur_pointer + 1)?;
+        Ok(self.rom.read_u16::<LittleEndian>()?)
     }
 
-    fn mark_decoded(&mut self, addr: u16) {
+    fn mark_decoded(&mut self, addr: Offset) -> Result<(), Error> {
+        let addr = self.to_address_space_offset(addr)?;
         self.decoded_bytes.insert(usize::from(addr));
+        Ok(())
     }
 
-    fn is_decoded(&self, addr: u16) -> bool {
-        self.decoded_bytes.contains(usize::from(addr))
+    fn is_decoded(&self, addr: Offset) -> Result<bool, Error> {
+        let addr = self.to_address_space_offset(addr)?;
+        Ok(self.decoded_bytes.contains(usize::from(addr)))
     }
 
-    fn cur_pointer(&mut self) -> Result<u16, Error> {
+    fn cur_offset(&mut self) -> Result<Offset, Error> {
         let cur_pointer = self.rom.stream_position()?;
-        if self.valid_address(cur_pointer) {
-            Ok(cur_pointer as u16)
+        if cur_pointer < u64::from(std::u16::MAX) {
+            Ok(Offset::Stream(cur_pointer as u16))
         } else {
-            Err(DisassemblyError::ReadOutOfBounds.into())
+            Err(DisassemblyError::OffsetOutOfBounds.into())
         }
-    }
-
-    fn valid_address(&self, addr: u64) -> bool {
-        u64::from(self.pc_start) + addr < std::u16::MAX.into()
-    }
-
-    fn display_address(&self, addr: u16) -> u16 {
-        addr + self.pc_start
     }
 }
 
