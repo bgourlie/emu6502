@@ -427,10 +427,10 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
                         Addressing::ZeroPageY => Ok(Operand::ZeroPageY(self.read_u8()?)),
                         Addressing::Implied => match opcode {
                             Op::Brk => Ok(Operand::BreakByte(self.read_u8()?)),
-                            Op::Rts => {
-                                // Seek back one byte so we don't decode past the Rts. The next call to
-                                // read() will see that this offset has been decoded and pop the next
-                                // unexplored offset.
+                            Op::Rts | Op::Rti => {
+                                // Seek back one byte so we don't decode past the return. The next
+                                // call to read() will see that this offset has been decoded and pop
+                                // the next unexplored offset.
                                 self.rom.seek(SeekFrom::Current(-1))?;
                                 Ok(Operand::Implied)
                             }
