@@ -595,7 +595,24 @@ impl Disassembly {
     pub fn display_at(&self, offset: u16) -> Option<String> {
         match self.address_space[usize::from(offset)] {
             Decoded::Unmapped | Decoded::NoInstruction => None,
-            Decoded::Instruction(instr) => Some(format!("{:?}", instr.opcode)),
+            Decoded::Instruction(instr) => {
+                let operand = match instr.operand {
+                    Operand::Absolute(addr) => format!("${:04X}", addr),
+                    Operand::AbsoluteX(addr) => format!("${:04X},X", addr),
+                    Operand::AbsoluteY(addr) => format!("${:04X},Y", addr),
+                    Operand::Accumulator => "A".to_owned(),
+                    Operand::Immediate(val) => format!("#${:02X}", val),
+                    Operand::Implied | Operand::BreakByte(_) => "".to_owned(),
+                    Operand::Indirect(addr) => format!("(${:04X})", addr),
+                    Operand::IndexedIndirect(addr) => format!("(${:04X},X)", addr),
+                    Operand::IndirectIndexed(addr) => format!("(${:04X}),Y", addr),
+                    Operand::Relative(offset) => format!("{}", offset), // TODO: label
+                    Operand::ZeroPage(addr) => format!("${:02X}", addr),
+                    Operand::ZeroPageX(addr) => format!("${:02X},X", addr),
+                    Operand::ZeroPageY(addr) => format!("${:02X},Y", addr),
+                };
+                Some(format!("{:?} {}", instr.opcode, operand))
+            }
         }
     }
 }
