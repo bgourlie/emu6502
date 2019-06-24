@@ -246,8 +246,8 @@ impl std::ops::Add<u16> for Offset {
 }
 
 impl Offset {
-    fn to_address_space_offset(&self, stream_offset: u16) -> Result<u16, Error> {
-        match *self {
+    fn to_address_space_offset(self, stream_offset: u16) -> Result<u16, Error> {
+        match self {
             Offset::Stream(addr) => {
                 if usize::from(addr) + usize::from(stream_offset) < usize::from(std::u16::MAX) {
                     Ok(addr + stream_offset)
@@ -259,8 +259,8 @@ impl Offset {
         }
     }
 
-    fn to_stream_offset(&self, stream_offset: u16) -> Result<u16, Error> {
-        match *self {
+    fn to_stream_offset(self, stream_offset: u16) -> Result<u16, Error> {
+        match self {
             Offset::Stream(addr) => Ok(addr),
             Offset::AddressSpace(addr) => {
                 if addr as isize - (stream_offset as isize) < 0 {
@@ -471,11 +471,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
         match offset {
             Offset::Stream(_) => true,
             Offset::AddressSpace(addr) => {
-                if addr < self.address_space_start_offset || addr >= self.address_space_end_offset {
-                    false
-                } else {
-                    true
-                }
+                !(addr < self.address_space_start_offset || addr >= self.address_space_end_offset)
             }
         }
     }
@@ -569,7 +565,7 @@ pub struct Disassembly {
 }
 
 impl Disassembly {
-    pub fn from_rom<'a, R: ReadBytesExt + Seek>(
+    pub fn from_rom<R: ReadBytesExt + Seek>(
         rom: &mut R,
         address_space_start_offset: u16,
         decode_start: u16,
