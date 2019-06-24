@@ -4,8 +4,11 @@ use {
     bit_set::BitSet,
     byteorder::{LittleEndian, ReadBytesExt},
     failure::{Error, Fail},
-    log::info,
-    std::io::{Seek, SeekFrom},
+    log::{info, warn},
+    std::{
+        io::{Seek, SeekFrom},
+        iter::IntoIterator,
+    },
 };
 
 #[rustfmt::skip]
@@ -263,12 +266,47 @@ impl Offset {
     }
 }
 
+pub struct DisassemblerIterator<'a, R: ReadBytesExt + Seek> {
+    inner: Disassembler<'a, R>,
+    encountered_err: bool,
+}
+
+impl<'a, R: ReadBytesExt + Seek> Iterator for DisassemblerIterator<'a, R> {
+    type Item = (u16, Decoded);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.encountered_err {
+            None
+        } else {
+            match self.inner.decode_next() {
+                Ok(val) => val,
+                Err(err) => {
+                    warn!("Disassembly ended due to error: {:?}", err);
+                    None
+                }
+            }
+        }
+    }
+}
+
 pub struct Disassembler<'a, R: ReadBytesExt + Seek> {
     rom: &'a mut R,
     address_space_start_offset: u16,
     address_space_end_offset: u16,
     decoded_bytes: BitSet,
     unexplored: Vec<Offset>,
+}
+
+impl<'a, R: ReadBytesExt + Seek> IntoIterator for Disassembler<'a, R> {
+    type Item = (u16, Decoded);
+    type IntoIter = DisassemblerIterator<'a, R>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        DisassemblerIterator {
+            inner: self,
+            encountered_err: false,
+        }
+    }
 }
 
 impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
@@ -334,7 +372,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
         }
     }
 
-    pub fn read(&mut self) -> Result<Option<(u16, Decoded)>, Error> {
+    pub fn decode_next(&mut self) -> Result<Option<(u16, Decoded)>, Error> {
         if let Some(opcode_offset) = self.next_opcode_offset()? {
             if self.is_mapped(opcode_offset) {
                 self.jump_to(opcode_offset)?;
