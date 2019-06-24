@@ -265,29 +265,72 @@ impl Offset {
 
 pub struct Disassembler<'a, R: ReadBytesExt + Seek> {
     rom: &'a mut R,
+    address_space_start_offset: u16,
+    address_space_end_offset: u16,
     decoded_bytes: BitSet,
-    address_space_offset: u16,
     unexplored: Vec<Offset>,
 }
 
 impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
     pub fn new(
         rom: &'a mut R,
-        address_space_offset: u16,
+        address_space_start_offset: u16,
         decode_start: u16,
     ) -> Result<Self, Error> {
-        if decode_start < address_space_offset {
+        if decode_start < address_space_start_offset {
             Err(DisassemblyError::InvalidDecodeStart.into())
         } else {
-            rom.seek(SeekFrom::Start(
-                u64::from(decode_start) - u64::from(address_space_offset),
-            ))?;
-            Ok(Disassembler {
+            let address_space_end_offset =
+                rom.stream_len()? + u64::from(address_space_start_offset);
+            let address_space_end_offset = if address_space_end_offset > u64::from(std::u16::MAX) {
+                std::u16::MAX
+            } else {
+                address_space_end_offset as u16
+            };
+
+            info!(
+                "Disassembling ROM mapped from {:04X} to {:04X}",
+                address_space_start_offset, address_space_end_offset
+            );
+
+            let mut disassembler = Disassembler {
                 rom,
-                address_space_offset,
+                address_space_start_offset,
+                address_space_end_offset,
                 decoded_bytes: BitSet::new(),
                 unexplored: Vec::new(),
-            })
+            };
+
+            if disassembler.is_mapped(Offset::AddressSpace(0xfffa)) {
+                disassembler.jump_to(Offset::AddressSpace(0xfffa))?;
+                let nmi_vector = disassembler.read_u16()?;
+                disassembler.push_unexplored(Offset::AddressSpace(nmi_vector))?;
+                info!("NMI vector detected at {:04X}", nmi_vector);
+            } else {
+                info!("NMI vector not mapped");
+            }
+
+            if disassembler.is_mapped(Offset::AddressSpace(0xfffc)) {
+                disassembler.jump_to(Offset::AddressSpace(0xfffc))?;
+                let reset_vector = disassembler.read_u16()?;
+                disassembler.push_unexplored(Offset::AddressSpace(reset_vector))?;
+                info!("Reset vector detected at {:04X}", reset_vector);
+            } else {
+                info!("Reset vector not mapped");
+            }
+
+            if disassembler.is_mapped(Offset::AddressSpace(0xfffe)) {
+                disassembler.jump_to(Offset::AddressSpace(0xfffe))?;
+                let irq_vector = disassembler.read_u16()?;
+                disassembler.push_unexplored(Offset::AddressSpace(irq_vector))?;
+                info!("IRQ vector detected at {:04X}", irq_vector);
+            } else {
+                info!("IRQ vector not mapped");
+            }
+
+            disassembler.jump_to(Offset::AddressSpace(decode_start))?;
+
+            Ok(disassembler)
         }
     }
 
@@ -312,7 +355,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
                             let target_offset: Result<Offset, Error> = {
                                 let addr = self
                                     .cur_offset()?
-                                    .to_stream_offset(self.address_space_offset)?
+                                    .to_stream_offset(self.address_space_start_offset)?
                                     as isize
                                     + relative_offset as isize;
 
@@ -383,8 +426,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
         match offset {
             Offset::Stream(_) => true,
             Offset::AddressSpace(addr) => {
-                // TODO: Check if the rom maps to the end of the address space
-                if addr < self.address_space_offset {
+                if addr < self.address_space_start_offset || addr >= self.address_space_end_offset {
                     false
                 } else {
                     true
@@ -405,11 +447,11 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
     }
 
     fn to_stream_offset(&self, offset: Offset) -> Result<u16, Error> {
-        offset.to_stream_offset(self.address_space_offset)
+        offset.to_stream_offset(self.address_space_start_offset)
     }
 
     fn to_address_space_offset(&self, offset: Offset) -> Result<u16, Error> {
-        offset.to_address_space_offset(self.address_space_offset)
+        offset.to_address_space_offset(self.address_space_start_offset)
     }
 
     fn next_opcode_offset(&mut self) -> Result<Option<Offset>, Error> {
