@@ -6,8 +6,10 @@ use {
     failure::{Error, Fail},
     log::{info, warn},
     std::{
+        cmp,
         io::{Seek, SeekFrom},
         iter::IntoIterator,
+        u16,
     },
 };
 
@@ -249,7 +251,7 @@ impl Offset {
     fn to_address_space_offset(self, stream_offset: u16) -> Result<u16, Error> {
         match self {
             Offset::Stream(addr) => {
-                if usize::from(addr) + usize::from(stream_offset) < usize::from(std::u16::MAX) {
+                if usize::from(addr) + usize::from(stream_offset) < usize::from(u16::MAX) {
                     Ok(addr + stream_offset)
                 } else {
                     Err(DisassemblyError::OffsetOutOfBounds.into())
@@ -325,13 +327,10 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
         if decode_start < address_space_start_offset {
             Err(DisassemblyError::InvalidDecodeStart.into())
         } else {
-            let address_space_end_offset =
-                rom.stream_len()? + u64::from(address_space_start_offset);
-            let address_space_end_offset = if address_space_end_offset > u64::from(std::u16::MAX) {
-                std::u16::MAX
-            } else {
-                address_space_end_offset as u16
-            };
+            let address_space_end_offset = cmp::min(
+                rom.stream_len()? + u64::from(address_space_start_offset),
+                u64::from(u16::MAX),
+            ) as u16;
 
             info!(
                 "Disassembling ROM mapped from {:04X} to {:04X}",
@@ -404,7 +403,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
                                     as isize
                                     + relative_offset as isize;
 
-                                if addr < 0 || addr >= std::u16::MAX as isize {
+                                if addr < 0 || addr >= u16::MAX as isize {
                                     Err(DisassemblyError::BranchOutOfBounds {
                                         branch_location: self
                                             .to_address_space_offset(opcode_offset)?,
@@ -552,7 +551,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
 
     fn cur_offset(&mut self) -> Result<Offset, Error> {
         let cur_pointer = self.rom.stream_position()?;
-        if cur_pointer < u64::from(std::u16::MAX) {
+        if cur_pointer < u64::from(u16::MAX) {
             Ok(Offset::Stream(cur_pointer as u16))
         } else {
             Err(DisassemblyError::OffsetOutOfBounds.into())
@@ -561,7 +560,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
 }
 
 pub struct Disassembly {
-    address_space: Box<[Decoded; std::u16::MAX as usize]>,
+    address_space: Box<[Decoded; u16::MAX as usize]>,
 }
 
 impl Disassembly {
@@ -570,7 +569,7 @@ impl Disassembly {
         address_space_start_offset: u16,
         decode_start: u16,
     ) -> Result<Self, Error> {
-        let mut address_space = Box::new([Decoded::default(); std::u16::MAX as usize]);
+        let mut address_space = Box::new([Decoded::default(); u16::MAX as usize]);
         let disassembler = Disassembler::new(rom, address_space_start_offset, decode_start)?;
         let start_offset = usize::from(disassembler.address_space_start_offset);
         let end_offset = usize::from(disassembler.address_space_end_offset);
