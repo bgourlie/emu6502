@@ -8,7 +8,9 @@ use {
 
 pub trait AddressingMode<M: Mapper, R: Copy + Clone + Debug, W: Copy + Clone + Debug> {
     fn read(cpu: &mut Cpu<M>) -> R;
-    fn write(_cpu: &mut Cpu<M>, _data: W) { unimplemented!() }
+    fn write(_cpu: &mut Cpu<M>, _data: W) {
+        unimplemented!()
+    }
     fn read_modify_write<F>(cpu: &mut Cpu<M>, modifier: F)
     where
         F: FnOnce(&mut Cpu<M>, R) -> W,
