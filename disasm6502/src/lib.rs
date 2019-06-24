@@ -206,7 +206,14 @@ pub enum Operand {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Decoded {
     Unmapped,
-    Mapped(Instruction),
+    NoInstruction,
+    Instruction(Instruction),
+}
+
+impl Default for Decoded {
+    fn default() -> Self {
+        Decoded::Unmapped
+    }
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -440,7 +447,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
 
                     Ok(Some((
                         self.to_address_space_offset(opcode_offset)?,
-                        Decoded::Mapped(Instruction::new(opcode, operand?)),
+                        Decoded::Instruction(Instruction::new(opcode, operand?)),
                     )))
                 } else {
                     Err(DisassemblyError::IllegalOpcode {
@@ -553,6 +560,42 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
             Ok(Offset::Stream(cur_pointer as u16))
         } else {
             Err(DisassemblyError::OffsetOutOfBounds.into())
+        }
+    }
+}
+
+pub struct Disassembly {
+    address_space: Box<[Decoded; std::u16::MAX as usize]>,
+}
+
+impl Disassembly {
+    pub fn from_rom<'a, R: ReadBytesExt + Seek>(
+        rom: &mut R,
+        address_space_start_offset: u16,
+        decode_start: u16,
+    ) -> Result<Self, Error> {
+        let mut address_space = Box::new([Decoded::default(); std::u16::MAX as usize]);
+        let disassembler = Disassembler::new(rom, address_space_start_offset, decode_start)?;
+        let start_offset = usize::from(disassembler.address_space_start_offset);
+        let end_offset = usize::from(disassembler.address_space_end_offset);
+
+        address_space
+            .iter_mut()
+            .skip(start_offset)
+            .take(end_offset - start_offset)
+            .for_each(|val| *val = Decoded::NoInstruction);
+
+        for (addr, instr) in disassembler {
+            address_space[addr as usize] = instr;
+        }
+
+        Ok(Disassembly { address_space })
+    }
+
+    pub fn display_at(&self, offset: u16) -> Option<String> {
+        match self.address_space[usize::from(offset)] {
+            Decoded::Unmapped | Decoded::NoInstruction => None,
+            Decoded::Instruction(instr) => Some(format!("{:?}", instr.opcode)),
         }
     }
 }
