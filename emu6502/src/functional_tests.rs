@@ -48,7 +48,7 @@ impl Mapper for TestMapper {
 fn opcodes() {
     let mut f = File::open("../test_roms/6502_functional_test.bin").unwrap();
     let disassembly = Disassembly::from_rom(&mut f, 0x400, 0x400).unwrap();
-    f.seek(SeekFrom::Start(0));
+    f.seek(SeekFrom::Start(0)).unwrap();
     let mut rom = Vec::<u8>::new();
     f.read_to_end(&mut rom).unwrap();
     let mut mapper = TestMapper::new();
