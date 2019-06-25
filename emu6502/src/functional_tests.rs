@@ -9,19 +9,17 @@ use {
 };
 
 const PC_START: u16 = 0x400;
-const MAX_CYCLES: usize = 100000000;
+const _MAX_CYCLES: usize = 100000000;
 const ADDRESSABLE_MEMORY: usize = 0x10000;
 
 pub struct TestMapper {
     addr: [u8; ADDRESSABLE_MEMORY],
-    elapsed_cycles: usize,
 }
 
 impl TestMapper {
     pub fn new() -> Self {
         TestMapper {
             addr: [0; ADDRESSABLE_MEMORY],
-            elapsed_cycles: 0,
         }
     }
 
