@@ -13,12 +13,24 @@ pub trait Instruction<M: Mapper, R: Copy + Clone + Debug, W: Copy + Clone + Debu
     fn execute<AM: AddressingMode<M, R, W>>(cpu: &mut Cpu<M>);
 }
 
+pub trait Compare<M: Mapper>: Instruction<M, u8, ()> {
+    fn lhs(cpu: &Cpu<M>) -> u8;
+
+    fn do_compare<AM: AddressingMode<M, u8, ()>>(cpu: &mut Cpu<M>) {
+        let lhs = Self::lhs(cpu);
+        let rhs = AM::read(cpu);
+        let res = i32::from(lhs) - i32::from(rhs);
+        cpu.set_carry(res & 0x100 == 0);
+        cpu.apply_sign_and_zero_flags(res as u8);
+    }
+}
+
 pub trait Branch<M: Mapper>: Instruction<M, i8, ()> {
     fn condition(cpu: &Cpu<M>) -> bool;
 
     fn branch<AM: AddressingMode<M, i8, ()>>(cpu: &mut Cpu<M>) {
+        let rel_addr = AM::read(cpu);
         if Self::condition(cpu) {
-            let rel_addr = AM::read(cpu);
             cpu.set_pc((i32::from(cpu.pc()) + i32::from(rel_addr)) as u16);
         }
     }
@@ -216,6 +228,51 @@ pub struct Clv;
 impl<M: Mapper> Instruction<M, (), ()> for Clv {
     fn execute<AM: AddressingMode<M, (), ()>>(cpu: &mut Cpu<M>) {
         cpu.set_overflow(false);
+    }
+}
+
+pub struct Cmp;
+
+impl<M: Mapper> Compare<M> for Cmp {
+    fn lhs(cpu: &Cpu<M>) -> u8 {
+        cpu.acc()
+    }
+}
+
+// TODO: Use blanket impl when impl specialization RFC lands
+impl<M: Mapper> Instruction<M, u8, ()> for Cmp {
+    fn execute<AM: AddressingMode<M, u8, ()>>(cpu: &mut Cpu<M>) {
+        Cmp::do_compare::<AM>(cpu)
+    }
+}
+
+pub struct Cpx;
+
+impl<M: Mapper> Compare<M> for Cpx {
+    fn lhs(cpu: &Cpu<M>) -> u8 {
+        cpu.x()
+    }
+}
+
+// TODO: Use blanket impl when impl specialization RFC lands
+impl<M: Mapper> Instruction<M, u8, ()> for Cpx {
+    fn execute<AM: AddressingMode<M, u8, ()>>(cpu: &mut Cpu<M>) {
+        Cpx::do_compare::<AM>(cpu)
+    }
+}
+
+pub struct Cpy;
+
+impl<M: Mapper> Compare<M> for Cpy {
+    fn lhs(cpu: &Cpu<M>) -> u8 {
+        cpu.y()
+    }
+}
+
+// TODO: Use blanket impl when impl specialization RFC lands
+impl<M: Mapper> Instruction<M, u8, ()> for Cpy {
+    fn execute<AM: AddressingMode<M, u8, ()>>(cpu: &mut Cpu<M>) {
+        Cpy::do_compare::<AM>(cpu)
     }
 }
 

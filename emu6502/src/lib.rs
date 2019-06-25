@@ -1,5 +1,8 @@
 #![feature(const_generics)]
 
+#[cfg(test)]
+mod functional_tests;
+
 mod addressing_modes;
 mod cpu;
 mod opcodes;

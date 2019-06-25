@@ -39,7 +39,6 @@ impl<M: Mapper> Cpu<M> {
 
     pub fn step(&mut self) {
         let opcode = self.fetch_pc();
-
         match opcode {
             0x00 => Brk::execute::<Implied>(self),
             0x01 => Ora::execute::<IndexedIndirect>(self),
@@ -154,10 +153,24 @@ impl<M: Mapper> Cpu<M> {
             0xbc => Ldy::execute::<AbsoluteX>(self),
             0xbd => Lda::execute::<AbsoluteX>(self),
             0xbe => Ldx::execute::<AbsoluteY>(self),
-            0xce => Dec::execute::<Absolute>(self),
+            0xc0 => Cpy::execute::<Immediate>(self),
+            0xc1 => Cmp::execute::<IndexedIndirect>(self),
+            0xc4 => Cpy::execute::<ZeroPage>(self),
+            0xc5 => Cmp::execute::<ZeroPage>(self),
             0xc6 => Dec::execute::<ZeroPage>(self),
-            0xca => Dex::execute::<Implied>(self),
             0xc8 => Iny::execute::<Implied>(self),
+            0xc9 => Cmp::execute::<Immediate>(self),
+            0xca => Dex::execute::<Implied>(self),
+            0xcc => Cpy::execute::<Absolute>(self),
+            0xcd => Cmp::execute::<Absolute>(self),
+            0xce => Dec::execute::<Absolute>(self),
+            0xd1 => Cmp::execute::<IndirectIndexed>(self),
+            0xd5 => Cmp::execute::<ZeroPageX>(self),
+            0xd9 => Cmp::execute::<AbsoluteY>(self),
+            0xdd => Cmp::execute::<AbsoluteX>(self),
+            0xe0 => Cpx::execute::<Immediate>(self),
+            0xe4 => Cpx::execute::<ZeroPage>(self),
+            0xec => Cpx::execute::<Absolute>(self),
             0xd0 => Bne::execute::<Relative>(self),
             0xd6 => Dec::execute::<ZeroPageX>(self),
             0xd8 => Cld::execute::<Implied>(self),
