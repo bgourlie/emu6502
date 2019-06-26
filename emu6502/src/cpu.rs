@@ -1,8 +1,4 @@
-use crate::{
-    addressing_modes::*,
-    opcodes::*,
-    util::{from_u16, to_u16},
-};
+use crate::{addressing_modes::*, opcodes::*};
 
 const FL_BREAK: u8 = 0b0001_0000;
 const FL_CARRY: u8 = 0b0000_0001;
@@ -328,14 +324,14 @@ impl<M: Mapper> Cpu<M> {
 
     pub(crate) fn fetch_pc(&mut self) -> u8 {
         let data = self.mapper.peek_mut(self.pc);
-        self.pc += 1;
+        self.pc = self.pc.wrapping_add(1);
         data
     }
 
     pub(crate) fn fetch_pc16(&mut self) -> u16 {
         let low = self.fetch_pc();
         let high = self.fetch_pc();
-        to_u16(low, high)
+        u16::from_le_bytes([low, high])
     }
 
     pub(crate) fn read(&mut self, addr: u16) -> u8 {
@@ -345,13 +341,13 @@ impl<M: Mapper> Cpu<M> {
     pub(crate) fn read16(&mut self, addr: u16) -> u16 {
         let low = self.mapper.peek_mut(addr);
         let high = self.mapper.peek_mut(addr.wrapping_add(1));
-        to_u16(low, high)
+        u16::from_le_bytes([low, high])
     }
 
     pub(crate) fn read16_zp(&mut self, addr: u8) -> u16 {
         let low = self.read(u16::from(addr));
         let high = self.read(u16::from(addr.wrapping_add(1)));
-        to_u16(low, high)
+        u16::from_le_bytes([low, high])
     }
 
     pub(crate) fn write(&mut self, addr: u16, data: u8) {
@@ -365,7 +361,7 @@ impl<M: Mapper> Cpu<M> {
     }
 
     pub(crate) fn push_stack16(&mut self, value: u16) {
-        let (low, high) = from_u16(value);
+        let [low, high] = value.to_le_bytes();
         self.push_stack(high);
         self.push_stack(low);
     }
@@ -380,7 +376,7 @@ impl<M: Mapper> Cpu<M> {
     pub(crate) fn pop_stack16(&mut self) -> u16 {
         let low = self.pop_stack();
         let high = self.pop_stack();
-        to_u16(low, high)
+        u16::from_le_bytes([low, high])
     }
 }
 

@@ -251,7 +251,7 @@ impl Offset {
     fn to_address_space_offset(self, stream_offset: u16) -> Result<u16, Error> {
         match self {
             Offset::Stream(addr) => {
-                if usize::from(addr) + usize::from(stream_offset) < usize::from(u16::MAX) {
+                if usize::from(addr) + usize::from(stream_offset) <= usize::from(u16::MAX) {
                     Ok(addr + stream_offset)
                 } else {
                     Err(DisassemblyError::OffsetOutOfBounds.into())
@@ -380,86 +380,72 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
 
     pub fn decode_next(&mut self) -> Result<Option<(u16, Decoded)>, Error> {
         if let Some(opcode_offset) = self.next_opcode_offset()? {
-            if self.is_mapped(opcode_offset) {
-                self.jump_to(opcode_offset)?;
-                let opcode_index = self.read_u8()? as usize;
-                if let Some((opcode, addressing_mode)) = OPCODES[opcode_index] {
-                    let operand: Result<Operand, Error> = match addressing_mode {
-                        Addressing::IndirectIndexed => {
-                            Ok(Operand::IndirectIndexed(self.read_u8()?))
-                        }
-                        Addressing::Indirect => Ok(Operand::Indirect(self.read_u16()?)),
-                        Addressing::IndexedIndirect => {
-                            Ok(Operand::IndexedIndirect(self.read_u8()?))
-                        }
-                        Addressing::Immediate => Ok(Operand::Immediate(self.read_u8()?)),
-                        Addressing::Relative => {
-                            let relative_offset = self.read_i8()?;
+            let opcode_index = self.read_u8()? as usize;
+            if let Some((opcode, addressing_mode)) = OPCODES[opcode_index] {
+                let operand: Result<Operand, Error> = match addressing_mode {
+                    Addressing::IndirectIndexed => Ok(Operand::IndirectIndexed(self.read_u8()?)),
+                    Addressing::Indirect => Ok(Operand::Indirect(self.read_u16()?)),
+                    Addressing::IndexedIndirect => Ok(Operand::IndexedIndirect(self.read_u8()?)),
+                    Addressing::Immediate => Ok(Operand::Immediate(self.read_u8()?)),
+                    Addressing::Relative => {
+                        let relative_offset = self.read_i8()?;
 
-                            let target_offset: Result<Offset, Error> = {
-                                let addr = self
-                                    .cur_offset()?
-                                    .to_stream_offset(self.address_space_start_offset)?
-                                    as isize
-                                    + relative_offset as isize;
+                        let target_offset: Result<Offset, Error> = {
+                            let addr = self
+                                .cur_offset()?
+                                .to_stream_offset(self.address_space_start_offset)?
+                                as isize
+                                + relative_offset as isize;
 
-                                if addr < 0 || addr >= u16::MAX as isize {
-                                    Err(DisassemblyError::BranchOutOfBounds {
-                                        branch_location: self
-                                            .to_address_space_offset(opcode_offset)?,
-                                    }
-                                    .into())
-                                } else {
-                                    Ok(Offset::Stream(addr as u16))
+                            if addr < 0 || addr >= u16::MAX as isize {
+                                Err(DisassemblyError::BranchOutOfBounds {
+                                    branch_location: self.to_address_space_offset(opcode_offset)?,
                                 }
-                            };
-
-                            let target_offset = target_offset?;
-                            self.push_unexplored(target_offset)?;
-                            Ok(Operand::Relative(relative_offset))
-                        }
-                        Addressing::Accumulator => Ok(Operand::Accumulator),
-                        Addressing::Absolute => {
-                            let addr = Offset::AddressSpace(self.read_u16()?);
-                            if opcode == Op::Jsr {
-                                self.push_unexplored(addr)?;
+                                .into())
+                            } else {
+                                Ok(Offset::Stream(addr as u16))
                             }
-                            Ok(Operand::Absolute(self.to_address_space_offset(addr)?))
-                        }
-                        Addressing::AbsoluteX => Ok(Operand::AbsoluteX(self.read_u16()?)),
-                        Addressing::AbsoluteY => Ok(Operand::AbsoluteY(self.read_u16()?)),
-                        Addressing::ZeroPage => Ok(Operand::ZeroPage(self.read_u8()?)),
-                        Addressing::ZeroPageX => Ok(Operand::ZeroPageX(self.read_u8()?)),
-                        Addressing::ZeroPageY => Ok(Operand::ZeroPageY(self.read_u8()?)),
-                        Addressing::Implied => match opcode {
-                            Op::Brk => Ok(Operand::BreakByte(self.read_u8()?)),
-                            Op::Rts | Op::Rti => {
-                                // Seek back one byte so we don't decode past the return. The next
-                                // call to read() will see that this offset has been decoded and pop
-                                // the next unexplored offset.
-                                self.rom.seek(SeekFrom::Current(-1))?;
-                                Ok(Operand::Implied)
-                            }
-                            _ => Ok(Operand::Implied),
-                        },
-                    };
+                        };
 
-                    Ok(Some((
-                        self.to_address_space_offset(opcode_offset)?,
-                        Decoded::Instruction(Instruction::new(opcode, operand?)),
-                    )))
-                } else {
-                    Err(DisassemblyError::IllegalOpcode {
-                        opcode_location: self.to_address_space_offset(opcode_offset)?,
+                        let target_offset = target_offset?;
+                        self.push_unexplored(target_offset)?;
+                        Ok(Operand::Relative(relative_offset))
                     }
-                    .into())
-                }
-            } else {
-                self.mark_decoded(opcode_offset)?;
+                    Addressing::Accumulator => Ok(Operand::Accumulator),
+                    Addressing::Absolute => {
+                        let addr = Offset::AddressSpace(self.read_u16()?);
+                        if opcode == Op::Jsr {
+                            self.push_unexplored(addr)?;
+                        }
+                        Ok(Operand::Absolute(self.to_address_space_offset(addr)?))
+                    }
+                    Addressing::AbsoluteX => Ok(Operand::AbsoluteX(self.read_u16()?)),
+                    Addressing::AbsoluteY => Ok(Operand::AbsoluteY(self.read_u16()?)),
+                    Addressing::ZeroPage => Ok(Operand::ZeroPage(self.read_u8()?)),
+                    Addressing::ZeroPageX => Ok(Operand::ZeroPageX(self.read_u8()?)),
+                    Addressing::ZeroPageY => Ok(Operand::ZeroPageY(self.read_u8()?)),
+                    Addressing::Implied => match opcode {
+                        Op::Brk => Ok(Operand::BreakByte(self.read_u8()?)),
+                        Op::Rts | Op::Rti => {
+                            // Seek back one byte so we don't decode past the return. The next
+                            // call to read() will see that this offset has been decoded and pop
+                            // the next unexplored offset.
+                            self.rom.seek(SeekFrom::Current(-1))?;
+                            Ok(Operand::Implied)
+                        }
+                        _ => Ok(Operand::Implied),
+                    },
+                };
+
                 Ok(Some((
                     self.to_address_space_offset(opcode_offset)?,
-                    Decoded::Unmapped,
+                    Decoded::Instruction(Instruction::new(opcode, operand?)),
                 )))
+            } else {
+                Err(DisassemblyError::IllegalOpcode {
+                    opcode_location: self.to_address_space_offset(opcode_offset)?,
+                }
+                .into())
             }
         } else {
             Ok(None)
@@ -496,26 +482,44 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
 
     fn next_opcode_offset(&mut self) -> Result<Option<Offset>, Error> {
         let opcode_location = self.cur_offset()?;
-
-        if self.is_decoded(opcode_location)? {
-            if let Some(next_opcode_location) = self.unexplored.pop() {
-                info!(
-                    "Already decoded {:04X}. Moving to {:04X}",
-                    self.to_address_space_offset(opcode_location)?,
-                    self.to_address_space_offset(next_opcode_location)?
-                );
-                Ok(Some(next_opcode_location))
-            } else {
-                Ok(None)
-            }
-        } else {
+        if !self.is_decoded(opcode_location)? {
             Ok(Some(opcode_location))
+        } else {
+            let next_opcode_location = loop {
+                if let Some(next_opcode_location) = self.unexplored.pop() {
+                    if !self.is_decoded(next_opcode_location)? {
+                        if self.is_mapped(next_opcode_location) {
+                            self.jump_to(next_opcode_location)?;
+                            break Ok(Some(next_opcode_location));
+                        } else {
+                            self.mark_decoded(next_opcode_location)?;
+                            info!(
+                                "{:04X} isn't mapped, skipping",
+                                self.to_address_space_offset(next_opcode_location)?
+                            );
+                        }
+                    } else {
+                        info!(
+                            "Already decoded {:04X}",
+                            self.to_address_space_offset(opcode_location)?
+                        );
+                    }
+                } else {
+                    break Ok(None);
+                }
+            };
+            next_opcode_location
         }
     }
 
-    fn jump_to(&mut self, addr: Offset) -> Result<(), Error> {
-        self.rom
-            .seek(SeekFrom::Start(u64::from(self.to_stream_offset(addr)?)))?;
+    fn jump_to(&mut self, offset: Offset) -> Result<(), Error> {
+        info!(
+            "Decoder jumped to {:04X}",
+            self.to_address_space_offset(offset)?
+        );
+
+        let stream_offset = u64::from(self.to_stream_offset(offset)?);
+        self.rom.seek(SeekFrom::Start(stream_offset))?;
         Ok(())
     }
 

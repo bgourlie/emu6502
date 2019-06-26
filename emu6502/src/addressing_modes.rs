@@ -1,8 +1,5 @@
 use {
-    crate::{
-        cpu::{Cpu, Mapper},
-        util::to_u16,
-    },
+    crate::cpu::{Cpu, Mapper},
     std::fmt::Debug,
 };
 
@@ -168,7 +165,7 @@ impl<M: Mapper> AddressingMode<M, u16, ()> for AbsoluteIndirect {
             cpu.read(indirect_target.wrapping_add(1))
         };
 
-        to_u16(target_low, target_high)
+        u16::from_le_bytes([target_low, target_high])
     }
 }
 
