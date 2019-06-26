@@ -1,8 +1,5 @@
 use {
-    crate::{
-        cpu::{Cpu, Mapper},
-        util::to_u16,
-    },
+    crate::cpu::{Cpu, Mapper},
     std::fmt::Debug,
 };
 
@@ -45,6 +42,7 @@ impl<M: Mapper, A: MemoryAddressing> AddressingMode<M, (u16, u8), (u16, u8)> for
 
 impl<M: Mapper, A: MemoryAddressing> AddressingMode<M, u8, ()> for A {
     fn read(cpu: &mut Cpu<M>) -> u8 {
+        println!("fetch target addr3");
         let addr = A::fetch_target_addr(cpu);
         cpu.read(addr)
     }
@@ -134,6 +132,7 @@ pub struct ZeroPage;
 
 impl MemoryAddressing for ZeroPage {
     fn fetch_target_addr<M: Mapper>(cpu: &mut Cpu<M>) -> u16 {
+        println!("Adsfasdf 5");
         u16::from(cpu.fetch_pc())
     }
 }
@@ -168,7 +167,7 @@ impl<M: Mapper> AddressingMode<M, u16, ()> for AbsoluteIndirect {
             cpu.read(indirect_target.wrapping_add(1))
         };
 
-        to_u16(target_low, target_high)
+        u16::from_le_bytes([target_low, target_high])
     }
 }
 

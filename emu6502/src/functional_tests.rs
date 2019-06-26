@@ -1,10 +1,9 @@
-use std::io::Seek;
 use {
     super::{Cpu, Mapper},
     disasm6502::Disassembly,
     std::{
         fs::File,
-        io::{Read, SeekFrom},
+        io::{Cursor, Read},
     },
 };
 
@@ -44,14 +43,21 @@ impl Mapper for TestMapper {
 
 #[test]
 fn opcodes() {
-    let mut f = File::open("../test_roms/6502_functional_test.bin").unwrap();
+    let rom = {
+        let mut f = File::open("../test_roms/6502_functional_test.bin").unwrap();
+        let mut rom = Vec::<u8>::new();
+        f.read_to_end(&mut rom).unwrap();
+        rom
+    };
 
-    let disassembly = Disassembly::from_rom(&mut f, 0xa, 0x400).unwrap();
-    f.seek(SeekFrom::Start(0)).unwrap();
-    let mut rom = Vec::<u8>::new();
-    f.read_to_end(&mut rom).unwrap();
     let mut mapper = TestMapper::new();
     mapper.store_many(0x0, &rom);
+
+    let disassembly = {
+        let mut cursor = Cursor::new(rom);
+        Disassembly::from_rom(&mut cursor, 0xa, 0x400).unwrap()
+    };
+
     let mut cpu = Cpu::new(mapper);
     cpu.set_pc(PC_START);
     let mut last_pc = PC_START;
@@ -63,6 +69,7 @@ fn opcodes() {
             println!("{:04X}: Executing unknown instruction", cpu.pc());
         }
         cpu.step();
+        println!("stepped");
         // Prevent endless loop
         //        if cpu.interconnect.elapsed_cycles() > MAX_CYCLES {
         //            assert!(false, "Took too many cycles to complete");
