@@ -45,12 +45,13 @@ impl Mapper for TestMapper {
 #[test]
 fn opcodes() {
     let mut f = File::open("../test_roms/6502_functional_test.bin").unwrap();
-    let disassembly = Disassembly::from_rom(&mut f, 0x0, 0x400).unwrap();
+
+    let disassembly = Disassembly::from_rom(&mut f, 0xa, 0x400).unwrap();
     f.seek(SeekFrom::Start(0)).unwrap();
     let mut rom = Vec::<u8>::new();
     f.read_to_end(&mut rom).unwrap();
     let mut mapper = TestMapper::new();
-    mapper.store_many(PC_START, &rom);
+    mapper.store_many(0x0, &rom);
     let mut cpu = Cpu::new(mapper);
     cpu.set_pc(PC_START);
     let mut last_pc = PC_START;
