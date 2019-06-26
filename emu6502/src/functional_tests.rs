@@ -67,21 +67,24 @@ fn opcodes() {
         if let Some(instr) = disassembly.display_at(cpu.pc()) {
             println!("{:04X}: Executing {}", cpu.pc(), instr);
         } else {
-            println!("{:04X}: Executing unknown instruction", cpu.pc());
+            println!(
+                "Unmapped address encountered: {:04X} (probably disasm issue)",
+                cpu.pc()
+            );
         }
         cpu.step();
 
         // Prevent endless loop
         if i > MAX_ITERATIONS {
-            assert!(false, "Took too many cycles to complete");
+            panic!("Took too many cycles to complete");
         }
 
         if last_pc == cpu.pc() {
-            if cpu.pc() == 0x3367 {
+            if cpu.pc() == 0x336d {
                 // Success!
                 break;
             } else {
-                assert!(false, "Trap detected");
+                panic!("Trap detected");
             }
         }
 

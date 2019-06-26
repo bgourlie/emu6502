@@ -414,8 +414,17 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
                     Addressing::Accumulator => Ok(Operand::Accumulator),
                     Addressing::Absolute => {
                         let addr = Offset::AddressSpace(self.read_u16()?);
-                        if opcode == Op::Jsr {
-                            self.push_unexplored(addr)?;
+                        match opcode {
+                            Op::Jsr => self.push_unexplored(addr)?,
+                            Op::Jmp => {
+                                self.push_unexplored(addr)?;
+
+                                // Seek back three bytes so we don't decode past the jump. The next
+                                // call to read() will see that this offset has been decoded and pop
+                                // the next unexplored offset.
+                                self.rom.seek(SeekFrom::Current(-1))?;
+                            }
+                            _ => {}
                         }
                         Ok(Operand::Absolute(self.to_address_space_offset(addr)?))
                     }
