@@ -8,7 +8,8 @@ use {
 };
 
 const PC_START: u16 = 0x400;
-const _MAX_CYCLES: usize = 100000000;
+const ADDRESS_SPACE_MAPPING_START: u16 = 0xa;
+const MAX_ITERATIONS: usize = 300000000;
 const ADDRESSABLE_MEMORY: usize = 0x10000;
 
 pub struct TestMapper {
@@ -51,7 +52,7 @@ fn opcodes() {
     };
 
     let mut mapper = TestMapper::new();
-    mapper.store_many(0x0, &rom);
+    mapper.store_many(ADDRESS_SPACE_MAPPING_START, &rom);
 
     let disassembly = {
         let mut cursor = Cursor::new(rom);
@@ -62,18 +63,18 @@ fn opcodes() {
     cpu.set_pc(PC_START);
     let mut last_pc = PC_START;
 
-    loop {
+    for i in 0.. {
         if let Some(instr) = disassembly.display_at(cpu.pc()) {
             println!("{:04X}: Executing {}", cpu.pc(), instr);
         } else {
             println!("{:04X}: Executing unknown instruction", cpu.pc());
         }
         cpu.step();
-        println!("stepped");
+
         // Prevent endless loop
-        //        if cpu.interconnect.elapsed_cycles() > MAX_CYCLES {
-        //            assert!(false, "Took too many cycles to complete");
-        //        }
+        if i > MAX_ITERATIONS {
+            assert!(false, "Took too many cycles to complete");
+        }
 
         if last_pc == cpu.pc() {
             if cpu.pc() == 0x3367 {
