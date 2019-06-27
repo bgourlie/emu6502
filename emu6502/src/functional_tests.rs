@@ -65,7 +65,7 @@ fn opcodes() {
 
     for i in 0.. {
         if let Some(instr) = disassembly.display_at(cpu.pc()) {
-            println!("{:04X}: Executing {}", cpu.pc(), instr);
+            println!("{: <12}PC    SP    A    X    Y   NVssDIZC", instr);
         } else {
             println!(
                 "Unmapped address encountered: {:04X} (probably disasm issue)",
@@ -73,7 +73,16 @@ fn opcodes() {
             );
         }
         cpu.step();
-
+        println!(
+            "            {:04X}  {:02X}    {:02X}   {:02X}   {:02X}  {:08b}",
+            cpu.pc(),
+            cpu.sp(),
+            cpu.acc(),
+            cpu.x(),
+            cpu.y(),
+            cpu.status()
+        );
+        println!();
         // Prevent endless loop
         if i > MAX_ITERATIONS {
             panic!("Took too many cycles to complete");
