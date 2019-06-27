@@ -65,16 +65,20 @@ fn opcodes() {
 
     for i in 0.. {
         if let Some(instr) = disassembly.display_at(cpu.pc()) {
-            println!("{: <12}PC    SP    A    X    Y   NVssDIZC", instr);
+            println!(
+                "{:04X}: {: <15}PC    SP    A    X    Y   NVssDIZC",
+                cpu.pc(),
+                instr
+            );
         } else {
             println!(
-                "Unmapped address encountered: {:04X} (probably disasm issue)",
+                "{:04X}: Unmapped address encountered: (probably disasm issue)",
                 cpu.pc()
             );
         }
         cpu.step();
         println!(
-            "            {:04X}  {:02X}    {:02X}   {:02X}   {:02X}  {:08b}",
+            "                     {:04X}  {:02X}    {:02X}   {:02X}   {:02X}  {:08b}",
             cpu.pc(),
             cpu.sp(),
             cpu.acc(),
