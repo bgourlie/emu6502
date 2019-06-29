@@ -2,7 +2,8 @@
 
 members = [
   "emu6502",
-  "disasm6502"
+  "disasm6502",
+  "ui"
 ]
 
 [profile.release]

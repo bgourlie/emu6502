@@ -2,3 +2,5 @@ Cargo.lock
 /target
 **/*.rs.bk
 .idea
+/pkg
+wasm-pack.log
