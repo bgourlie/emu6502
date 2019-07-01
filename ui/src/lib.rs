@@ -1,3 +1,6 @@
+#![feature(custom_inner_attributes)]
+#![rustfmt::skip::macros(div, input, label)]
+
 #[macro_use]
 extern crate seed;
 
@@ -31,9 +34,20 @@ fn update(msg: Msg, model: &mut Model, _: &mut Orders<Msg>) {
 // View
 
 fn view(model: &Model) -> El<Msg> {
-    button![
-        simple_ev(Ev::Click, Msg::Increment),
-        format!("Hello, World × {}", model.val)
+    div!
+    [ label!
+        [ "ROM Location"
+        , input!
+            [ attrs!
+                { At::Type => "file"
+                }
+            , simple_ev(Ev::Change, Msg::Increment)
+            ]
+        ]
+        , button!
+            [ simple_ev(Ev::Click, Msg::Increment)
+            , format!("Hello, World × {}", model.val)
+            ]
     ]
 }
 
