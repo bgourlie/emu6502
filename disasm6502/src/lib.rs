@@ -494,7 +494,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
         if !self.is_decoded(opcode_location)? {
             Ok(Some(opcode_location))
         } else {
-            let next_opcode_location = loop {
+            loop {
                 if let Some(next_opcode_location) = self.unexplored.pop() {
                     if !self.is_decoded(next_opcode_location)? {
                         if self.is_mapped(next_opcode_location) {
@@ -516,8 +516,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
                 } else {
                     break Ok(None);
                 }
-            };
-            next_opcode_location
+            }
         }
     }
 
