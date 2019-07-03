@@ -4,17 +4,27 @@
 #[macro_use]
 extern crate seed;
 
-use seed::prelude::*;
+use {log::debug, seed::prelude::*};
 
 // Model
 
 struct Model {
-    pub val: i32,
+    rom_path: Option<String>,
+}
+
+impl Model {
+    fn rom_path_display(&self) -> String {
+        if let Some(rom_path) = &self.rom_path {
+            rom_path.to_string()
+        } else {
+            "None Selected".to_owned()
+        }
+    }
 }
 
 impl Default for Model {
     fn default() -> Self {
-        Self { val: 0 }
+        Self { rom_path: None }
     }
 }
 
@@ -22,12 +32,20 @@ impl Default for Model {
 
 #[derive(Clone)]
 enum Msg {
-    Increment,
+    RomSelected(String),
 }
 
 fn update(msg: Msg, model: &mut Model, _: &mut Orders<Msg>) {
     match msg {
-        Msg::Increment => model.val += 1,
+        Msg::RomSelected(path) => {
+            if path.trim().is_empty() {
+                debug!("No file selected.");
+                model.rom_path = None;
+            } else {
+                debug!("Selected {}", path);
+                model.rom_path = Some(path);
+            }
+        }
     }
 }
 
@@ -41,18 +59,17 @@ fn view(model: &Model) -> El<Msg> {
             [ attrs!
                 { At::Type => "file"
                 }
-            , simple_ev(Ev::Change, Msg::Increment)
+            , input_ev(Ev::Change, Msg::RomSelected)
             ]
         ]
-        , button!
-            [ simple_ev(Ev::Click, Msg::Increment)
-            , format!("Hello, World × {}", model.val)
-            ]
+        , span![ model.rom_path_display() ]
     ]
 }
 
 #[wasm_bindgen]
-pub fn render() {
+pub fn bootstrap() {
+    wasm_logger::init(wasm_logger::Config::new(log::Level::Debug).message_on_new_line());
+
     seed::App::build(Model::default(), update, view)
         .finish()
         .run();
