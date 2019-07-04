@@ -1,4 +1,4 @@
-use crate::{addressing_modes::*, opcodes::*};
+use crate::{addressing_modes::*, opcodes::*, Mapper};
 
 const FL_BREAK: u8 = 0b0001_0000;
 const FL_CARRY: u8 = 0b0000_0001;
@@ -378,12 +378,4 @@ impl<M: Mapper> Cpu<M> {
         let high = self.pop_stack();
         u16::from_le_bytes([low, high])
     }
-}
-
-pub trait Mapper {
-    fn peek(&self, addr: u16) -> u8;
-    fn peek_mut(&mut self, addr: u16) -> u8 {
-        self.peek(addr)
-    }
-    fn poke(&mut self, addr: u16, value: u8);
 }

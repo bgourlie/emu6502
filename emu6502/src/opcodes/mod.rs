@@ -2,10 +2,7 @@
 mod tests;
 
 use {
-    crate::{
-        addressing_modes::*,
-        cpu::{Cpu, Mapper},
-    },
+    crate::{addressing_modes::*, Cpu, Mapper},
     std::fmt::Debug,
 };
 

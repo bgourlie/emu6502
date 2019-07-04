@@ -1,5 +1,5 @@
 use {
-    crate::cpu::{Cpu, Mapper},
+    crate::{Cpu, Mapper},
     std::fmt::Debug,
 };
 

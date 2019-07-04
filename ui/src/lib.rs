@@ -2,8 +2,10 @@
 extern crate seed;
 
 use {
+    emu6502::{BasicMapper, Cpu},
     log::debug,
     seed::prelude::*,
+    std::io::Cursor,
     wasm_bindgen::JsCast,
     web_sys::{Event, FileReader, HtmlInputElement},
 };
@@ -48,8 +50,28 @@ fn update(msg: Msg, model: &mut Model, _: &mut Orders<Msg>) {
     match msg {
         Msg::RomSelected(event) => {
             let file_input: HtmlInputElement = event.target().unwrap().dyn_into().unwrap();
-            if let Some(_file) = file_input.files().unwrap().get(0) {
+            if let Some(file) = file_input.files().unwrap().get(0) {
                 debug!("file selected!");
+
+                let file_reader = FileReader::new().unwrap();
+                let mut onload = Closure::wrap(Box::new(move |event: Event| {
+                    let file_reader: FileReader = event.target().unwrap().dyn_into().unwrap();
+                    let mut rom = {
+                        let blob = file_reader.result().unwrap();
+                        let bytes = js_sys::Uint8Array::new(&blob);
+                        let mut rom = vec![0; bytes.length() as usize];
+                        bytes.copy_to(&mut rom);
+                        Cursor::new(rom)
+                    };
+                    let mapper = BasicMapper::new(&mut rom, 0x0a);
+                    let cpu = Cpu::new(mapper);
+                    debug!("cpu loaded!");
+                }) as Box<dyn FnMut(_)>);
+
+                file_reader.set_onload(Some(onload.as_ref().unchecked_ref()));
+                file_reader.read_as_array_buffer(&file).unwrap();
+                onload.forget();
+
                 model.transition_to_rom_loaded();
             } else {
                 debug!("No file selected!");
