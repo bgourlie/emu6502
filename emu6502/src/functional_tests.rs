@@ -1,6 +1,6 @@
 use std::io::{Seek, SeekFrom};
 use {
-    super::{BasicMapper, Cpu},
+    super::{BasicMapper, Cpu, Mapper},
     disasm6502::Disassembly,
     std::fs::File,
 };

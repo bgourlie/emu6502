@@ -16,14 +16,9 @@
 
 <script src='/pkg/package.js'></script>
 
-<script>
-    // the `wasm_bindgen` global is set to the exports of the Rust module
-    const { bootstrap } = wasm_bindgen;
-    // here we tell bindgen the path to the wasm file so it can run
-    // initialization and return to us a promise when it's done
-    wasm_bindgen('/pkg/package_bg.wasm')
-        .then(bootstrap)
-        .catch(console.error);
+<script type="module">
+    import init from './pkg/package.js';
+    init('./pkg/package_bg.wasm');
 </script>
 
 </body>

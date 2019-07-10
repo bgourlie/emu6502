@@ -12,11 +12,12 @@ crate-type = ["cdylib"]
 [dependencies]
 seed = "^0.3.6"
 wasm-bindgen = "^0.2.42"
+wasm-bindgen-futures = "0.3.24"
 log = "0.4.6"
 wasm-logger = "0.1.5"
 js-sys = "0.3.24"
+futures = "0.1.28"
 emu6502 = { path = "../emu6502" }
-
 [dependencies.web-sys]
 version = "0.3.19"
-features = [ "Blob", "Event", "EventTarget", "File", "FileList", "FileReader", "HtmlInputElement" ]
+features = [ "Blob", "Event", "EventTarget", "File", "FileList", "FileReaderSync", "HtmlInputElement" ]
