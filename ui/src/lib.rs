@@ -31,7 +31,7 @@ impl Default for RomSelectionModel {
 }
 
 struct RomLoadedModel<M: Mapper> {
-    _cpu: Cpu<M>,
+    cpu: Cpu<M>,
 }
 
 enum Model<M: Mapper> {
@@ -45,7 +45,7 @@ impl<M: Mapper> Model<M> {
     }
 
     fn transition_to_rom_loaded(&mut self, cpu: Cpu<M>) {
-        *self = Model::RomLoaded(RomLoadedModel { _cpu: cpu })
+        *self = Model::RomLoaded(RomLoadedModel { cpu })
     }
 }
 
@@ -55,11 +55,19 @@ impl<M: Mapper> Default for Model<M> {
     }
 }
 
+#[derive(Copy, Clone)]
+enum RunStrategy {
+    Steps(u64),
+    _UntilNmi,
+    _Indefinitely,
+}
+
 #[derive(Clone)]
 enum Msg {
     RomSelected(Event),
     RomBytesRead(js_sys::Uint8Array),
     RomLoadingErr,
+    Run(RunStrategy),
 }
 
 fn update<M: Mapper + 'static>(msg: Msg, model: &mut Model<M>, orders: &mut Orders<Msg>) {
@@ -84,10 +92,24 @@ fn update<M: Mapper + 'static>(msg: Msg, model: &mut Model<M>, orders: &mut Orde
             bytes.copy_to(&mut rom);
             let mut cursor = Cursor::new(&rom);
             let mapper = M::new(&mut cursor, 0xa);
-            let cpu = Cpu::new(mapper);
+            let mut cpu = Cpu::new(mapper);
+            cpu.set_pc(0x400); // this is specific to 6502_functional_test.bin
             model.transition_to_rom_loaded(cpu);
         }
         Msg::RomLoadingErr => debug!("Rom loading error!"),
+        Msg::Run(strategy) => match strategy {
+            RunStrategy::Steps(steps) => {
+                if let Model::RomLoaded(ref mut model) = model {
+                    for _i in 0..steps {
+                        model.cpu.step();
+                        debug!("stepped cpu pc = {:4X}", model.cpu.pc());
+                    }
+                } else {
+                    panic!("this should never happen")
+                }
+            }
+            _ => unimplemented!("RunStrategy not implemented"),
+        },
     }
 }
 
@@ -105,7 +127,10 @@ fn view<M: Mapper>(model: &Model<M>) -> El<Msg> {
             ]
         ],
 
-        Model::RomLoaded(_rom_loaded_model) => div!["Rom loaded!"],
+        Model::RomLoaded(_rom_loaded_model) => div![button![
+            "Step",
+            simple_ev(Ev::Click, Msg::Run(RunStrategy::Steps(1)))
+        ]],
     }
 }
 

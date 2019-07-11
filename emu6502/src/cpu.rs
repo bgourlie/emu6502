@@ -204,7 +204,7 @@ impl<M: Mapper> Cpu<M> {
         self.acc = val;
     }
 
-    pub(crate) fn set_pc(&mut self, addr: u16) {
+    pub fn set_pc(&mut self, addr: u16) {
         self.pc = addr;
     }
 
