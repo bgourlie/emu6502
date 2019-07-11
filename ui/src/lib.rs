@@ -7,7 +7,7 @@ use {
     js_sys::Promise,
     log::debug,
     seed::prelude::*,
-    std::io::Cursor,
+    std::{borrow::Cow, io::Cursor},
     wasm_bindgen::JsCast,
     wasm_bindgen_futures::JsFuture,
     web_sys::{Event, File, HtmlInputElement},
@@ -18,8 +18,10 @@ extern "C" {
     fn read_as_array_buffer(path: File) -> Promise;
 }
 
+type Str = Cow<'static, str>;
+
 struct RomSelectionModel {
-    message: Option<String>,
+    message: Option<Str>,
 }
 
 impl Default for RomSelectionModel {
@@ -38,7 +40,7 @@ enum Model<M: Mapper> {
 }
 
 impl<M: Mapper> Model<M> {
-    fn transition_to_rom_selection(&mut self, message: Option<String>) {
+    fn transition_to_rom_selection(&mut self, message: Option<Str>) {
         *self = Model::RomSelection(RomSelectionModel { message })
     }
 
@@ -66,9 +68,6 @@ fn update<M: Mapper + 'static>(msg: Msg, model: &mut Model<M>, orders: &mut Orde
             let file_input: HtmlInputElement = event.target().unwrap().dyn_into().unwrap();
             if let Some(file) = file_input.files().unwrap().get(0) {
                 debug!("file selected!");
-                //                let file_reader = FileReaderSync::new().unwrap();
-                //                let buffer = file_reader.read_as_array_buffer(&file).unwrap();
-                //                let bytes = js_sys::Uint8Array::new(&buffer);
                 let promise = read_as_array_buffer(file);
                 let future = JsFuture::from(promise)
                     .map(|arr| Msg::RomBytesRead(arr.dyn_into::<js_sys::Uint8Array>().unwrap()))
@@ -77,7 +76,7 @@ fn update<M: Mapper + 'static>(msg: Msg, model: &mut Model<M>, orders: &mut Orde
                 orders.perform_cmd(future);
             } else {
                 debug!("No file selected!");
-                model.transition_to_rom_selection(Some("No file was selected".to_owned()));
+                model.transition_to_rom_selection(Some("No file was selected".into()));
             }
         }
         Msg::RomBytesRead(bytes) => {
