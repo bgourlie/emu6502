@@ -1,4 +1,3 @@
-use std::io::{Seek, SeekFrom};
 use {
     super::{BasicMapper, Cpu, Mapper},
     disasm6502::Disassembly,
@@ -13,9 +12,7 @@ const MAX_ITERATIONS: usize = 300000000;
 fn opcodes() {
     let mut file = File::open("../test_roms/6502_functional_test.bin").unwrap();
     let mapper = BasicMapper::new(&mut file, ADDRESS_SPACE_MAPPING_START);
-    file.seek(SeekFrom::Start(0)).unwrap();
     let disassembly = Disassembly::from_rom(&mut file, ADDRESS_SPACE_MAPPING_START, 0x400).unwrap();
-
     let mut cpu = Cpu::new(mapper);
     cpu.set_pc(PC_START);
     let mut last_pc = PC_START;

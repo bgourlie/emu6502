@@ -3,6 +3,7 @@ extern crate seed;
 
 use futures::future::Future;
 use {
+    disasm6502::Disassembly,
     emu6502::{BasicMapper, Cpu, Mapper},
     js_sys::Promise,
     log::debug,
@@ -32,6 +33,7 @@ impl Default for RomSelectionModel {
 
 struct RomLoadedModel<M: Mapper> {
     cpu: Cpu<M>,
+    _disassembly: Disassembly,
 }
 
 enum Model<M: Mapper> {
@@ -44,8 +46,11 @@ impl<M: Mapper> Model<M> {
         *self = Model::RomSelection(RomSelectionModel { message })
     }
 
-    fn transition_to_rom_loaded(&mut self, cpu: Cpu<M>) {
-        *self = Model::RomLoaded(RomLoadedModel { cpu })
+    fn transition_to_rom_loaded(&mut self, cpu: Cpu<M>, disassembly: Disassembly) {
+        *self = Model::RomLoaded(RomLoadedModel {
+            cpu,
+            _disassembly: disassembly,
+        })
     }
 }
 
@@ -92,9 +97,10 @@ fn update<M: Mapper + 'static>(msg: Msg, model: &mut Model<M>, orders: &mut Orde
             bytes.copy_to(&mut rom);
             let mut cursor = Cursor::new(&rom);
             let mapper = M::new(&mut cursor, 0xa);
+            let disassembly = Disassembly::from_rom(&mut cursor, 0xa, 0x400).unwrap();
             let mut cpu = Cpu::new(mapper);
             cpu.set_pc(0x400); // this is specific to 6502_functional_test.bin
-            model.transition_to_rom_loaded(cpu);
+            model.transition_to_rom_loaded(cpu, disassembly);
         }
         Msg::RomLoadingErr => debug!("Rom loading error!"),
         Msg::Run(strategy) => match strategy {
