@@ -133,11 +133,25 @@ fn view<M: Mapper>(model: &Model<M>) -> El<Msg> {
             ]
         ],
 
-        Model::RomLoaded(_rom_loaded_model) => div![button![
-            "Step",
-            simple_ev(Ev::Click, Msg::Run(RunStrategy::Steps(1)))
-        ]],
+        Model::RomLoaded(model) => div![
+            status_widget(&model.cpu),
+            button![
+                "Step",
+                simple_ev(Ev::Click, Msg::Run(RunStrategy::Steps(1)))
+            ]
+        ],
     }
+}
+
+fn status_widget<M: Mapper>(cpu: &Cpu<M>) -> El<Msg> {
+    div![
+        div![div!["pc"], div![format!("{:04X}", cpu.pc())]],
+        div![div!["sp"], div![format!("{:02X}", cpu.sp())]],
+        div![div!["acc"], div![format!("{:02X}", cpu.acc())]],
+        div![div!["x"], div![format!("{:02X}", cpu.x())]],
+        div![div!["y"], div![format!("{:02X}", cpu.y())]],
+        div![div!["status"], div![format!("{:08b}", cpu.status())]]
+    ]
 }
 
 fn error_message(model: &RomSelectionModel) -> El<Msg> {
