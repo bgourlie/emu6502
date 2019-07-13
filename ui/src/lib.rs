@@ -145,12 +145,13 @@ fn view<M: Mapper>(model: &Model<M>) -> El<Msg> {
 
 fn status_widget<M: Mapper>(cpu: &Cpu<M>) -> El<Msg> {
     div![
+        attrs! {At::Class => "cpuStatus"},
         div![div!["pc"], div![format!("{:04X}", cpu.pc())]],
         div![div!["sp"], div![format!("{:02X}", cpu.sp())]],
         div![div!["acc"], div![format!("{:02X}", cpu.acc())]],
         div![div!["x"], div![format!("{:02X}", cpu.x())]],
         div![div!["y"], div![format!("{:02X}", cpu.y())]],
-        div![div!["status"], div![format!("{:08b}", cpu.status())]]
+        div![div!["NVssDIZC"], div![format!("{:08b}", cpu.status())]]
     ]
 }
 

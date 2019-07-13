@@ -1,0 +1,18 @@
+body {
+  font-family: "Courier New", Courier, monospace;
+}
+
+.cpuStatus {
+  display: flex;
+
+  > div {
+    display: flex;
+    text-align: center;
+    flex-direction: column;
+    margin: 0 0.4rem;
+
+    > div:first-of-type {
+      font-weight: bold;
+    }
+  }
+}
