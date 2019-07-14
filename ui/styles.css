@@ -1,17 +1,30 @@
 body {
-  font-family: "Courier New", Courier, monospace;
+  background-color: #2b2b2b;
+  color: #a9b7c6;
+  font-family: Helvetica, sans-serif;
 }
 
-.cpuStatus {
+#app {
   display: flex;
+  flex-direction: column;
+  height: 100vh;
 }
-.cpuStatus > div {
+
+#romSelectionView {
+  text-align: center;
+}
+
+#cpuStatus {
+  display: flex;
+  font-family: "Courier New", Courier, monospace;
+}
+#cpuStatus > div {
   display: flex;
   text-align: center;
   flex-direction: column;
   margin: 0 0.4rem;
 }
-.cpuStatus > div > div:first-of-type {
+#cpuStatus > div > div:first-of-type {
   font-weight: bold;
 }
 

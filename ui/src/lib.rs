@@ -122,9 +122,10 @@ fn update<M: Mapper + 'static>(msg: Msg, model: &mut Model<M>, orders: &mut Orde
 fn view<M: Mapper>(model: &Model<M>) -> El<Msg> {
     match model {
         Model::RomSelection(model) => div![
+            attrs! {At::Id => "romSelectionView"},
             error_message(&model),
             label![
-                "ROM Location",
+                div!["ROM Location"],
                 input![
                     attrs! { At::Type => "file"
                     },
@@ -134,6 +135,7 @@ fn view<M: Mapper>(model: &Model<M>) -> El<Msg> {
         ],
 
         Model::RomLoaded(model) => div![
+            attrs! {At::Id => "romLoadedView"},
             status_widget(&model.cpu),
             button![
                 "Step",
@@ -145,7 +147,7 @@ fn view<M: Mapper>(model: &Model<M>) -> El<Msg> {
 
 fn status_widget<M: Mapper>(cpu: &Cpu<M>) -> El<Msg> {
     div![
-        attrs! {At::Class => "cpuStatus"},
+        attrs! {At::Id => "cpuStatus"},
         div![div!["pc"], div![format!("{:04X}", cpu.pc())]],
         div![div!["sp"], div![format!("{:02X}", cpu.sp())]],
         div![div!["acc"], div![format!("{:02X}", cpu.acc())]],

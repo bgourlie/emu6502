@@ -1,9 +1,27 @@
+$backgroundColor: #2b2b2b;
+$fontColor: #a9b7c6;
+$monospaceFont: "Courier New", Courier, monospace;
+$font: Helvetica, sans-serif;
+
 body {
-  font-family: "Courier New", Courier, monospace;
+  background-color: $backgroundColor;
+  color: $fontColor;
+  font-family: $font;
 }
 
-.cpuStatus {
+#app {
   display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+#romSelectionView {
+  text-align: center;
+}
+
+#cpuStatus {
+  display: flex;
+  font-family: $monospaceFont;
 
   > div {
     display: flex;
