@@ -3,10 +3,19 @@ $fontColor: #a9b7c6;
 $monospaceFont: "Courier New", Courier, monospace;
 $font: Helvetica, sans-serif;
 
+@font-face {
+  font-family: 'fontello';
+  src: url('icons/fontello.woff2?927603') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+
 body {
   background-color: $backgroundColor;
   color: $fontColor;
   font-family: $font;
+  margin: 0;
+  padding: 0;
 }
 
 #app {
@@ -15,8 +24,45 @@ body {
   height: 100vh;
 }
 
+.icon {
+  font-family: "fontello";
+  font-style: normal;
+  font-weight: normal;
+  speak: none;
+
+  display: inline-block;
+  text-decoration: inherit;
+  width: 1em;
+  margin-right: .2em;
+  text-align: center;
+
+  /* For safety - reset parent styles that can break glyph codes*/
+  font-variant: normal;
+  text-transform: none;
+
+  /* Font smoothing. That was taken from TWBS */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  &.icon-folder:before {
+    content: '\e800';
+  }
+}
+
 #romSelectionView {
   text-align: center;
+
+  label {
+    cursor: pointer;
+
+    input[type='file'] {
+      display: none;
+    }
+
+    .icon-folder {
+      font-size: 3em;
+    }
+  }
 }
 
 #cpuStatus {

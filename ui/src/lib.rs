@@ -33,7 +33,7 @@ impl Default for RomSelectionModel {
 
 struct RomLoadedModel<M: Mapper> {
     cpu: Cpu<M>,
-    _disassembly: Disassembly,
+    disassembly: Disassembly,
 }
 
 enum Model<M: Mapper> {
@@ -47,10 +47,7 @@ impl<M: Mapper> Model<M> {
     }
 
     fn transition_to_rom_loaded(&mut self, cpu: Cpu<M>, disassembly: Disassembly) {
-        *self = Model::RomLoaded(RomLoadedModel {
-            cpu,
-            _disassembly: disassembly,
-        })
+        *self = Model::RomLoaded(RomLoadedModel { cpu, disassembly })
     }
 }
 
@@ -125,7 +122,8 @@ fn view<M: Mapper>(model: &Model<M>) -> El<Msg> {
             attrs! {At::Id => "romSelectionView"},
             error_message(&model),
             label![
-                div!["ROM Location"],
+                icon("folder"),
+                div!["Select ROM"],
                 input![
                     attrs! { At::Type => "file"
                     },
@@ -136,13 +134,18 @@ fn view<M: Mapper>(model: &Model<M>) -> El<Msg> {
 
         Model::RomLoaded(model) => div![
             attrs! {At::Id => "romLoadedView"},
-            status_widget(&model.cpu),
             button![
                 "Step",
                 simple_ev(Ev::Click, Msg::Run(RunStrategy::Steps(1)))
-            ]
+            ],
+            status_widget(&model.cpu),
+            disassembly(&model.disassembly, 0x400)
         ],
     }
+}
+
+fn icon(name: &'static str) -> El<Msg> {
+    div![attrs! {At::Class => format!("icon icon-{}", name)}]
 }
 
 fn status_widget<M: Mapper>(cpu: &Cpu<M>) -> El<Msg> {
@@ -155,6 +158,10 @@ fn status_widget<M: Mapper>(cpu: &Cpu<M>) -> El<Msg> {
         div![div!["y"], div![format!("{:02X}", cpu.y())]],
         div![div!["NVssDIZC"], div![format!("{:08b}", cpu.status())]]
     ]
+}
+
+fn disassembly(_disassembly: &Disassembly, _offset: u16) -> El<Msg> {
+    div![]
 }
 
 fn error_message(model: &RomSelectionModel) -> El<Msg> {
