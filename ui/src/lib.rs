@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate seed;
 
+use disasm6502::Instruction;
 use futures::future::Future;
 use {
     disasm6502::Disassembly,
@@ -160,8 +161,20 @@ fn status_widget<M: Mapper>(cpu: &Cpu<M>) -> El<Msg> {
     ]
 }
 
-fn disassembly(_disassembly: &Disassembly, _offset: u16) -> El<Msg> {
-    div![]
+fn disassembly(disassembly: &Disassembly, offset: u16) -> El<Msg> {
+    let disassembly_rows: Vec<El<Msg>> = disassembly
+        .range(offset.saturating_sub(100)..offset.saturating_add(100))
+        .map(|(addr, i)| {
+            div![format!(
+                "{:04X}: {:?} {}",
+                addr,
+                i.opcode(),
+                i.operand().to_string()
+            )]
+        })
+        .collect();
+
+    div![attrs! {At::Id => "disassembly"}, disassembly_rows]
 }
 
 fn error_message(model: &RomSelectionModel) -> El<Msg> {

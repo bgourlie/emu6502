@@ -7,8 +7,10 @@ use {
     log::{info, warn},
     std::{
         cmp,
+        collections::BTreeMap,
         io::{Seek, SeekFrom},
-        iter::IntoIterator,
+        iter::{IntoIterator, Iterator},
+        ops::RangeBounds,
         u16,
     },
 };
@@ -205,16 +207,23 @@ pub enum Operand {
     BreakByte(u8),
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum Decoded {
-    Unmapped,
-    NoInstruction,
-    Instruction(Instruction),
-}
-
-impl Default for Decoded {
-    fn default() -> Self {
-        Decoded::Unmapped
+impl ToString for Operand {
+    fn to_string(&self) -> String {
+        match self {
+            Operand::Absolute(addr) => format!("${:04X}", addr),
+            Operand::AbsoluteX(addr) => format!("${:04X},X", addr),
+            Operand::AbsoluteY(addr) => format!("${:04X},Y", addr),
+            Operand::Accumulator => "A".to_owned(),
+            Operand::Immediate(val) => format!("#${:02X}", val),
+            Operand::Implied | Operand::BreakByte(_) => "".to_owned(),
+            Operand::Indirect(addr) => format!("(${:04X})", addr),
+            Operand::IndexedIndirect(addr) => format!("(${:04X},X)", addr),
+            Operand::IndirectIndexed(addr) => format!("(${:04X}),Y", addr),
+            Operand::Relative(offset) => format!("{}", offset), // TODO: label
+            Operand::ZeroPage(addr) => format!("${:02X}", addr),
+            Operand::ZeroPageX(addr) => format!("${:02X},X", addr),
+            Operand::ZeroPageY(addr) => format!("${:02X},Y", addr),
+        }
     }
 }
 
@@ -227,6 +236,14 @@ pub struct Instruction {
 impl Instruction {
     fn new(opcode: Op, operand: Operand) -> Self {
         Instruction { opcode, operand }
+    }
+
+    pub fn opcode(&self) -> Op {
+        self.opcode
+    }
+
+    pub fn operand(&self) -> Operand {
+        self.operand
     }
 }
 
@@ -281,7 +298,7 @@ pub struct DisassemblerIterator<'a, R: ReadBytesExt + Seek> {
 }
 
 impl<'a, R: ReadBytesExt + Seek> Iterator for DisassemblerIterator<'a, R> {
-    type Item = (u16, Decoded);
+    type Item = (u16, Instruction);
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.encountered_err {
@@ -307,7 +324,7 @@ pub struct Disassembler<'a, R: ReadBytesExt + Seek> {
 }
 
 impl<'a, R: ReadBytesExt + Seek> IntoIterator for Disassembler<'a, R> {
-    type Item = (u16, Decoded);
+    type Item = (u16, Instruction);
     type IntoIter = DisassemblerIterator<'a, R>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -378,7 +395,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
         }
     }
 
-    pub fn decode_next(&mut self) -> Result<Option<(u16, Decoded)>, Error> {
+    pub fn decode_next(&mut self) -> Result<Option<(u16, Instruction)>, Error> {
         if let Some(opcode_offset) = self.next_opcode_offset()? {
             let opcode_index = self.read_u8()? as usize;
             if let Some((opcode, addressing_mode)) = OPCODES[opcode_index] {
@@ -448,7 +465,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
 
                 Ok(Some((
                     self.to_address_space_offset(opcode_offset)?,
-                    Decoded::Instruction(Instruction::new(opcode, operand?)),
+                    Instruction::new(opcode, operand?),
                 )))
             } else {
                 Err(DisassemblyError::IllegalOpcode {
@@ -572,7 +589,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
 }
 
 pub struct Disassembly {
-    address_space: Box<[Decoded; u16::MAX as usize]>,
+    address_space: BTreeMap<u16, Instruction>,
 }
 
 impl Disassembly {
@@ -581,45 +598,30 @@ impl Disassembly {
         address_space_start_offset: u16,
         decode_start: u16,
     ) -> Result<Self, Error> {
-        let mut address_space = Box::new([Decoded::default(); u16::MAX as usize]);
+        let mut address_space = BTreeMap::new();
         let disassembler = Disassembler::new(rom, address_space_start_offset, decode_start)?;
-        let start_offset = usize::from(disassembler.address_space_start_offset);
-        let end_offset = usize::from(disassembler.address_space_end_offset);
-
-        address_space
-            .iter_mut()
-            .skip(start_offset)
-            .take(end_offset - start_offset)
-            .for_each(|val| *val = Decoded::NoInstruction);
 
         for (addr, instr) in disassembler {
-            address_space[addr as usize] = instr;
+            address_space.insert(addr, instr);
         }
 
         Ok(Disassembly { address_space })
     }
 
+    pub fn range<T: RangeBounds<u16>>(
+        &self,
+        range: T,
+    ) -> impl Iterator<Item = (&u16, &Instruction)> {
+        self.address_space.range(range)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&u16, &Instruction)> {
+        self.address_space.iter()
+    }
+
     pub fn display_at(&self, offset: u16) -> Option<String> {
-        match self.address_space[usize::from(offset)] {
-            Decoded::Unmapped | Decoded::NoInstruction => None,
-            Decoded::Instruction(instr) => {
-                let operand = match instr.operand {
-                    Operand::Absolute(addr) => format!("${:04X}", addr),
-                    Operand::AbsoluteX(addr) => format!("${:04X},X", addr),
-                    Operand::AbsoluteY(addr) => format!("${:04X},Y", addr),
-                    Operand::Accumulator => "A".to_owned(),
-                    Operand::Immediate(val) => format!("#${:02X}", val),
-                    Operand::Implied | Operand::BreakByte(_) => "".to_owned(),
-                    Operand::Indirect(addr) => format!("(${:04X})", addr),
-                    Operand::IndexedIndirect(addr) => format!("(${:04X},X)", addr),
-                    Operand::IndirectIndexed(addr) => format!("(${:04X}),Y", addr),
-                    Operand::Relative(offset) => format!("{}", offset), // TODO: label
-                    Operand::ZeroPage(addr) => format!("${:02X}", addr),
-                    Operand::ZeroPageX(addr) => format!("${:02X},X", addr),
-                    Operand::ZeroPageY(addr) => format!("${:02X},Y", addr),
-                };
-                Some(format!("{:?} {}", instr.opcode, operand))
-            }
-        }
+        self.address_space
+            .get(&offset)
+            .map(|instr| format!("{:?} {}", instr.opcode, instr.operand.to_string()))
     }
 }

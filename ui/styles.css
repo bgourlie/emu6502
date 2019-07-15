@@ -19,6 +19,10 @@ body {
   height: 100vh;
 }
 
+#disassembly {
+  font-family: "Courier New", Courier, monospace;
+}
+
 .icon {
   font-family: "fontello";
   font-style: normal;
