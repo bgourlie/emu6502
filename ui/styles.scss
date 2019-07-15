@@ -26,6 +26,16 @@ body {
 
 #disassembly {
   font-family: $monospaceFont;
+  display: flex;
+  flex-direction: column;
+
+  > div {
+    display: flex;
+
+    >.addr {
+      padding: 0 1em 0 0;
+    }
+  }
 }
 
 .icon {

@@ -21,6 +21,14 @@ body {
 
 #disassembly {
   font-family: "Courier New", Courier, monospace;
+  display: flex;
+  flex-direction: column;
+}
+#disassembly > div {
+  display: flex;
+}
+#disassembly > div > .addr {
+  padding: 0 1em 0 0;
 }
 
 .icon {

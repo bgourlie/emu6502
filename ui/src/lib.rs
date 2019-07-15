@@ -165,12 +165,10 @@ fn disassembly(disassembly: &Disassembly, offset: u16) -> El<Msg> {
     let disassembly_rows: Vec<El<Msg>> = disassembly
         .range(offset.saturating_sub(100)..offset.saturating_add(100))
         .map(|(addr, i)| {
-            div![format!(
-                "{:04X}: {:?} {}",
-                addr,
-                i.opcode(),
-                i.operand().to_string()
-            )]
+            div![
+                div![attrs! {At::Class => "addr"}, format!("{:04X}", addr)],
+                div![format!("{:?} {}", i.opcode(), i.operand().to_string())]
+            ]
         })
         .collect();
 
