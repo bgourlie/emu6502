@@ -619,6 +619,10 @@ impl Disassembly {
         self.address_space.iter()
     }
 
+    pub fn instruction_at(&self, offset: u16) -> Option<Instruction> {
+        self.address_space.get(&offset).map(|i| *i)
+    }
+
     pub fn display_at(&self, offset: u16) -> Option<String> {
         self.address_space
             .get(&offset)

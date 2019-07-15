@@ -6,7 +6,7 @@ use {
     emu6502::{BasicMapper, Cpu, Mapper},
     futures::future::Future,
     js_sys::Promise,
-    log::debug,
+    log::{debug, warn},
     seed::prelude::*,
     std::{borrow::Cow, io::Cursor},
     wasm_bindgen::JsCast,
@@ -161,8 +161,19 @@ fn status_widget<M: Mapper>(cpu: &Cpu<M>) -> El<Msg> {
 }
 
 fn disassembly(disassembly: &Disassembly, offset: u16) -> El<Msg> {
+    let range_start = offset.saturating_sub(100);
+    let range_end = offset.saturating_add(100);
+
+    if disassembly.instruction_at(offset) == None {
+        warn!("No instruction at {:04X}", offset);
+    }
+
+    debug!(
+        "displaying instructions {:04X}..{:04X}",
+        range_start, range_end
+    );
     let disassembly_rows: Vec<El<Msg>> = disassembly
-        .range(offset.saturating_sub(100)..offset.saturating_add(100))
+        .range(range_start..range_end)
         .map(|(addr, i)| {
             let instruction_classes = if *addr != offset {
                 class!["instruction"]

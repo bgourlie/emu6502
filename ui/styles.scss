@@ -30,7 +30,9 @@ body {
 #disassembly {
   font-family: $monospaceFont;
   display: flex;
+  height: 600px;
   flex-direction: column;
+  overflow-y: auto;
 
   > div {
     display: flex;
@@ -42,6 +44,7 @@ body {
     }
 
     >.instruction {
+      padding: 0 0 0 0.25em;
       &.current {
         background-color: $currentInstructionBackgroundColor;
       }

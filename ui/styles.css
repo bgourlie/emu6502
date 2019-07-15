@@ -22,7 +22,9 @@ body {
 #disassembly {
   font-family: "Courier New", Courier, monospace;
   display: flex;
+  height: 600px;
   flex-direction: column;
+  overflow-y: auto;
 }
 #disassembly > div {
   display: flex;
@@ -31,6 +33,9 @@ body {
   background-color: #313335;
   border-right: 1px solid #606366;
   padding: 0 1em 0 0;
+}
+#disassembly > div > .instruction {
+  padding: 0 0 0 0.25em;
 }
 #disassembly > div > .instruction.current {
   background-color: #2d6099;
