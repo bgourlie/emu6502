@@ -4,6 +4,7 @@ $backgroundColor: #2b2b2b;
 $fontColor: #a9b7c6;
 $gutterBackgroundColor: #313335;
 $gutterBorderColor: #606366;
+$currentInstructionBackgroundColor: #2d6099;
 
 @font-face {
   font-family: 'fontello';
@@ -38,6 +39,12 @@ body {
       background-color: $gutterBackgroundColor;
       border-right: 1px solid $gutterBorderColor;
       padding: 0 1em 0 0;
+    }
+
+    >.instruction {
+      &.current {
+        background-color: $currentInstructionBackgroundColor;
+      }
     }
   }
 }

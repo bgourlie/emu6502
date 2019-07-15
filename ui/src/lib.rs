@@ -1,11 +1,10 @@
 #[macro_use]
 extern crate seed;
 
-use disasm6502::Instruction;
-use futures::future::Future;
 use {
     disasm6502::Disassembly,
     emu6502::{BasicMapper, Cpu, Mapper},
+    futures::future::Future,
     js_sys::Promise,
     log::debug,
     seed::prelude::*,
@@ -140,7 +139,7 @@ fn view<M: Mapper>(model: &Model<M>) -> El<Msg> {
                 simple_ev(Ev::Click, Msg::Run(RunStrategy::Steps(1)))
             ],
             status_widget(&model.cpu),
-            disassembly(&model.disassembly, 0x400)
+            disassembly(&model.disassembly, model.cpu.pc())
         ],
     }
 }
@@ -165,12 +164,18 @@ fn disassembly(disassembly: &Disassembly, offset: u16) -> El<Msg> {
     let disassembly_rows: Vec<El<Msg>> = disassembly
         .range(offset.saturating_sub(100)..offset.saturating_add(100))
         .map(|(addr, i)| {
+            let instruction_classes = if *addr != offset {
+                class!["instruction"]
+            } else {
+                class!["instruction", "current"]
+            };
+
             div![
+                div![class!["gutter"], div![format!("{:04X}", addr)]],
                 div![
-                    attrs! {At::Class => "gutter"},
-                    div![format!("{:04X}", addr)]
-                ],
-                div![format!("{:?} {}", i.opcode(), i.operand().to_string())]
+                    instruction_classes,
+                    format!("{:?} {}", i.opcode(), i.operand().to_string())
+                ]
             ]
         })
         .collect();
