@@ -27,7 +27,9 @@ body {
 #disassembly > div {
   display: flex;
 }
-#disassembly > div > .addr {
+#disassembly > div > .gutter {
+  background-color: #313335;
+  border-right: 1px solid #606366;
   padding: 0 1em 0 0;
 }
 

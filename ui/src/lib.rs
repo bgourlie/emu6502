@@ -166,7 +166,10 @@ fn disassembly(disassembly: &Disassembly, offset: u16) -> El<Msg> {
         .range(offset.saturating_sub(100)..offset.saturating_add(100))
         .map(|(addr, i)| {
             div![
-                div![attrs! {At::Class => "addr"}, format!("{:04X}", addr)],
+                div![
+                    attrs! {At::Class => "gutter"},
+                    div![format!("{:04X}", addr)]
+                ],
                 div![format!("{:?} {}", i.opcode(), i.operand().to_string())]
             ]
         })
