@@ -3,7 +3,7 @@ extern crate seed;
 
 use {
     disasm6502::Disassembly,
-    emu6502::{BasicMapper, Cpu, Mapper},
+    emu6502::{BasicMapper, Cpu, Debugger, Mapper},
     futures::future::Future,
     js_sys::Promise,
     log::{debug, warn},
@@ -31,17 +31,17 @@ impl Default for RomSelectionModel {
     }
 }
 
-struct RomLoadedModel<M: Mapper> {
+struct RomLoadedModel<M: Mapper + Debugger> {
     cpu: Cpu<M>,
     disassembly: Disassembly,
 }
 
-enum Model<M: Mapper> {
+enum Model<M: Mapper + Debugger> {
     RomSelection(RomSelectionModel),
     RomLoaded(RomLoadedModel<M>),
 }
 
-impl<M: Mapper> Model<M> {
+impl<M: Mapper + Debugger> Model<M> {
     fn transition_to_rom_selection(&mut self, message: Option<Str>) {
         *self = Model::RomSelection(RomSelectionModel { message })
     }
@@ -51,7 +51,7 @@ impl<M: Mapper> Model<M> {
     }
 }
 
-impl<M: Mapper> Default for Model<M> {
+impl<M: Mapper + Debugger> Default for Model<M> {
     fn default() -> Self {
         Model::RomSelection(RomSelectionModel::default())
     }
@@ -72,7 +72,11 @@ enum Msg {
     Run(RunStrategy),
 }
 
-fn update<M: Mapper + 'static>(msg: Msg, model: &mut Model<M>, orders: &mut Orders<Msg>) {
+fn update<M: Mapper + Debugger + 'static>(
+    msg: Msg,
+    model: &mut Model<M>,
+    orders: &mut Orders<Msg>,
+) {
     match msg {
         Msg::RomSelected(event) => {
             let file_input: HtmlInputElement = event.target().unwrap().dyn_into().unwrap();
@@ -107,6 +111,15 @@ fn update<M: Mapper + 'static>(msg: Msg, model: &mut Model<M>, orders: &mut Orde
                         model.cpu.step();
                         debug!("stepped cpu pc = {:4X}", model.cpu.pc());
                     }
+
+                    model
+                        .cpu
+                        .mapper()
+                        .read_memory_changes(move |changed_addresses| {
+                            for address in changed_addresses {
+                                debug!("memory changed at {:04X}", address);
+                            }
+                        });
                 } else {
                     panic!("this should never happen")
                 }
@@ -116,7 +129,7 @@ fn update<M: Mapper + 'static>(msg: Msg, model: &mut Model<M>, orders: &mut Orde
     }
 }
 
-fn view<M: Mapper>(model: &Model<M>) -> El<Msg> {
+fn view<M: Mapper + Debugger>(model: &Model<M>) -> El<Msg> {
     match model {
         Model::RomSelection(model) => div![
             attrs! {At::Id => "romSelectionView"},
@@ -148,7 +161,7 @@ fn icon(name: &'static str) -> El<Msg> {
     div![attrs! {At::Class => format!("icon icon-{}", name)}]
 }
 
-fn status_widget<M: Mapper>(cpu: &Cpu<M>) -> El<Msg> {
+fn status_widget<M: Mapper + Debugger>(cpu: &Cpu<M>) -> El<Msg> {
     div![
         attrs! {At::Id => "cpuStatus"},
         div![div!["pc"], div![format!("{:04X}", cpu.pc())]],

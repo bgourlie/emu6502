@@ -33,6 +33,10 @@ impl<M: Mapper> Cpu<M> {
         }
     }
 
+    pub fn mapper(&self) -> &M {
+        &self.mapper
+    }
+
     pub fn step(&mut self) {
         let opcode = self.fetch_pc();
         match opcode {
