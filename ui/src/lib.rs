@@ -6,7 +6,7 @@ use {
     emu6502::{BasicMapper, Cpu, Debugger, Mapper},
     futures::future::Future,
     js_sys::Promise,
-    log::{debug, warn},
+    log::{debug, info, warn},
     seed::prelude::*,
     std::{borrow::Cow, io::Cursor},
     wasm_bindgen::JsCast,
@@ -112,14 +112,20 @@ fn update<M: Mapper + Debugger + 'static>(
                         debug!("stepped cpu pc = {:4X}", model.cpu.pc());
                     }
 
-                    model
-                        .cpu
-                        .mapper()
-                        .read_memory_changes(move |changed_addresses| {
-                            for address in changed_addresses {
-                                debug!("memory changed at {:04X}", address);
+                    model.cpu.mapper().read_memory_changes(|changed_addresses| {
+                        for address in changed_addresses {
+                            if let Some(modified_instruction) =
+                                model.disassembly.instruction_at(*address)
+                            {
+                                // TODO:
+                                // instruction_at should return an enum specifying indicating
+                                // no instruction, instruction pointer (what the program counter
+                                // would equal prior to executing it), or instruction operand
+                                // (bytes that are part of the instruction).
+                                info!("TODO: Disassemble from {:04X}", address);
                             }
-                        });
+                        }
+                    });
                 } else {
                     panic!("this should never happen")
                 }
