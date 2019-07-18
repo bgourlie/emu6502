@@ -114,7 +114,7 @@ fn update<M: Mapper + Debugger + 'static>(
 
                     model.cpu.mapper().read_memory_changes(|changed_addresses| {
                         for address in changed_addresses {
-                            if let Some(modified_instruction) =
+                            if let Some(_modified_instruction) =
                                 model.disassembly.instruction_at(*address)
                             {
                                 // TODO:
@@ -180,19 +180,12 @@ fn status_widget<M: Mapper + Debugger>(cpu: &Cpu<M>) -> El<Msg> {
 }
 
 fn disassembly(disassembly: &Disassembly, offset: u16) -> El<Msg> {
-    let range_start = offset.saturating_sub(100);
-    let range_end = offset.saturating_add(100);
-
     if disassembly.instruction_at(offset) == None {
         warn!("No instruction at {:04X}", offset);
     }
 
-    debug!(
-        "displaying instructions {:04X}..{:04X}",
-        range_start, range_end
-    );
     let disassembly_rows: Vec<El<Msg>> = disassembly
-        .range(range_start..range_end)
+        .range(offset, 100)
         .map(|(addr, i)| {
             let instruction_classes = if *addr != offset {
                 class!["instruction"]
