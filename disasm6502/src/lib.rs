@@ -608,22 +608,17 @@ impl Disassembly {
         Ok(Disassembly { address_space })
     }
 
-    pub fn range(&self, offset: u16, window: u16) -> impl Iterator<Item = (&u16, &Instruction)> {
-        let half_window = window / 2;
-        let half_window_in_bytes = half_window.saturating_mul(3);
-        let range_start = offset.saturating_sub(half_window_in_bytes);
-        let range_end = offset.saturating_add(half_window_in_bytes);
-        let half_window = usize::from(half_window);
-
+    pub fn window(&self, offset: u16, size: u16) -> impl Iterator<Item = (&u16, &Instruction)> {
+        let half_size = usize::from(size / 2);
         self.address_space
-            .range(range_start..offset)
+            .range(..offset)
             .rev()
-            .take(usize::from(half_window))
-            .chain(
-                self.address_space
-                    .range(offset..range_end)
-                    .take(half_window),
-            )
+            .take(usize::from(half_size))
+            /* TODO: Find a way to avoid the following allocation */
+            .collect::<Vec<(&u16, &Instruction)>>()
+            .into_iter()
+            .rev()
+            .chain(self.address_space.range(offset..).take(half_size))
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (&u16, &Instruction)> {

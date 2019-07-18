@@ -185,7 +185,7 @@ fn disassembly(disassembly: &Disassembly, offset: u16) -> El<Msg> {
     }
 
     let disassembly_rows: Vec<El<Msg>> = disassembly
-        .range(offset, 100)
+        .window(offset, 100)
         .map(|(addr, i)| {
             let instruction_classes = if *addr != offset {
                 class!["instruction"]
