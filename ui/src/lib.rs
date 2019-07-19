@@ -114,15 +114,13 @@ fn update<M: Mapper + Debugger + 'static>(
 
                     model.cpu.mapper().read_memory_changes(|changed_addresses| {
                         for address in changed_addresses {
-                            if let Some(_modified_instruction) =
+                            if let Some(modified_instruction) =
                                 model.disassembly.instruction_at(*address)
                             {
-                                // TODO:
-                                // instruction_at should return an enum specifying indicating
-                                // no instruction, instruction pointer (what the program counter
-                                // would equal prior to executing it), or instruction operand
-                                // (bytes that are part of the instruction).
-                                info!("TODO: Disassemble from {:04X}", address);
+                                info!(
+                                    "Code modified at {:04X} {:?}",
+                                    address, modified_instruction
+                                );
                             }
                         }
                     });

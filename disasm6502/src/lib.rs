@@ -146,6 +146,22 @@ const OPCODES: [Option<(Op, Addressing)>; 0x100] = [
     Some((Op::Inc, Addressing::AbsoluteX)),         None,
 ];
 
+fn operand_length(instruction: Instruction) -> u16 {
+    if instruction.opcode == Op::Brk {
+        1
+    } else {
+        match instruction.operand {
+            Operand::Implied | Operand::Accumulator => 0,
+            Operand::ZeroPage(_)
+            | Operand::ZeroPageX(_)
+            | Operand::ZeroPageY(_)
+            | Operand::Immediate(_)
+            | Operand::Relative(_) => 1,
+            _ => 2,
+        }
+    }
+}
+
 #[rustfmt::skip]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Op {
@@ -237,11 +253,11 @@ impl Instruction {
         Instruction { opcode, operand }
     }
 
-    pub fn opcode(&self) -> Op {
+    pub fn opcode(self) -> Op {
         self.opcode
     }
 
-    pub fn operand(&self) -> Operand {
+    pub fn operand(self) -> Operand {
         self.operand
     }
 }
@@ -610,7 +626,11 @@ impl Disassembly {
         let disassembler = Disassembler::new(rom, address_space_start_offset, decode_start)?;
 
         for (addr, instr) in disassembler {
+            let operand_len = operand_length(instr);
             address_space.insert(addr, Address::Instruction(instr));
+            for i in 0..operand_len {
+                address_space.insert(addr + i + 1, Address::Operand(addr));
+            }
         }
 
         Ok(Disassembly { address_space })
@@ -628,7 +648,7 @@ impl Disassembly {
                     None
                 }
             })
-            .take(usize::from(half_size))
+            .take(half_size)
             /* TODO: Find a way to avoid the following allocation */
             .collect::<Vec<(&u16, &Instruction)>>()
             .into_iter()
@@ -648,11 +668,19 @@ impl Disassembly {
     }
 
     pub fn instruction_at(&self, offset: u16) -> Option<Instruction> {
-        if let Some(Address::Instruction(i)) = self.address_space.get(&offset) {
-            Some(*i)
-        } else {
-            None
-        }
+        self.address_space.get(&offset).map(|i| match i {
+            Address::Instruction(instruction) => *instruction,
+            Address::Operand(instruction_pointer) => {
+                match self
+                    .address_space
+                    .get(instruction_pointer)
+                    .expect("instruction pointer expected to point to decoded address")
+                {
+                    Address::Instruction(instruction) => *instruction,
+                    _ => panic!("instruction pointer expected to point to instruction"),
+                }
+            }
+        })
     }
 
     pub fn display_at(&self, offset: u16) -> Option<String> {
