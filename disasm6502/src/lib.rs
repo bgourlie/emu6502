@@ -638,33 +638,35 @@ impl Disassembly {
 
     pub fn window(&self, offset: u16, size: u16) -> impl Iterator<Item = (&u16, &Instruction)> {
         let half_size = usize::from(size / 2);
-        self.address_space
-            .range(..offset)
-            .rev()
-            .filter_map(|(offset, a)| {
-                if let Address::Instruction(i) = a {
-                    Some((offset, i))
-                } else {
-                    None
-                }
-            })
-            .take(half_size)
-            /* TODO: Find a way to avoid the following allocation */
-            .collect::<Vec<(&u16, &Instruction)>>()
-            .into_iter()
-            .rev()
-            .chain(
-                self.address_space
-                    .range(offset..)
-                    .filter_map(|(offset, a)| {
-                        if let Address::Instruction(i) = a {
-                            Some((offset, i))
-                        } else {
-                            None
-                        }
-                    })
-                    .take(half_size),
-            )
+        let mut window = Vec::with_capacity(half_size);
+        window.extend(
+            self.address_space
+                .range(..offset)
+                .rev()
+                .filter_map(|(offset, a)| {
+                    if let Address::Instruction(i) = a {
+                        Some((offset, i))
+                    } else {
+                        None
+                    }
+                })
+                .take(half_size),
+        );
+
+        let rest_size = half_size - window.len() + half_size;
+
+        window.into_iter().rev().chain(
+            self.address_space
+                .range(offset..)
+                .filter_map(|(offset, a)| {
+                    if let Address::Instruction(i) = a {
+                        Some((offset, i))
+                    } else {
+                        None
+                    }
+                })
+                .take(rest_size),
+        )
     }
 
     pub fn instruction_at(&self, offset: u16) -> Option<Instruction> {
