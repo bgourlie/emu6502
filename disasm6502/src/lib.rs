@@ -589,9 +589,6 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
 
 #[derive(Copy, Clone)]
 pub enum Address {
-    /// An address that has not been disassembled.
-    Unknown,
-
     /// An address that is an instruction pointer, containing the fully decoded instruction.
     Instruction(Instruction),
 
