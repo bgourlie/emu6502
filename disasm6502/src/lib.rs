@@ -10,7 +10,6 @@ use {
         collections::BTreeMap,
         io::{Seek, SeekFrom},
         iter::{IntoIterator, Iterator},
-        ops::RangeBounds,
         u16,
     },
 };
@@ -588,8 +587,20 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
     }
 }
 
+#[derive(Copy, Clone)]
+pub enum Address {
+    /// An address that has not been disassembled.
+    Unknown,
+
+    /// An address that is an instruction pointer, containing the fully decoded instruction.
+    Instruction(Instruction),
+
+    /// An address that is part part of an instruction, containing the instruction pointer.
+    Operand(u16),
+}
+
 pub struct Disassembly {
-    address_space: BTreeMap<u16, Instruction>,
+    address_space: BTreeMap<u16, Address>,
 }
 
 impl Disassembly {
@@ -602,7 +613,7 @@ impl Disassembly {
         let disassembler = Disassembler::new(rom, address_space_start_offset, decode_start)?;
 
         for (addr, instr) in disassembler {
-            address_space.insert(addr, instr);
+            address_space.insert(addr, Address::Instruction(instr));
         }
 
         Ok(Disassembly { address_space })
@@ -613,25 +624,42 @@ impl Disassembly {
         self.address_space
             .range(..offset)
             .rev()
+            .filter_map(|(offset, a)| {
+                if let Address::Instruction(i) = a {
+                    Some((offset, i))
+                } else {
+                    None
+                }
+            })
             .take(usize::from(half_size))
             /* TODO: Find a way to avoid the following allocation */
             .collect::<Vec<(&u16, &Instruction)>>()
             .into_iter()
             .rev()
-            .chain(self.address_space.range(offset..).take(half_size))
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = (&u16, &Instruction)> {
-        self.address_space.iter()
+            .chain(
+                self.address_space
+                    .range(offset..)
+                    .filter_map(|(offset, a)| {
+                        if let Address::Instruction(i) = a {
+                            Some((offset, i))
+                        } else {
+                            None
+                        }
+                    })
+                    .take(half_size),
+            )
     }
 
     pub fn instruction_at(&self, offset: u16) -> Option<Instruction> {
-        self.address_space.get(&offset).map(|i| *i)
+        if let Some(Address::Instruction(i)) = self.address_space.get(&offset) {
+            Some(*i)
+        } else {
+            None
+        }
     }
 
     pub fn display_at(&self, offset: u16) -> Option<String> {
-        self.address_space
-            .get(&offset)
+        self.instruction_at(offset)
             .map(|instr| format!("{:?} {}", instr.opcode, instr.operand.to_string()))
     }
 }
