@@ -98,7 +98,7 @@ fn update<M: Mapper + Debugger + 'static>(
             bytes.copy_to(&mut rom);
             let mut cursor = Cursor::new(&rom);
             let mapper = M::new(&mut cursor, 0xa);
-            let disassembly = Disassembly::from_rom(&mut cursor, 0xa, 0x400).unwrap();
+            let disassembly = Disassembly::from_address_space(&mut cursor, 0xa, 0x400).unwrap();
             let mut cpu = Cpu::new(mapper);
             cpu.set_pc(0x400); // this is specific to 6502_functional_test.bin
             model.transition_to_rom_loaded(cpu, disassembly);
@@ -111,19 +111,26 @@ fn update<M: Mapper + Debugger + 'static>(
                         model.cpu.step();
                         debug!("stepped cpu pc = {:4X}", model.cpu.pc());
                     }
-
+                    let mut addresses_to_update = Vec::<u16>::new();
                     model.cpu.mapper().read_memory_changes(|changed_addresses| {
-                        for address in changed_addresses {
-                            if let Some(modified_instruction) =
-                                model.disassembly.instruction_at(*address)
-                            {
-                                info!(
-                                    "Code modified at {:04X} {:?}",
-                                    address, modified_instruction
-                                );
-                            }
-                        }
+                        addresses_to_update.extend(changed_addresses);
                     });
+
+                    for address in addresses_to_update {
+                        if let Some((instruction_pointer, modified_instruction)) =
+                            model.disassembly.instruction_at(address)
+                        {
+                            info!(
+                                "Code modified at {:04X} {:?}",
+                                address, modified_instruction
+                            );
+                            let mut cursor = model.cpu.mapper().address_space_stream();
+                            model
+                                .disassembly
+                                .update(&mut cursor, instruction_pointer)
+                                .unwrap();
+                        }
+                    }
                 } else {
                     panic!("this should never happen")
                 }

@@ -1,7 +1,11 @@
 use {
     crate::Debugger,
     fnv::FnvHashSet,
-    std::{cell::RefCell, collections::hash_set, io::Read},
+    std::{
+        cell::RefCell,
+        collections::hash_set,
+        io::{Cursor, Read},
+    },
 };
 
 const ADDRESSABLE_MEMORY: usize = 0x10000;
@@ -53,5 +57,9 @@ impl Debugger for BasicMapper {
         let mut memory_change_set = self.memory_change_set.borrow_mut();
         f(memory_change_set.iter());
         memory_change_set.clear()
+    }
+
+    fn address_space_stream(&self) -> Cursor<&[u8]> {
+        Cursor::new(&self.memory[..])
     }
 }

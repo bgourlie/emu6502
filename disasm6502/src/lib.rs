@@ -9,7 +9,7 @@ use {
         cmp,
         collections::BTreeMap,
         io::{Seek, SeekFrom},
-        iter::{IntoIterator, Iterator},
+        iter::{FromIterator, IntoIterator, Iterator},
         u16,
     },
 };
@@ -334,7 +334,7 @@ pub struct Disassembler<'a, R: ReadBytesExt + Seek> {
     rom: &'a mut R,
     address_space_start_offset: u16,
     address_space_end_offset: u16,
-    decoded_bytes: BitSet,
+    decoded_bytes: BitSet<u16>,
     unexplored: Vec<Offset>,
 }
 
@@ -351,10 +351,11 @@ impl<'a, R: ReadBytesExt + Seek> IntoIterator for Disassembler<'a, R> {
 }
 
 impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
-    pub fn new(
+    pub fn new<I: IntoIterator<Item = u16>>(
         rom: &'a mut R,
         address_space_start_offset: u16,
         decode_start: u16,
+        ignore_offsets: I,
     ) -> Result<Self, Error> {
         if decode_start < address_space_start_offset {
             Err(DisassemblyError::InvalidDecodeStart.into())
@@ -369,11 +370,14 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
                 address_space_start_offset, address_space_end_offset
             );
 
+            let decoded_bytes =
+                BitSet::from_iter(ignore_offsets.into_iter().map(|offset| usize::from(offset)));
+
             let mut disassembler = Disassembler {
                 rom,
                 address_space_start_offset,
                 address_space_end_offset,
-                decoded_bytes: BitSet::new(),
+                decoded_bytes,
                 unexplored: Vec::new(),
             };
 
@@ -617,14 +621,30 @@ pub struct Disassembly {
 }
 
 impl Disassembly {
-    pub fn from_rom<R: ReadBytesExt + Seek>(
-        rom: &mut R,
+    /// Disassemble the provided address space.
+    ///
+    /// # Arguments
+    ///
+    /// * `stream` - A seekable byte stream to disassemble
+    /// * `address_space_start_offset` - The start offset that the byte stream maps to
+    /// * `decode_start` - The absolute offset to start disassembly from
+    pub fn from_address_space<R: ReadBytesExt + Seek>(
+        stream: &mut R,
         address_space_start_offset: u16,
         decode_start: u16,
     ) -> Result<Self, Error> {
-        let mut address_space = BTreeMap::new();
-        let disassembler = Disassembler::new(rom, address_space_start_offset, decode_start)?;
+        let disassembler =
+            Disassembler::new(stream, address_space_start_offset, decode_start, None)?;
 
+        let mut address_space = BTreeMap::new();
+        Self::update_address_space(&mut address_space, disassembler);
+        Ok(Disassembly { address_space })
+    }
+
+    fn update_address_space<R: ReadBytesExt + Seek>(
+        address_space: &mut BTreeMap<u16, Address>,
+        disassembler: Disassembler<R>,
+    ) {
         for (addr, instr) in disassembler {
             let operand_len = operand_length(instr);
             address_space.insert(addr, Address::Instruction(instr));
@@ -632,8 +652,29 @@ impl Disassembly {
                 address_space.insert(addr + i + 1, Address::Operand(addr));
             }
         }
+    }
 
-        Ok(Disassembly { address_space })
+    /// Updates the disassembly starting at the specified offset. This is useful for example when
+    /// the program counter points to an offset that was never disassembled or a particular offset
+    /// was modified at runtime, as is the case with self-modifying code.
+    pub fn update<R: ReadBytesExt + Seek>(
+        &mut self,
+        stream: &mut R,
+        start_offset: u16,
+    ) -> Result<(), Error> {
+        let mut already_decoded =
+            BitSet::<u16>::from_iter(self.address_space.keys().map(|offset| usize::from(*offset)));
+
+        already_decoded.remove(usize::from(start_offset));
+
+        let disassembler = Disassembler::new(
+            stream,
+            0,
+            start_offset,
+            already_decoded.iter().map(|offset| offset as u16),
+        )?;
+        Self::update_address_space(&mut self.address_space, disassembler);
+        Ok(())
     }
 
     pub fn window(&self, offset: u16, size: u16) -> impl Iterator<Item = (&u16, &Instruction)> {
@@ -669,16 +710,18 @@ impl Disassembly {
         )
     }
 
-    pub fn instruction_at(&self, offset: u16) -> Option<Instruction> {
+    /// Given an offset, which may be an instruction pointer or an address that is part of an
+    /// instruction, return the instruction pointer and the decoded instruction.
+    pub fn instruction_at(&self, offset: u16) -> Option<(u16, Instruction)> {
         self.address_space.get(&offset).map(|i| match i {
-            Address::Instruction(instruction) => *instruction,
+            Address::Instruction(instruction) => (offset, *instruction),
             Address::Operand(instruction_pointer) => {
                 match self
                     .address_space
                     .get(instruction_pointer)
                     .expect("instruction pointer expected to point to decoded address")
                 {
-                    Address::Instruction(instruction) => *instruction,
+                    Address::Instruction(instruction) => (*instruction_pointer, *instruction),
                     _ => panic!("instruction pointer expected to point to instruction"),
                 }
             }
@@ -687,6 +730,6 @@ impl Disassembly {
 
     pub fn display_at(&self, offset: u16) -> Option<String> {
         self.instruction_at(offset)
-            .map(|instr| format!("{:?} {}", instr.opcode, instr.operand.to_string()))
+            .map(|(_, instr)| format!("{:?} {}", instr.opcode, instr.operand.to_string()))
     }
 }

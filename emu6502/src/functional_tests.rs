@@ -12,7 +12,8 @@ const MAX_ITERATIONS: usize = 300000000;
 fn opcodes() {
     let mut file = File::open("../test_roms/6502_functional_test.bin").unwrap();
     let mapper = BasicMapper::new(&mut file, ADDRESS_SPACE_MAPPING_START);
-    let disassembly = Disassembly::from_rom(&mut file, ADDRESS_SPACE_MAPPING_START, 0x400).unwrap();
+    let disassembly =
+        Disassembly::from_address_space(&mut file, ADDRESS_SPACE_MAPPING_START, 0x400).unwrap();
     let mut cpu = Cpu::new(mapper);
     cpu.set_pc(PC_START);
     let mut last_pc = PC_START;
