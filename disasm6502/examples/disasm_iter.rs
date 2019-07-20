@@ -6,7 +6,11 @@ use std::fs::File;
 pub fn main() -> Result<(), Error> {
     pretty_env_logger::init();
     let mut f = File::open("./test_roms/6502_functional_test.bin").unwrap();
-    let disassembler = Disassembler::new(&mut f, 0xa, 0x400, &[])?;
+    let disassembler = Disassembler::builder(&mut f)
+        .with_decode_start_offset(0x400)
+        .with_mapping_start_offset(0xa)
+        .detect_interrupt_vectors(true)
+        .build()?;
     for (addr, instr) in disassembler {
         info!("{:04X}: {:?}", addr, instr);
     }

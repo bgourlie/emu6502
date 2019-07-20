@@ -98,7 +98,7 @@ fn update<M: Mapper + Debugger + 'static>(
             bytes.copy_to(&mut rom);
             let mut cursor = Cursor::new(&rom);
             let mapper = M::new(&mut cursor, 0xa);
-            let disassembly = Disassembly::from_address_space(&mut cursor, 0xa, 0x400).unwrap();
+            let disassembly = Disassembly::from_stream(&mut cursor, 0xa, 0x400).unwrap();
             let mut cpu = Cpu::new(mapper);
             cpu.set_pc(0x400); // this is specific to 6502_functional_test.bin
             model.transition_to_rom_loaded(cpu, disassembly);
