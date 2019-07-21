@@ -3,8 +3,8 @@ use {
     fnv::FnvHashSet,
     std::{
         cell::RefCell,
-        collections::hash_set,
         io::{Cursor, Read},
+        iter::FromIterator,
     },
 };
 
@@ -50,13 +50,9 @@ impl Mapper for BasicMapper {
 }
 
 impl Debugger for BasicMapper {
-    fn read_memory_changes<F>(&self, f: F)
-    where
-        F: FnOnce(hash_set::Iter<u16>),
-    {
+    fn read_memory_changes(&self) -> Vec<u16> {
         let mut memory_change_set = self.memory_change_set.borrow_mut();
-        f(memory_change_set.iter());
-        memory_change_set.clear()
+        Vec::from_iter(memory_change_set.drain())
     }
 
     fn address_space_stream(&self) -> Cursor<&[u8]> {

@@ -6,7 +6,7 @@ use {
     emu6502::{BasicMapper, Cpu, Debugger, Mapper},
     futures::future::Future,
     js_sys::Promise,
-    log::{debug, info, warn},
+    log::{debug, warn},
     seed::prelude::*,
     std::{borrow::Cow, io::Cursor},
     wasm_bindgen::JsCast,
@@ -111,24 +111,26 @@ fn update<M: Mapper + Debugger + 'static>(
                         model.cpu.step();
                         debug!("stepped cpu pc = {:4X}", model.cpu.pc());
                     }
-                    let mut addresses_to_update = Vec::<u16>::new();
-                    model.cpu.mapper().read_memory_changes(|changed_addresses| {
-                        addresses_to_update.extend(changed_addresses);
-                    });
 
-                    for address in addresses_to_update {
-                        if let Some((instruction_pointer, modified_instruction)) =
-                            model.disassembly.instruction_at(address)
-                        {
-                            info!(
-                                "Code modified at {:04X} {:?}",
-                                address, modified_instruction
-                            );
-                            let mut cursor = model.cpu.mapper().address_space_stream();
+                    let memory_changes = model.cpu.mapper().read_memory_changes();
+
+                    if !memory_changes.is_empty() {
+                        // Retrieve any updated offsets that are disassembled program code
+                        let mut offsets_to_disassemble =
+                            model.disassembly.instruction_offsets(memory_changes);
+
+                        // If the program counter points to an an offset that has not been
+                        // disassembled, ensure it is also disassembled
+                        if !offsets_to_disassemble.contains(&model.cpu.pc()) {
+                            offsets_to_disassemble.insert(model.cpu.pc());
+                        }
+
+                        if !offsets_to_disassemble.is_empty() {
+                            let mut stream = model.cpu.mapper().address_space_stream();
                             model
                                 .disassembly
-                                .update(&mut cursor, Some(instruction_pointer))
-                                .unwrap();
+                                .update(&mut stream, offsets_to_disassemble)
+                                .expect("disassembly update failed");
                         }
                     }
                 } else {

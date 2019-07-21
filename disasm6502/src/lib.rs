@@ -3,7 +3,7 @@
 use {
     byteorder::{LittleEndian, ReadBytesExt},
     failure::{Error, Fail},
-    fnv::FnvHashSet,
+    fnv::{FnvHashMap, FnvHashSet},
     log::{error, info},
     std::{
         cmp,
@@ -578,21 +578,14 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
     }
 }
 
-#[derive(Copy, Clone)]
-pub enum Address {
-    /// An address that is an instruction pointer, containing the fully decoded instruction.
-    Instruction(Instruction),
-
-    /// An address that is part part of an instruction, containing the instruction pointer.
-    Operand(u16),
-}
-
 pub struct Disassembly {
     /// An ordered map that maintains a mapping of offsets to their respective decoded instruction.
-    address_space: BTreeMap<u16, Address>,
+    instructions: BTreeMap<u16, Instruction>,
 
-    /// A HashSet that contains offsets that have been visited by the disassembler.
-    visited: FnvHashSet<u16>,
+    /// A mapping from offset to the instruction pointer for that offset. For example, a single
+    /// instruction may span three bytes, the offsets for those bytes will map to the instruction
+    /// pointer.
+    decoded: FnvHashMap<u16, u16>,
 }
 
 impl Disassembly {
@@ -615,10 +608,10 @@ impl Disassembly {
             .build()?;
 
         let mut disassembly = Disassembly {
-            address_space: BTreeMap::default(),
-            visited: FnvHashSet::default(),
+            instructions: BTreeMap::default(),
+            decoded: FnvHashMap::default(),
         };
-        disassembly.update_address_space(disassembler);
+        disassembly.update_decoding(disassembler);
         Ok(disassembly)
     }
 
@@ -632,62 +625,48 @@ impl Disassembly {
     ) -> Result<(), Error> {
         let disassembler = Disassembler::builder(stream)
             .with_decode_offsets(update_offsets)
-            .with_visited_offsets(self.visited.iter().map(|v| *v))
+            .with_visited_offsets(self.decoded.iter().map(|(v, _)| *v))
             .build()?;
 
-        self.update_address_space(disassembler);
+        self.update_decoding(disassembler);
         Ok(())
     }
 
     pub fn window(&self, offset: u16, size: u16) -> impl Iterator<Item = (&u16, &Instruction)> {
         let half_size = usize::from(size / 2);
         let mut window = Vec::with_capacity(half_size);
-        window.extend(
-            self.address_space
-                .range(..offset)
-                .rev()
-                .filter_map(|(offset, a)| {
-                    if let Address::Instruction(i) = a {
-                        Some((offset, i))
-                    } else {
-                        None
-                    }
-                })
-                .take(half_size),
-        );
+        window.extend(self.instructions.range(..offset).rev().take(half_size));
 
         let rest_size = half_size - window.len() + half_size;
 
-        window.into_iter().rev().chain(
-            self.address_space
-                .range(offset..)
-                .filter_map(|(offset, a)| {
-                    if let Address::Instruction(i) = a {
-                        Some((offset, i))
-                    } else {
-                        None
-                    }
-                })
-                .take(rest_size),
-        )
+        window
+            .into_iter()
+            .rev()
+            .chain(self.instructions.range(offset..).take(rest_size))
     }
 
     /// Given an offset, which may be an instruction pointer or an address that is part of an
     /// instruction, return the instruction pointer and the decoded instruction.
     pub fn instruction_at(&self, offset: u16) -> Option<(u16, Instruction)> {
-        self.address_space.get(&offset).map(|i| match i {
-            Address::Instruction(instruction) => (offset, *instruction),
-            Address::Operand(instruction_pointer) => {
-                match self
-                    .address_space
-                    .get(instruction_pointer)
-                    .expect("instruction pointer expected to point to decoded address")
-                {
-                    Address::Instruction(instruction) => (*instruction_pointer, *instruction),
-                    _ => panic!("instruction pointer expected to point to instruction"),
-                }
-            }
+        self.decoded.get(&offset).map(|instruction_pointer| {
+            (
+                *instruction_pointer,
+                *self
+                    .instructions
+                    .get(&instruction_pointer)
+                    .expect("should exist"),
+            )
         })
+    }
+
+    pub fn instruction_offsets<'a, I: IntoIterator<Item = u16>>(
+        &self,
+        offsets: I,
+    ) -> FnvHashSet<u16> {
+        offsets
+            .into_iter()
+            .filter_map(|offset| self.decoded.get(&offset).map(|offset| *offset))
+            .collect()
     }
 
     pub fn display_at(&self, offset: u16) -> Option<String> {
@@ -695,17 +674,14 @@ impl Disassembly {
             .map(|(_, instr)| format!("{:?} {}", instr.opcode, instr.operand.to_string()))
     }
 
-    fn update_address_space<R: ReadBytesExt + Seek>(&mut self, disassembler: Disassembler<R>) {
-        for (offset, instr) in disassembler {
+    fn update_decoding<R: ReadBytesExt + Seek>(&mut self, disassembler: Disassembler<R>) {
+        for (instruction_offset, instr) in disassembler {
             let operand_len = operand_length(instr);
-            self.address_space
-                .insert(offset, Address::Instruction(instr));
-            self.visited.insert(offset);
+            self.instructions.insert(instruction_offset, instr);
+            self.decoded.insert(instruction_offset, instruction_offset);
             for i in 0..operand_len {
-                let operand_offset = offset + i + 1;
-                self.address_space
-                    .insert(operand_offset, Address::Operand(offset));
-                self.visited.insert(operand_offset);
+                let operand_offset = instruction_offset + i + 1;
+                self.decoded.insert(operand_offset, instruction_offset);
             }
         }
     }
