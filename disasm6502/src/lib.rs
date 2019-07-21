@@ -190,8 +190,8 @@ pub enum Addressing {
 
 #[derive(Debug, Fail)]
 enum DisassemblyError {
-    #[fail(display = "Decode start must be greater than the address space offset")]
-    InvalidDecodeStart,
+    #[fail(display = "Decode must map to an address in the supplied stream")]
+    InvalidDecodeOffset,
 
     #[fail(display = "Branch out of bounds: {:X?}", branch_location)]
     BranchOutOfBounds { branch_location: u16 },
@@ -286,7 +286,7 @@ pub struct DisassemblerBuilder<'a, R: ReadBytesExt + Seek> {
     stream: &'a mut R,
     decode_offsets: Option<Vec<u16>>,
     mapping_start_offset: Option<u16>,
-    ignored_offsets: BitSet<u16>,
+    visited_offsets: BitSet<u16>,
     detect_interrupt_vectors: bool,
 }
 
@@ -307,11 +307,12 @@ impl<'a, R: ReadBytesExt + Seek> DisassemblerBuilder<'a, R> {
         self
     }
 
-    /// Configures any offsets that the disassembler should skip. This may come in useful if you
-    /// want to disassemble only memory locations that have changed.
-    pub fn with_ignored_offsets<I: IntoIterator<Item = u16>>(mut self, offsets: I) -> Self {
-        self.ignored_offsets
-            .extend(offsets.into_iter().map(|offset| usize::from(offset)));
+    /// Indicate any offsets you want to be considered "visited," meaning the disassembler will not
+    /// decode these offsets. This is useful if you want to update a few offsets of an existing
+    /// disassembly.
+    pub fn with_visited_offsets<I: IntoIterator<Item = u16>>(mut self, offsets: I) -> Self {
+        self.visited_offsets
+            .extend(offsets.into_iter().map(usize::from));
         self
     }
 
@@ -328,11 +329,13 @@ impl<'a, R: ReadBytesExt + Seek> DisassemblerBuilder<'a, R> {
             self.stream.stream_len()? + u64::from(mapping_start_offset),
             u64::from(u16::MAX),
         ) as u16;
-        let decode_offsets = self.decode_offsets.take().unwrap_or(Vec::new());
-        if decode_offsets.iter().any(|decode_offset| {
+        let decode_offsets = self.decode_offsets.take().unwrap_or_default();
+        let has_invalid_decode_offsets = decode_offsets.iter().any(|decode_offset| {
             *decode_offset < mapping_start_offset || *decode_offset > mapping_end_offset
-        }) {
-            Err(DisassemblyError::InvalidDecodeStart.into())
+        });
+
+        if has_invalid_decode_offsets {
+            Err(DisassemblyError::InvalidDecodeOffset.into())
         } else {
             info!(
                 "Disassembling stream mapped from {:04X} to {:04X}",
@@ -343,7 +346,7 @@ impl<'a, R: ReadBytesExt + Seek> DisassemblerBuilder<'a, R> {
                 stream: self.stream,
                 mapping_start_offset,
                 mapping_end_offset,
-                decoded_bytes: self.ignored_offsets,
+                visited_offsets: self.visited_offsets,
                 decode_stack: decode_offsets,
             };
 
@@ -391,7 +394,7 @@ pub struct Disassembler<'a, R: ReadBytesExt + Seek> {
     stream: &'a mut R,
     mapping_start_offset: u16,
     mapping_end_offset: u16,
-    decoded_bytes: BitSet<u16>,
+    visited_offsets: BitSet<u16>,
     decode_stack: Vec<u16>,
 }
 
@@ -413,7 +416,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
             stream,
             decode_offsets: None,
             mapping_start_offset: None,
-            ignored_offsets: BitSet::<u16>::default(),
+            visited_offsets: BitSet::<u16>::default(),
             detect_interrupt_vectors: false,
         }
     }
@@ -499,7 +502,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
     }
 
     fn push_decode_stack(&mut self, offset: u16) {
-        if !self.is_decoded(offset) {
+        if !self.is_visited(offset) {
             info!("Pushed {:04X} onto the unexplored stack", offset);
             self.decode_stack.push(offset);
         }
@@ -507,17 +510,17 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
 
     fn next_opcode_offset(&mut self) -> Result<Option<u16>, Error> {
         let opcode_location = self.cur_offset()?;
-        if !self.is_decoded(opcode_location) {
+        if !self.is_visited(opcode_location) {
             Ok(Some(opcode_location))
         } else {
             loop {
                 if let Some(next_decode_location) = self.decode_stack.pop() {
-                    if !self.is_decoded(next_decode_location) {
+                    if !self.is_visited(next_decode_location) {
                         if self.is_mapped(next_decode_location) {
                             self.jump_to(next_decode_location)?;
                             break Ok(Some(next_decode_location));
                         } else {
-                            self.mark_decoded(next_decode_location)?;
+                            self.mark_visited(next_decode_location);
                             info!("{:04X} isn't mapped, skipping", next_decode_location);
                         }
                     } else {
@@ -539,30 +542,29 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
 
     fn read_u8(&mut self) -> Result<u8, Error> {
         let cur_pointer = self.cur_offset()?;
-        self.mark_decoded(cur_pointer)?;
+        self.mark_visited(cur_pointer);
         Ok(self.stream.read_u8()?)
     }
 
     fn read_i8(&mut self) -> Result<i8, Error> {
         let cur_pointer = self.cur_offset()?;
-        self.mark_decoded(cur_pointer)?;
+        self.mark_visited(cur_pointer);
         Ok(self.stream.read_i8()?)
     }
 
     fn read_u16(&mut self) -> Result<u16, Error> {
         let cur_pointer = self.cur_offset()?;
-        self.mark_decoded(cur_pointer)?;
-        self.mark_decoded(cur_pointer + 1)?;
+        self.mark_visited(cur_pointer);
+        self.mark_visited(cur_pointer + 1);
         Ok(self.stream.read_u16::<LittleEndian>()?)
     }
 
-    fn mark_decoded(&mut self, offset: u16) -> Result<(), Error> {
-        self.decoded_bytes.insert(usize::from(offset));
-        Ok(())
+    fn mark_visited(&mut self, offset: u16) {
+        self.visited_offsets.insert(usize::from(offset));
     }
 
-    fn is_decoded(&self, offset: u16) -> bool {
-        self.decoded_bytes.contains(usize::from(offset))
+    fn is_visited(&self, offset: u16) -> bool {
+        self.visited_offsets.contains(usize::from(offset))
     }
 
     fn cur_offset(&mut self) -> Result<u16, Error> {
@@ -623,7 +625,7 @@ impl Disassembly {
 
         let disassembler = Disassembler::builder(stream)
             .with_decode_offsets(Some(start_offset))
-            .with_ignored_offsets(already_decoded.iter().map(|offset| offset as u16))
+            .with_visited_offsets(already_decoded.iter().map(|offset| offset as u16))
             .build()?;
 
         Self::update_address_space(&mut self.address_space, disassembler);
