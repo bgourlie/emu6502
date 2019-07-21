@@ -127,7 +127,7 @@ fn update<M: Mapper + Debugger + 'static>(
                             let mut cursor = model.cpu.mapper().address_space_stream();
                             model
                                 .disassembly
-                                .update(&mut cursor, instruction_pointer)
+                                .update(&mut cursor, Some(instruction_pointer))
                                 .unwrap();
                         }
                     }
