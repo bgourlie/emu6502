@@ -165,44 +165,56 @@ fn update<M: Mapper + Debugger + 'static>(
 }
 
 fn view<M: Mapper + Debugger>(model: &Model<M>) -> El<Msg> {
-    let view = match model.state {
-        State::RomSelection(ref state) => div![
-            id!["romSelectionView"],
-            error_message(state),
-            label![
-                icon("folder"),
-                div!["Select ROM"],
-                input![
-                    attrs! { At::Type => "file"
-                    },
-                    raw_ev(Ev::Change, Msg::RomSelected)
+    let (top_bar_view, view) = match model.state {
+        State::RomSelection(ref state) => {
+            let top_bar_view = div![
+                id!["romSelection"],
+                error_message(state),
+                label![
+                    icon("folder"),
+                    div!["Select ROM"],
+                    input![
+                        attrs! { At::Type => "file"
+                        },
+                        raw_ev(Ev::Change, Msg::RomSelected)
+                    ]
                 ]
-            ]
-        ],
+            ];
+            let view = div![];
+            (top_bar_view, view)
+        }
 
-        State::RomLoaded(ref state) => div![
-            id!["romLoadedView"],
-            top_bar(&state.cpu),
-            disassembly(&state.disassembly, state.cpu.pc())
-        ],
+        State::RomLoaded(ref state) => {
+            let top_bar_view = div![
+                status_widget(&state.cpu),
+                button![
+                    "Step",
+                    simple_ev(Ev::Click, Msg::Run(RunStrategy::Steps(1)))
+                ],
+            ];
+
+            let view = div![
+                id!["romLoadedView"],
+                disassembly(&state.disassembly, state.cpu.pc())
+            ];
+            (top_bar_view, view)
+        }
     };
 
-    div![id!["view"], keyboard_ev("keydown", Msg::KeyPress), view]
+    div![
+        id!["view"],
+        keyboard_ev("keydown", Msg::KeyPress),
+        top_bar(top_bar_view),
+        view
+    ]
 }
 
 fn icon(name: &'static str) -> El<Msg> {
     div![attrs! {At::Class => format!("icon icon-{}", name)}]
 }
 
-fn top_bar<M: Mapper + Debugger>(cpu: &Cpu<M>) -> El<Msg> {
-    div![
-        id!["topBar"],
-        status_widget(cpu),
-        button![
-            "Step",
-            simple_ev(Ev::Click, Msg::Run(RunStrategy::Steps(1)))
-        ],
-    ]
+fn top_bar(view: El<Msg>) -> El<Msg> {
+    div![id!["topBar"], view]
 }
 
 fn status_widget<M: Mapper + Debugger>(cpu: &Cpu<M>) -> El<Msg> {

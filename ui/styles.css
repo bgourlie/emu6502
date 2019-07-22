@@ -62,23 +62,29 @@ body {
   content: "";
 }
 
-#romSelectionView {
+#romSelection {
   text-align: center;
 }
-#romSelectionView label {
+#romSelection label {
+  display: flex;
+  flex-direction: column;
   cursor: pointer;
+  font-size: 0.75rem;
+  text-align: center;
 }
-#romSelectionView label input[type=file] {
+#romSelection label input[type=file] {
   display: none;
 }
-#romSelectionView label .icon-folder {
-  font-size: 3em;
+#romSelection label .icon-folder {
+  font-size: 2rem;
 }
 
 #topBar {
-  display: flex;
   height: 3rem;
   overflow: hidden;
+}
+#topBar > div {
+  display: flex;
 }
 
 #cpuStatus {
