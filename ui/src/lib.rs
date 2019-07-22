@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate seed;
 
+mod console_buffer;
+
 use {
     disasm6502::Disassembly,
     emu6502::{BasicMapper, Cpu, Debugger, Mapper},
