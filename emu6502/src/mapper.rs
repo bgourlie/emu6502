@@ -38,14 +38,12 @@ impl Mapper for BasicMapper {
     }
 
     fn peek(&self, addr: u16) -> u8 {
-        let addr = addr as usize;
-        self.memory[addr]
+        self.memory[usize::from(addr)]
     }
 
     fn poke(&mut self, addr: u16, data: u8) {
         self.memory_change_set.borrow_mut().insert(addr);
-        let addr = addr as usize;
-        self.memory[addr] = data;
+        self.memory[usize::from(addr)] = data;
     }
 }
 

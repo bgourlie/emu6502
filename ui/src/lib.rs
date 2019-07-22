@@ -80,12 +80,11 @@ fn update<M: Mapper + Debugger + 'static>(
 ) {
     match msg {
         Msg::KeyPress(event) => match event.key_code() {
-            83 => match model {
-                Model::RomLoaded(_) => {
+            83 => {
+                if let Model::RomLoaded(_) = model {
                     orders.send_msg(Msg::Run(RunStrategy::Steps(1)));
                 }
-                _ => (),
-            },
+            }
             _ => (),
         },
         Msg::RomSelected(event) => {
@@ -179,11 +178,7 @@ fn view<M: Mapper + Debugger>(model: &Model<M>) -> El<Msg> {
         ],
     };
 
-    div![
-        id!["view"],
-        keyboard_ev("keydown", |e| Msg::KeyPress(e)),
-        view
-    ]
+    div![id!["view"], keyboard_ev("keydown", Msg::KeyPress), view]
 }
 
 fn icon(name: &'static str) -> El<Msg> {
