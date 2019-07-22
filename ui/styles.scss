@@ -5,6 +5,7 @@ $fontColor: #a9b7c6;
 $gutterBackgroundColor: #313335;
 $gutterBorderColor: #606366;
 $currentInstructionBackgroundColor: #2d6099;
+$topBarHeight: 3rem;
 
 @font-face {
   font-family: 'fontello';
@@ -30,7 +31,7 @@ body {
 #disassembly {
   font-family: $monospaceFont;
   display: flex;
-  height: 600px;
+  height: calc(100vh - #{$topBarHeight});
   flex-direction: column;
   overflow-y: auto;
 
@@ -91,6 +92,12 @@ body {
       font-size: 3em;
     }
   }
+}
+
+#topBar {
+  display: flex;
+  height: $topBarHeight;
+  overflow: hidden;
 }
 
 #cpuStatus {

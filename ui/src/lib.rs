@@ -17,6 +17,7 @@ use {
 #[wasm_bindgen(module = "/util.js")]
 extern "C" {
     fn read_as_array_buffer(path: File) -> Promise;
+    fn scroll_current_instruction_into_view();
 }
 
 type Str = Cow<'static, str>;
@@ -141,6 +142,7 @@ fn update<M: Mapper + Debugger + 'static>(
                                 .update(&mut stream, offsets_to_disassemble)
                                 .expect("disassembly update failed");
                         }
+                        scroll_current_instruction_into_view();
                     }
                 } else {
                     panic!("this should never happen")
@@ -169,11 +171,7 @@ fn view<M: Mapper + Debugger>(model: &Model<M>) -> El<Msg> {
 
         Model::RomLoaded(model) => div![
             id!["romLoadedView"],
-            button![
-                "Step",
-                simple_ev(Ev::Click, Msg::Run(RunStrategy::Steps(1)))
-            ],
-            status_widget(&model.cpu),
+            top_bar(&model.cpu),
             disassembly(&model.disassembly, model.cpu.pc())
         ],
     };
@@ -183,6 +181,17 @@ fn view<M: Mapper + Debugger>(model: &Model<M>) -> El<Msg> {
 
 fn icon(name: &'static str) -> El<Msg> {
     div![attrs! {At::Class => format!("icon icon-{}", name)}]
+}
+
+fn top_bar<M: Mapper + Debugger>(cpu: &Cpu<M>) -> El<Msg> {
+    div![
+        id!["topBar"],
+        status_widget(cpu),
+        button![
+            "Step",
+            simple_ev(Ev::Click, Msg::Run(RunStrategy::Steps(1)))
+        ],
+    ]
 }
 
 fn status_widget<M: Mapper + Debugger>(cpu: &Cpu<M>) -> El<Msg> {
@@ -221,7 +230,7 @@ fn disassembly(disassembly: &Disassembly, offset: u16) -> El<Msg> {
         })
         .collect();
 
-    div![attrs! {At::Id => "disassembly"}, disassembly_rows]
+    div![id!["disassembly"], disassembly_rows]
 }
 
 fn error_message(model: &RomSelectionModel) -> El<Msg> {

@@ -12,3 +12,14 @@ export const read_as_array_buffer = (file) => {
         reader.readAsArrayBuffer(file);
     });
 };
+
+export const scroll_current_instruction_into_view = () => {
+    window.requestAnimationFrame(() => {
+        const elem = document.querySelector(".instruction.current");
+        if (elem.scrollIntoViewIfNeeded) {
+            elem.scrollIntoViewIfNeeded();
+        } else {
+            elem.scrollIntoView();
+        }
+    });
+};
