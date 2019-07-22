@@ -17,7 +17,6 @@ use {
 #[wasm_bindgen(module = "/util.js")]
 extern "C" {
     fn read_as_array_buffer(path: File) -> Promise;
-    fn scroll_current_instruction_into_view();
 }
 
 type Str = Cow<'static, str>;
@@ -142,7 +141,6 @@ fn update<M: Mapper + Debugger + 'static>(
                                 .update(&mut stream, offsets_to_disassemble)
                                 .expect("disassembly update failed");
                         }
-                        scroll_current_instruction_into_view();
                     }
                 } else {
                     panic!("this should never happen")
