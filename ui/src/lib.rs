@@ -70,6 +70,7 @@ enum Msg {
     RomBytesRead(js_sys::Uint8Array),
     RomLoadingErr,
     Run(RunStrategy),
+    KeyPress(web_sys::KeyboardEvent),
 }
 
 fn update<M: Mapper + Debugger + 'static>(
@@ -78,6 +79,15 @@ fn update<M: Mapper + Debugger + 'static>(
     orders: &mut Orders<Msg>,
 ) {
     match msg {
+        Msg::KeyPress(event) => match event.key_code() {
+            83 => match model {
+                Model::RomLoaded(_) => {
+                    orders.send_msg(Msg::Run(RunStrategy::Steps(1)));
+                }
+                _ => (),
+            },
+            _ => (),
+        },
         Msg::RomSelected(event) => {
             let file_input: HtmlInputElement = event.target().unwrap().dyn_into().unwrap();
             if let Some(file) = file_input.files().unwrap().get(0) {
@@ -143,9 +153,9 @@ fn update<M: Mapper + Debugger + 'static>(
 }
 
 fn view<M: Mapper + Debugger>(model: &Model<M>) -> El<Msg> {
-    match model {
+    let view = match model {
         Model::RomSelection(model) => div![
-            attrs! {At::Id => "romSelectionView"},
+            id!["romSelectionView"],
             error_message(&model),
             label![
                 icon("folder"),
@@ -159,7 +169,7 @@ fn view<M: Mapper + Debugger>(model: &Model<M>) -> El<Msg> {
         ],
 
         Model::RomLoaded(model) => div![
-            attrs! {At::Id => "romLoadedView"},
+            id!["romLoadedView"],
             button![
                 "Step",
                 simple_ev(Ev::Click, Msg::Run(RunStrategy::Steps(1)))
@@ -167,7 +177,13 @@ fn view<M: Mapper + Debugger>(model: &Model<M>) -> El<Msg> {
             status_widget(&model.cpu),
             disassembly(&model.disassembly, model.cpu.pc())
         ],
-    }
+    };
+
+    div![
+        id!["view"],
+        keyboard_ev("keydown", |e| Msg::KeyPress(e)),
+        view
+    ]
 }
 
 fn icon(name: &'static str) -> El<Msg> {
@@ -176,7 +192,7 @@ fn icon(name: &'static str) -> El<Msg> {
 
 fn status_widget<M: Mapper + Debugger>(cpu: &Cpu<M>) -> El<Msg> {
     div![
-        attrs! {At::Id => "cpuStatus"},
+        id!["cpuStatus"],
         div![div!["pc"], div![format!("{:04X}", cpu.pc())]],
         div![div!["sp"], div![format!("{:02X}", cpu.sp())]],
         div![div!["acc"], div![format!("{:02X}", cpu.acc())]],
