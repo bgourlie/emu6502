@@ -4,6 +4,7 @@ extern crate seed;
 mod console_buffer;
 
 use {
+    console_buffer::ConsoleBuffer,
     disasm6502::Disassembly,
     emu6502::{BasicMapper, Cpu, Debugger, Mapper},
     futures::future::Future,
@@ -38,24 +39,34 @@ struct RomLoadedModel<M: Mapper + Debugger> {
     disassembly: Disassembly,
 }
 
-enum Model<M: Mapper + Debugger> {
-    RomSelection(RomSelectionModel),
-    RomLoaded(RomLoadedModel<M>),
+struct Model<M: Mapper + Debugger> {
+    console_buffer: ConsoleBuffer,
+    state: State<M>,
 }
 
 impl<M: Mapper + Debugger> Model<M> {
     fn transition_to_rom_selection(&mut self, message: Option<Str>) {
-        *self = Model::RomSelection(RomSelectionModel { message })
+        self.state = State::RomSelection(RomSelectionModel { message })
     }
 
     fn transition_to_rom_loaded(&mut self, cpu: Cpu<M>, disassembly: Disassembly) {
-        *self = Model::RomLoaded(RomLoadedModel { cpu, disassembly })
+        self.state = State::RomLoaded(RomLoadedModel { cpu, disassembly })
     }
+}
+
+enum State<M: Mapper + Debugger> {
+    RomSelection(RomSelectionModel),
+    RomLoaded(RomLoadedModel<M>),
 }
 
 impl<M: Mapper + Debugger> Default for Model<M> {
     fn default() -> Self {
-        Model::RomSelection(RomSelectionModel::default())
+        let mut console_buffer = ConsoleBuffer::default();
+        console_buffer.push("Welcome!");
+        Model {
+            state: State::RomSelection(RomSelectionModel::default()),
+            console_buffer,
+        }
     }
 }
 
@@ -83,7 +94,7 @@ fn update<M: Mapper + Debugger + 'static>(
     match msg {
         Msg::KeyPress(event) => match event.key_code() {
             83 => {
-                if let Model::RomLoaded(_) = model {
+                if let State::RomLoaded(_) = model.state {
                     orders.send_msg(Msg::Run(RunStrategy::Steps(1)));
                 }
             }
@@ -117,28 +128,28 @@ fn update<M: Mapper + Debugger + 'static>(
         Msg::RomLoadingErr => debug!("Rom loading error!"),
         Msg::Run(strategy) => match strategy {
             RunStrategy::Steps(steps) => {
-                if let Model::RomLoaded(ref mut model) = model {
+                if let State::RomLoaded(ref mut state) = model.state {
                     for _i in 0..steps {
-                        model.cpu.step();
-                        debug!("stepped cpu pc = {:4X}", model.cpu.pc());
+                        state.cpu.step();
+                        debug!("stepped cpu pc = {:4X}", state.cpu.pc());
                     }
 
-                    let memory_changes = model.cpu.mapper().read_memory_changes();
+                    let memory_changes = state.cpu.mapper().read_memory_changes();
 
                     if !memory_changes.is_empty() {
                         // Retrieve any updated offsets that are disassembled program code
                         let mut offsets_to_disassemble =
-                            model.disassembly.instruction_offsets(memory_changes);
+                            state.disassembly.instruction_offsets(memory_changes);
 
                         // If the program counter points to an an offset that has not been
                         // disassembled, ensure it is also disassembled
-                        if !offsets_to_disassemble.contains(&model.cpu.pc()) {
-                            offsets_to_disassemble.insert(model.cpu.pc());
+                        if !offsets_to_disassemble.contains(&state.cpu.pc()) {
+                            offsets_to_disassemble.insert(state.cpu.pc());
                         }
 
                         if !offsets_to_disassemble.is_empty() {
-                            let mut stream = model.cpu.mapper().address_space_stream();
-                            model
+                            let mut stream = state.cpu.mapper().address_space_stream();
+                            state
                                 .disassembly
                                 .update(&mut stream, offsets_to_disassemble)
                                 .expect("disassembly update failed");
@@ -154,10 +165,10 @@ fn update<M: Mapper + Debugger + 'static>(
 }
 
 fn view<M: Mapper + Debugger>(model: &Model<M>) -> El<Msg> {
-    let view = match model {
-        Model::RomSelection(model) => div![
+    let view = match model.state {
+        State::RomSelection(ref state) => div![
             id!["romSelectionView"],
-            error_message(&model),
+            error_message(state),
             label![
                 icon("folder"),
                 div!["Select ROM"],
@@ -169,10 +180,10 @@ fn view<M: Mapper + Debugger>(model: &Model<M>) -> El<Msg> {
             ]
         ],
 
-        Model::RomLoaded(model) => div![
+        State::RomLoaded(ref state) => div![
             id!["romLoadedView"],
-            top_bar(&model.cpu),
-            disassembly(&model.disassembly, model.cpu.pc())
+            top_bar(&state.cpu),
+            disassembly(&state.disassembly, state.cpu.pc())
         ],
     };
 
