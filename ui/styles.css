@@ -19,12 +19,28 @@ body {
   height: 100vh;
 }
 
+#topRow {
+  height: 3rem;
+  overflow: hidden;
+  display: flex;
+}
+
+#mainRow {
+  height: calc(100vh - 3rem);
+  display: flex;
+}
+
+#console {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
 #disassembly {
   font-family: "Courier New", Courier, monospace;
   display: flex;
-  height: calc(100vh - 3rem);
   flex-direction: column;
   overflow-y: auto;
+  width: 15rem;
 }
 #disassembly > div {
   display: flex;
@@ -62,29 +78,19 @@ body {
   content: "";
 }
 
-#romSelection {
+#romSelectButton {
   text-align: center;
-}
-#romSelection label {
   display: flex;
   flex-direction: column;
   cursor: pointer;
   font-size: 0.75rem;
-  text-align: center;
+  align-items: center;
 }
-#romSelection label input[type=file] {
+#romSelectButton input[type=file] {
   display: none;
 }
-#romSelection label .icon-folder {
+#romSelectButton .icon-folder {
   font-size: 2rem;
-}
-
-#topBar {
-  height: 3rem;
-  overflow: hidden;
-}
-#topBar > div {
-  display: flex;
 }
 
 #cpuStatus {

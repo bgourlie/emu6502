@@ -41,7 +41,11 @@ impl ConsoleBuffer {
     pub fn iter(&self) -> Iter {
         Iter {
             buffer: self,
-            cur_index: u32::from(self.ptr),
+            cur_index: if self.ptr > 0 {
+                self.ptr - 1
+            } else {
+                BUFFER_SIZE - 1
+            },
             iter_count: 0,
         }
     }
@@ -49,19 +53,23 @@ impl ConsoleBuffer {
 
 pub struct Iter<'a> {
     buffer: &'a ConsoleBuffer,
-    cur_index: u32,
-    iter_count: u32,
+    cur_index: u16,
+    iter_count: u16,
 }
 
 impl<'a> Iterator for Iter<'a> {
     type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.iter_count < u32::from(BUFFER_SIZE) {
+        if BUFFER_SIZE > self.iter_count {
             self.iter_count += 1;
             let cur_index = self.cur_index;
-            self.cur_index += 1;
-            self.buffer.messages[(cur_index % u32::from(BUFFER_SIZE)) as usize]
+            self.cur_index = if cur_index > 0 {
+                cur_index - 1
+            } else {
+                BUFFER_SIZE - 1
+            };
+            self.buffer.messages[usize::from(cur_index)]
                 .as_ref()
                 .map(|s| &s[..])
         } else {
@@ -71,24 +79,39 @@ impl<'a> Iterator for Iter<'a> {
 }
 
 #[test]
+fn test_console_buffer_two() {
+    let mut buffer = ConsoleBuffer::default();
+    buffer.push("test");
+    let messages: Vec<&str> = buffer.iter().collect();
+    assert_eq!(messages.len(), 1);
+    assert_eq!(messages[0], "test");
+}
+
+#[test]
 fn test_console_buffer() {
     let mut buffer = ConsoleBuffer::default();
-    for i in 0..256 {
+    for i in 0..BUFFER_SIZE {
         buffer.push(i.to_string());
     }
 
     let messages: Vec<&str> = buffer.iter().collect();
 
-    assert_eq!(messages.len(), 256);
-    for i in 0..256 {
-        assert_eq!(messages[i], i.to_string().as_str());
+    assert_eq!(messages.len(), usize::from(BUFFER_SIZE));
+    for i in 0..BUFFER_SIZE {
+        assert_eq!(
+            messages[usize::from(i)],
+            (BUFFER_SIZE - 1 - i).to_string().as_str()
+        );
     }
 
     buffer.push("256");
     let messages: Vec<&str> = buffer.iter().collect();
 
-    assert_eq!(messages.len(), 256);
-    for i in 1..257 {
-        assert_eq!(messages[i - 1], i.to_string().as_str());
+    assert_eq!(messages.len(), usize::from(BUFFER_SIZE));
+    for i in 1..(BUFFER_SIZE + 1) {
+        assert_eq!(
+            messages[usize::from(i) - 1],
+            usize::from(BUFFER_SIZE + 1 - i).to_string().as_str()
+        );
     }
 }

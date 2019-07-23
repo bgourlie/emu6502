@@ -11,7 +11,7 @@ use {
     js_sys::Promise,
     log::{debug, warn},
     seed::prelude::*,
-    std::{borrow::Cow, io::Cursor},
+    std::io::Cursor,
     wasm_bindgen::JsCast,
     wasm_bindgen_futures::JsFuture,
     web_sys::{Event, File, HtmlInputElement},
@@ -20,18 +20,6 @@ use {
 #[wasm_bindgen(module = "/util.js")]
 extern "C" {
     fn read_as_array_buffer(path: File) -> Promise;
-}
-
-type Str = Cow<'static, str>;
-
-struct RomSelectionModel {
-    message: Option<Str>,
-}
-
-impl Default for RomSelectionModel {
-    fn default() -> Self {
-        RomSelectionModel { message: None }
-    }
 }
 
 struct RomLoadedModel<M: Mapper + Debugger> {
@@ -45,17 +33,13 @@ struct Model<M: Mapper + Debugger> {
 }
 
 impl<M: Mapper + Debugger> Model<M> {
-    fn transition_to_rom_selection(&mut self, message: Option<Str>) {
-        self.state = State::RomSelection(RomSelectionModel { message })
-    }
-
     fn transition_to_rom_loaded(&mut self, cpu: Cpu<M>, disassembly: Disassembly) {
         self.state = State::RomLoaded(RomLoadedModel { cpu, disassembly })
     }
 }
 
 enum State<M: Mapper + Debugger> {
-    RomSelection(RomSelectionModel),
+    RomSelection,
     RomLoaded(RomLoadedModel<M>),
 }
 
@@ -64,7 +48,7 @@ impl<M: Mapper + Debugger> Default for Model<M> {
         let mut console_buffer = ConsoleBuffer::default();
         console_buffer.push("Welcome!");
         Model {
-            state: State::RomSelection(RomSelectionModel::default()),
+            state: State::RomSelection,
             console_buffer,
         }
     }
@@ -112,7 +96,7 @@ fn update<M: Mapper + Debugger + 'static>(
                 orders.perform_cmd(future);
             } else {
                 debug!("No file selected!");
-                model.transition_to_rom_selection(Some("No file was selected".into()));
+                model.console_buffer.push("No file was selected");
             }
         }
         Msg::RomBytesRead(bytes) => {
@@ -165,27 +149,24 @@ fn update<M: Mapper + Debugger + 'static>(
 }
 
 fn view<M: Mapper + Debugger>(model: &Model<M>) -> El<Msg> {
-    let (top_bar_view, view) = match model.state {
-        State::RomSelection(ref state) => {
-            let top_bar_view = div![
-                id!["romSelection"],
-                error_message(state),
-                label![
-                    icon("folder"),
-                    div!["Select ROM"],
-                    input![
-                        attrs! { At::Type => "file"
-                        },
-                        raw_ev(Ev::Change, Msg::RomSelected)
-                    ]
+    let (top_view, main_view) = match model.state {
+        State::RomSelection => {
+            let top_view = div![label![
+                id!["romSelectButton"],
+                icon("folder"),
+                div!["Select ROM"],
+                input![
+                    attrs! { At::Type => "file"
+                    },
+                    raw_ev(Ev::Change, Msg::RomSelected)
                 ]
-            ];
-            let view = div![];
-            (top_bar_view, view)
+            ]];
+            let main_view = div![];
+            (top_view, main_view)
         }
 
         State::RomLoaded(ref state) => {
-            let top_bar_view = div![
+            let top_view = div![
                 status_widget(&state.cpu),
                 button![
                     "Step",
@@ -193,28 +174,31 @@ fn view<M: Mapper + Debugger>(model: &Model<M>) -> El<Msg> {
                 ],
             ];
 
-            let view = div![
+            let main_view = div![
                 id!["romLoadedView"],
                 disassembly(&state.disassembly, state.cpu.pc())
             ];
-            (top_bar_view, view)
+            (top_view, main_view)
         }
     };
+
+    let console_rows: Vec<El<Msg>> = model.console_buffer.iter().map(|s| div![s]).collect();
+    debug!("{}", console_rows.len());
+    let top_view = top_view.add_attr("id".to_owned(), "topRow".to_owned());
+    let main_view = main_view
+        .add_attr("id".to_owned(), "mainRow".to_owned())
+        .add_child(div![id!["console"], console_rows]);
 
     div![
         id!["view"],
         keyboard_ev("keydown", Msg::KeyPress),
-        top_bar(top_bar_view),
-        view
+        top_view,
+        main_view,
     ]
 }
 
 fn icon(name: &'static str) -> El<Msg> {
     div![attrs! {At::Class => format!("icon icon-{}", name)}]
-}
-
-fn top_bar(view: El<Msg>) -> El<Msg> {
-    div![id!["topBar"], view]
 }
 
 fn status_widget<M: Mapper + Debugger>(cpu: &Cpu<M>) -> El<Msg> {
@@ -254,14 +238,6 @@ fn disassembly(disassembly: &Disassembly, offset: u16) -> El<Msg> {
         .collect();
 
     div![id!["disassembly"], disassembly_rows]
-}
-
-fn error_message(model: &RomSelectionModel) -> El<Msg> {
-    if let Some(ref message) = model.message {
-        span![message]
-    } else {
-        empty![]
-    }
 }
 
 #[wasm_bindgen(start)]
