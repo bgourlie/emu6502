@@ -1,14 +1,17 @@
 #[macro_use]
 extern crate seed;
 
+mod console_buffer;
+
 use {
+    console_buffer::ConsoleBuffer,
     disasm6502::Disassembly,
     emu6502::{BasicMapper, Cpu, Debugger, Mapper},
     futures::future::Future,
     js_sys::Promise,
     log::{debug, warn},
     seed::prelude::*,
-    std::{borrow::Cow, io::Cursor},
+    std::io::Cursor,
     wasm_bindgen::JsCast,
     wasm_bindgen_futures::JsFuture,
     web_sys::{Event, File, HtmlInputElement},
@@ -19,41 +22,35 @@ extern "C" {
     fn read_as_array_buffer(path: File) -> Promise;
 }
 
-type Str = Cow<'static, str>;
-
-struct RomSelectionModel {
-    message: Option<Str>,
-}
-
-impl Default for RomSelectionModel {
-    fn default() -> Self {
-        RomSelectionModel { message: None }
-    }
-}
-
 struct RomLoadedModel<M: Mapper + Debugger> {
     cpu: Cpu<M>,
     disassembly: Disassembly,
 }
 
-enum Model<M: Mapper + Debugger> {
-    RomSelection(RomSelectionModel),
-    RomLoaded(RomLoadedModel<M>),
+struct Model<M: Mapper + Debugger> {
+    console_buffer: ConsoleBuffer,
+    state: State<M>,
 }
 
 impl<M: Mapper + Debugger> Model<M> {
-    fn transition_to_rom_selection(&mut self, message: Option<Str>) {
-        *self = Model::RomSelection(RomSelectionModel { message })
-    }
-
     fn transition_to_rom_loaded(&mut self, cpu: Cpu<M>, disassembly: Disassembly) {
-        *self = Model::RomLoaded(RomLoadedModel { cpu, disassembly })
+        self.state = State::RomLoaded(RomLoadedModel { cpu, disassembly })
     }
+}
+
+enum State<M: Mapper + Debugger> {
+    RomSelection,
+    RomLoaded(RomLoadedModel<M>),
 }
 
 impl<M: Mapper + Debugger> Default for Model<M> {
     fn default() -> Self {
-        Model::RomSelection(RomSelectionModel::default())
+        let mut console_buffer = ConsoleBuffer::default();
+        console_buffer.push("Welcome!");
+        Model {
+            state: State::RomSelection,
+            console_buffer,
+        }
     }
 }
 
@@ -81,7 +78,7 @@ fn update<M: Mapper + Debugger + 'static>(
     match msg {
         Msg::KeyPress(event) => match event.key_code() {
             83 => {
-                if let Model::RomLoaded(_) = model {
+                if let State::RomLoaded(_) = model.state {
                     orders.send_msg(Msg::Run(RunStrategy::Steps(1)));
                 }
             }
@@ -99,7 +96,7 @@ fn update<M: Mapper + Debugger + 'static>(
                 orders.perform_cmd(future);
             } else {
                 debug!("No file selected!");
-                model.transition_to_rom_selection(Some("No file was selected".into()));
+                model.console_buffer.push("No file was selected");
             }
         }
         Msg::RomBytesRead(bytes) => {
@@ -115,28 +112,28 @@ fn update<M: Mapper + Debugger + 'static>(
         Msg::RomLoadingErr => debug!("Rom loading error!"),
         Msg::Run(strategy) => match strategy {
             RunStrategy::Steps(steps) => {
-                if let Model::RomLoaded(ref mut model) = model {
+                if let State::RomLoaded(ref mut state) = model.state {
                     for _i in 0..steps {
-                        model.cpu.step();
-                        debug!("stepped cpu pc = {:4X}", model.cpu.pc());
+                        state.cpu.step();
+                        debug!("stepped cpu pc = {:4X}", state.cpu.pc());
                     }
 
-                    let memory_changes = model.cpu.mapper().read_memory_changes();
+                    let memory_changes = state.cpu.mapper().read_memory_changes();
 
                     if !memory_changes.is_empty() {
                         // Retrieve any updated offsets that are disassembled program code
                         let mut offsets_to_disassemble =
-                            model.disassembly.instruction_offsets(memory_changes);
+                            state.disassembly.instruction_offsets(memory_changes);
 
                         // If the program counter points to an an offset that has not been
                         // disassembled, ensure it is also disassembled
-                        if !offsets_to_disassemble.contains(&model.cpu.pc()) {
-                            offsets_to_disassemble.insert(model.cpu.pc());
+                        if !offsets_to_disassemble.contains(&state.cpu.pc()) {
+                            offsets_to_disassemble.insert(state.cpu.pc());
                         }
 
                         if !offsets_to_disassemble.is_empty() {
-                            let mut stream = model.cpu.mapper().address_space_stream();
-                            model
+                            let mut stream = state.cpu.mapper().address_space_stream();
+                            state
                                 .disassembly
                                 .update(&mut stream, offsets_to_disassemble)
                                 .expect("disassembly update failed");
@@ -152,11 +149,10 @@ fn update<M: Mapper + Debugger + 'static>(
 }
 
 fn view<M: Mapper + Debugger>(model: &Model<M>) -> El<Msg> {
-    let view = match model {
-        Model::RomSelection(model) => div![
-            id!["romSelectionView"],
-            error_message(&model),
-            label![
+    let (top_view, main_view) = match model.state {
+        State::RomSelection => {
+            let top_view = div![label![
+                id!["romSelectButton"],
                 icon("folder"),
                 div!["Select ROM"],
                 input![
@@ -164,32 +160,45 @@ fn view<M: Mapper + Debugger>(model: &Model<M>) -> El<Msg> {
                     },
                     raw_ev(Ev::Change, Msg::RomSelected)
                 ]
-            ]
-        ],
+            ]];
+            let main_view = div![];
+            (top_view, main_view)
+        }
 
-        Model::RomLoaded(model) => div![
-            id!["romLoadedView"],
-            top_bar(&model.cpu),
-            disassembly(&model.disassembly, model.cpu.pc())
-        ],
+        State::RomLoaded(ref state) => {
+            let top_view = div![
+                status_widget(&state.cpu),
+                button![
+                    "Step",
+                    simple_ev(Ev::Click, Msg::Run(RunStrategy::Steps(1)))
+                ],
+            ];
+
+            let main_view = div![
+                id!["romLoadedView"],
+                disassembly(&state.disassembly, state.cpu.pc())
+            ];
+            (top_view, main_view)
+        }
     };
 
-    div![id!["view"], keyboard_ev("keydown", Msg::KeyPress), view]
+    let console_rows: Vec<El<Msg>> = model.console_buffer.iter().map(|s| div![s]).collect();
+    debug!("{}", console_rows.len());
+    let top_view = top_view.add_attr("id".to_owned(), "topRow".to_owned());
+    let main_view = main_view
+        .add_attr("id".to_owned(), "mainRow".to_owned())
+        .add_child(div![id!["console"], console_rows]);
+
+    div![
+        id!["view"],
+        keyboard_ev("keydown", Msg::KeyPress),
+        top_view,
+        main_view,
+    ]
 }
 
 fn icon(name: &'static str) -> El<Msg> {
     div![attrs! {At::Class => format!("icon icon-{}", name)}]
-}
-
-fn top_bar<M: Mapper + Debugger>(cpu: &Cpu<M>) -> El<Msg> {
-    div![
-        id!["topBar"],
-        status_widget(cpu),
-        button![
-            "Step",
-            simple_ev(Ev::Click, Msg::Run(RunStrategy::Steps(1)))
-        ],
-    ]
 }
 
 fn status_widget<M: Mapper + Debugger>(cpu: &Cpu<M>) -> El<Msg> {
@@ -229,14 +238,6 @@ fn disassembly(disassembly: &Disassembly, offset: u16) -> El<Msg> {
         .collect();
 
     div![id!["disassembly"], disassembly_rows]
-}
-
-fn error_message(model: &RomSelectionModel) -> El<Msg> {
-    if let Some(ref message) = model.message {
-        span![message]
-    } else {
-        empty![]
-    }
 }
 
 #[wasm_bindgen(start)]

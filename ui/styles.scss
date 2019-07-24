@@ -5,7 +5,7 @@ $fontColor: #a9b7c6;
 $gutterBackgroundColor: #313335;
 $gutterBorderColor: #606366;
 $currentInstructionBackgroundColor: #2d6099;
-$topBarHeight: 3rem;
+$topRowHeight: 3rem;
 
 @font-face {
   font-family: 'fontello';
@@ -28,24 +28,45 @@ body {
   height: 100vh;
 }
 
+#topRow {
+  height: $topRowHeight;
+  overflow: hidden;
+  display: flex;
+}
+
+#mainRow {
+  height: calc(100vh - #{$topRowHeight});
+  display: flex;
+}
+
+#console {
+  display: flex;
+  flex-direction: column-reverse;
+  flex: 1;
+  padding: 0.5em;
+  font-family: $monospaceFont;
+  background-color: black;
+}
+
 #disassembly {
   font-family: $monospaceFont;
   display: flex;
-  height: calc(100vh - #{$topBarHeight});
   flex-direction: column;
   overflow-y: auto;
+  width: 15rem;
 
   > div {
     display: flex;
 
-    >.gutter {
+    > .gutter {
       background-color: $gutterBackgroundColor;
       border-right: 1px solid $gutterBorderColor;
       padding: 0 1em 0 0;
     }
 
-    >.instruction {
+    > .instruction {
       padding: 0 0 0 0.25em;
+
       &.current {
         background-color: $currentInstructionBackgroundColor;
       }
@@ -78,26 +99,22 @@ body {
   }
 }
 
-#romSelectionView {
+
+#romSelectButton {
   text-align: center;
-
-  label {
-    cursor: pointer;
-
-    input[type='file'] {
-      display: none;
-    }
-
-    .icon-folder {
-      font-size: 3em;
-    }
-  }
-}
-
-#topBar {
   display: flex;
-  height: $topBarHeight;
-  overflow: hidden;
+  flex-direction: column;
+  cursor: pointer;
+  font-size: 0.75rem;
+  align-items: center;
+
+  input[type='file'] {
+    display: none;
+  }
+
+  .icon-folder {
+    font-size: 2rem;
+  }
 }
 
 #cpuStatus {
