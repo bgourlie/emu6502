@@ -33,6 +33,10 @@ body {
 #console {
   display: flex;
   flex-direction: column-reverse;
+  flex: 1;
+  padding: 0.5em;
+  font-family: "Courier New", Courier, monospace;
+  background-color: black;
 }
 
 #disassembly {
