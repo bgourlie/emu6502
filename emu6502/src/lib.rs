@@ -9,4 +9,9 @@ mod debugger;
 mod mapper;
 mod opcodes;
 
-pub use crate::{cpu::Cpu, debugger::Debugger, mapper::BasicMapper, mapper::Mapper};
+pub use crate::{
+    cpu::{Cpu, DebuggableCpu},
+    debugger::Debugger,
+    mapper::BasicMapper,
+    mapper::Mapper,
+};

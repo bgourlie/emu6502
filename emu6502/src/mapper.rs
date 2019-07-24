@@ -2,7 +2,6 @@ use {
     crate::Debugger,
     fnv::FnvHashSet,
     std::{
-        cell::RefCell,
         io::{Cursor, Read},
         iter::FromIterator,
     },
@@ -22,7 +21,7 @@ pub trait Mapper: Sized {
 }
 
 pub struct BasicMapper {
-    memory_change_set: RefCell<FnvHashSet<u16>>,
+    memory_change_set: FnvHashSet<u16>,
     memory: Box<[u8; ADDRESSABLE_MEMORY]>,
 }
 
@@ -33,7 +32,7 @@ impl Mapper for BasicMapper {
         reader.read_exact(&mut memory[mapping_start..]).unwrap();
         BasicMapper {
             memory,
-            memory_change_set: RefCell::new(FnvHashSet::default()),
+            memory_change_set: FnvHashSet::default(),
         }
     }
 
@@ -42,15 +41,14 @@ impl Mapper for BasicMapper {
     }
 
     fn poke(&mut self, addr: u16, data: u8) {
-        self.memory_change_set.borrow_mut().insert(addr);
+        self.memory_change_set.insert(addr);
         self.memory[usize::from(addr)] = data;
     }
 }
 
 impl Debugger for BasicMapper {
-    fn read_memory_changes(&self) -> Vec<u16> {
-        let mut memory_change_set = self.memory_change_set.borrow_mut();
-        Vec::from_iter(memory_change_set.drain())
+    fn read_memory_changes(&mut self) -> Vec<u16> {
+        Vec::from_iter(self.memory_change_set.drain())
     }
 
     fn address_space_stream(&self) -> Cursor<&[u8]> {

@@ -6,7 +6,7 @@ mod console_buffer;
 use {
     console_buffer::ConsoleBuffer,
     disasm6502::Disassembly,
-    emu6502::{BasicMapper, Cpu, Debugger, Mapper},
+    emu6502::{BasicMapper, Cpu, DebuggableCpu, Debugger, Mapper},
     futures::future::Future,
     js_sys::Promise,
     log::{debug, warn},
@@ -118,8 +118,7 @@ fn update<M: Mapper + Debugger + 'static>(
                         debug!("stepped cpu pc = {:4X}", state.cpu.pc());
                     }
 
-                    let memory_changes = state.cpu.mapper().read_memory_changes();
-
+                    let memory_changes = state.cpu.mapper_mut().read_memory_changes();
                     if !memory_changes.is_empty() {
                         // Retrieve any updated offsets that are disassembled program code
                         let mut offsets_to_disassemble =

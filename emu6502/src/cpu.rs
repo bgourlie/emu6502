@@ -1,4 +1,4 @@
-use crate::{addressing_modes::*, opcodes::*, Mapper};
+use crate::{addressing_modes::*, opcodes::*, Debugger, Mapper};
 
 const FL_BREAK: u8 = 0b0001_0000;
 const FL_CARRY: u8 = 0b0000_0001;
@@ -31,10 +31,6 @@ impl<M: Mapper> Cpu<M> {
             status: 0,
             mapper,
         }
-    }
-
-    pub fn mapper(&self) -> &M {
-        &self.mapper
     }
 
     pub fn step(&mut self) {
@@ -381,5 +377,20 @@ impl<M: Mapper> Cpu<M> {
         let low = self.pop_stack();
         let high = self.pop_stack();
         u16::from_le_bytes([low, high])
+    }
+}
+
+pub trait DebuggableCpu<M: Mapper + Debugger> {
+    fn mapper(&self) -> &M;
+    fn mapper_mut(&mut self) -> &mut M;
+}
+
+impl<M: Mapper + Debugger> DebuggableCpu<M> for Cpu<M> {
+    fn mapper(&self) -> &M {
+        &self.mapper
+    }
+
+    fn mapper_mut(&mut self) -> &mut M {
+        &mut self.mapper
     }
 }
