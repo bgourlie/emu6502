@@ -118,25 +118,26 @@ fn update<M: Mapper + Debugger + 'static>(
                         debug!("stepped cpu pc = {:4X}", state.cpu.pc());
                     }
 
-                    let memory_changes = state.cpu.mapper_mut().read_memory_changes();
-                    if !memory_changes.is_empty() {
-                        // Retrieve any updated offsets that are disassembled program code
-                        let mut offsets_to_disassemble =
-                            state.disassembly.instruction_offsets(memory_changes);
+                    let mut offsets_to_disassemble: fnv::FnvHashSet<u16> = state
+                        .cpu
+                        .mapper_mut()
+                        .read_memory_changes()
+                        .into_iter()
+                        .filter_map(|offset| state.disassembly.instruction_offset(offset))
+                        .collect();
 
-                        // If the program counter points to an an offset that has not been
-                        // disassembled, ensure it is also disassembled
-                        if !offsets_to_disassemble.contains(&state.cpu.pc()) {
-                            offsets_to_disassemble.insert(state.cpu.pc());
-                        }
+                    // If the program counter points to an an offset that has not been
+                    // disassembled, ensure it is also disassembled
+                    if let None = state.disassembly.instruction_at(state.cpu.pc()) {
+                        offsets_to_disassemble.insert(state.cpu.pc());
+                    }
 
-                        if !offsets_to_disassemble.is_empty() {
-                            let mut stream = state.cpu.mapper().address_space_stream();
-                            state
-                                .disassembly
-                                .update(&mut stream, offsets_to_disassemble)
-                                .expect("disassembly update failed");
-                        }
+                    if !offsets_to_disassemble.is_empty() {
+                        let mut stream = state.cpu.mapper().address_space_stream();
+                        state
+                            .disassembly
+                            .update(&mut stream, offsets_to_disassemble)
+                            .expect("disassembly update failed");
                     }
                 } else {
                     panic!("this should never happen")
@@ -182,7 +183,6 @@ fn view<M: Mapper + Debugger>(model: &Model<M>) -> El<Msg> {
     };
 
     let console_rows: Vec<El<Msg>> = model.console_buffer.iter().map(|s| div![s]).collect();
-    debug!("{}", console_rows.len());
     let top_view = top_view.add_attr("id".to_owned(), "topRow".to_owned());
     let main_view = main_view
         .add_attr("id".to_owned(), "mainRow".to_owned())

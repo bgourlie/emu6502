@@ -659,14 +659,8 @@ impl Disassembly {
         })
     }
 
-    pub fn instruction_offsets<'a, I: IntoIterator<Item = u16>>(
-        &self,
-        offsets: I,
-    ) -> FnvHashSet<u16> {
-        offsets
-            .into_iter()
-            .filter_map(|offset| self.decoded.get(&offset).map(|offset| *offset))
-            .collect()
+    pub fn instruction_offset(&self, offset: u16) -> Option<u16> {
+        self.decoded.get(&offset).map(|offset| *offset)
     }
 
     pub fn display_at(&self, offset: u16) -> Option<String> {
