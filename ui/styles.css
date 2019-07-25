@@ -56,6 +56,7 @@ body {
 }
 #disassembly > div > .instruction {
   padding: 0 0 0 0.25em;
+  flex: 1;
 }
 #disassembly > div > .instruction.current {
   background-color: #2d6099;
