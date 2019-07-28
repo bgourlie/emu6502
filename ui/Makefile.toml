@@ -4,6 +4,13 @@ CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = "true"
 PORT = "8000"
 
 # ---- BUILD & CREATE WASMS ----
+[tasks.build2]
+description = "Build (new)"
+workspace = false
+env = { "RUSTFLAGS" = "-C target-feature=+atomics" }
+command = "xargo"
+args = ["build", "--target", "wasm32-unknown-unknown"]
+
 [tasks.build]
 description = "Build"
 workspace = false

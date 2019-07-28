@@ -21,5 +21,16 @@ emu6502 = { path = "../emu6502" }
 disasm6502 = { path = "../disasm6502" }
 
 [dependencies.web-sys]
-version = "0.3.19"
-features = [ "Blob", "Event", "EventTarget", "File", "FileList", "FileReaderSync", "HtmlInputElement" ]
+git = "https://github.com/rustwasm/wasm-bindgen"
+features = [
+    "Blob",
+    "DedicatedWorkerGlobalScope",
+    "Event",
+    "EventTarget",
+    "File",
+    "FileList",
+    "FileReaderSync",
+    "HtmlInputElement",
+    "MessageEvent",
+    "Worker",
+  ]
