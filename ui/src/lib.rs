@@ -73,7 +73,7 @@ enum Msg {
 fn update<M: Mapper + Debugger + 'static>(
     msg: Msg,
     model: &mut Model<M>,
-    orders: &mut Orders<Msg>,
+    orders: &mut impl Orders<Msg>,
 ) {
     match msg {
         Msg::KeyPress(event) => match event.key_code() {
@@ -148,7 +148,7 @@ fn update<M: Mapper + Debugger + 'static>(
     }
 }
 
-fn view<M: Mapper + Debugger>(model: &Model<M>) -> El<Msg> {
+fn view<M: Mapper + Debugger>(model: &Model<M>) -> impl View<Msg> {
     let (top_view, main_view) = match model.state {
         State::RomSelection => {
             let top_view = div![label![
@@ -182,7 +182,7 @@ fn view<M: Mapper + Debugger>(model: &Model<M>) -> El<Msg> {
         }
     };
 
-    let console_rows: Vec<El<Msg>> = model.console_buffer.iter().map(|s| div![s]).collect();
+    let console_rows: Vec<Node<Msg>> = model.console_buffer.iter().map(|s| div![s]).collect();
     let top_view = top_view.add_attr("id".to_owned(), "topRow".to_owned());
     let main_view = main_view
         .add_attr("id".to_owned(), "mainRow".to_owned())
@@ -196,11 +196,11 @@ fn view<M: Mapper + Debugger>(model: &Model<M>) -> El<Msg> {
     ]
 }
 
-fn icon(name: &'static str) -> El<Msg> {
+fn icon(name: &'static str) -> Node<Msg> {
     div![attrs! {At::Class => format!("icon icon-{}", name)}]
 }
 
-fn status_widget<M: Mapper + Debugger>(cpu: &Cpu<M>) -> El<Msg> {
+fn status_widget<M: Mapper + Debugger>(cpu: &Cpu<M>) -> Node<Msg> {
     div![
         id!["cpuStatus"],
         div![div!["pc"], div![format!("{:04X}", cpu.pc())]],
@@ -212,12 +212,12 @@ fn status_widget<M: Mapper + Debugger>(cpu: &Cpu<M>) -> El<Msg> {
     ]
 }
 
-fn disassembly(disassembly: &Disassembly, offset: u16) -> El<Msg> {
+fn disassembly(disassembly: &Disassembly, offset: u16) -> Node<Msg> {
     if disassembly.instruction_at(offset) == None {
         warn!("No instruction at {:04X}", offset);
     }
 
-    let disassembly_rows: Vec<El<Msg>> = disassembly
+    let disassembly_rows: Vec<Node<Msg>> = disassembly
         .window(offset, 100)
         .map(|(addr, i)| {
             let instruction_classes = if *addr != offset {
@@ -243,7 +243,7 @@ fn disassembly(disassembly: &Disassembly, offset: u16) -> El<Msg> {
 pub fn bootstrap() {
     wasm_logger::init(wasm_logger::Config::new(log::Level::Debug).message_on_new_line());
 
-    seed::App::build(Model::<BasicMapper>::default(), update, view)
+    seed::App::build(|_,_| Model::<BasicMapper>::default(), update, view)
         .finish()
         .run();
 }
