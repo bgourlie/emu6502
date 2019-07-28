@@ -44,7 +44,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  width: 15rem;
+  width: 30rem;
 }
 #disassembly > div {
   display: flex;
