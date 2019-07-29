@@ -578,6 +578,30 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
     }
 }
 
+#[derive(Copy, Clone, Eq, PartialEq)]
+enum JumpOffset {
+    JumpAbsolute(u16),
+    JumpIndirect(u16),
+    Branch(i8),
+    Subroutine(u16)
+}
+
+impl JumpOffset {
+    fn normalize(self, instruction_offset: u16) -> u16 {
+        match self {
+            JumpOffset::Subroutine(offset) | JumpOffset::JumpAbsolute(offset) | JumpOffset::JumpIndirect(offset) => offset,
+            JumpOffset::Branch(relative_offset) => {
+                let target_offset = i32::from(instruction_offset) + 2 + i32::from(relative_offset);
+                if target_offset < 0 || target_offset > i32::from(u16::MAX) {
+                    panic!("TODO: have this function return a result instead of panic")
+                } else {
+                    target_offset as u16
+                }
+            }
+        }
+    }
+}
+
 pub struct Disassembly {
     /// An ordered map that maintains a mapping of offsets to their respective decoded instruction.
     instructions: BTreeMap<u16, Instruction>,
@@ -586,6 +610,24 @@ pub struct Disassembly {
     /// instruction may span three bytes, the offsets for those bytes will map to the instruction
     /// pointer.
     decoded: FnvHashMap<u16, u16>,
+
+    /// A mapping from offset to label.
+    labels: FnvHashMap<u16, String>,
+
+    /// A mapping from jump offset to the offsets that reference them.
+    jump_offsets: FnvHashMap<u16, FnvHashSet<u16>>,
+
+    /// Tracks the number of indirect jump labels created.
+    indirect_jump_label_count: u16,
+
+    /// Tracks the number of jump labels created.
+    jump_label_count: u16,
+
+    /// Tracks the number of branch labels created.
+    branch_label_count: u16,
+
+    /// Tracks the number of subroutine labels created.
+    subroutine_label_count: u16
 }
 
 impl Disassembly {
@@ -610,6 +652,12 @@ impl Disassembly {
         let mut disassembly = Disassembly {
             instructions: BTreeMap::default(),
             decoded: FnvHashMap::default(),
+            labels: FnvHashMap::default(),
+            jump_offsets: FnvHashMap::default(),
+            jump_label_count: 0,
+            indirect_jump_label_count: 0,
+            branch_label_count: 0,
+            subroutine_label_count: 0
         };
         disassembly.update_decoding(disassembler);
         Ok(disassembly)
@@ -663,13 +711,88 @@ impl Disassembly {
         self.decoded.get(&offset).map(|offset| *offset)
     }
 
-    pub fn display_at(&self, offset: u16) -> Option<String> {
-        self.instruction_at(offset)
-            .map(|(_, instr)| format!("{:?} {}", instr.opcode, instr.operand.to_string()))
+    fn get_jump_offset(&self, instruction: Instruction) -> Option<JumpOffset> {
+        match instruction.opcode {
+            Op::Jmp => {
+                match instruction.operand {
+                    Operand::Absolute(offset) => Some(JumpOffset::JumpAbsolute(offset)),
+                    Operand::Indirect(offset) => Some(JumpOffset::JumpIndirect(offset)),
+                    _ => None
+                }
+            },
+            Op::Bne | Op::Beq | Op::Bcc | Op::Bcs | Op::Bmi | Op::Bpl | Op::Bvc | Op::Bvs => {
+                if let Operand::Relative(offset) = instruction.operand {
+                    Some(JumpOffset::Branch(offset))
+                } else {
+                    None
+                }
+            }
+            Op::Jsr => {
+                if let Operand::Absolute(offset) = instruction.operand {
+                    Some(JumpOffset::Subroutine(offset))
+                } else {
+                    None
+                }
+            }
+            _ => None
+        }
+    }
+
+    pub fn label_at(&self, offset: u16) -> Option<std::borrow::Cow<str>> {
+        self.labels.get(&offset).map(|label| label.into())
     }
 
     fn update_decoding<R: ReadBytesExt + Seek>(&mut self, disassembler: Disassembler<R>) {
         for (instruction_offset, instr) in disassembler {
+            let maybe_new_jump_offset = self.get_jump_offset(instr);
+            // If the address has already been decoded, we may need to update label bookkeeping
+            if let Some(old_instruction) = self.instructions.get(&instruction_offset) {
+                // Check to see if the offset being updated has a jump offset
+                if let Some(old_jump_offset) = self.get_jump_offset(*old_instruction) {
+                    let target_offset = old_jump_offset.normalize(instruction_offset);
+                    // If the instruction being updated jumped to target_offset, remove it from the set
+                    if let Some(jumping_offsets) = self.jump_offsets.get_mut(&target_offset) {
+
+                        if let Some(new_jump_offset) = maybe_new_jump_offset {
+                            if new_jump_offset.normalize(instruction_offset) != target_offset {
+                                jumping_offsets.remove(&instruction_offset);
+                            }
+                        }
+
+                        // If no more offsets jump to the target_offset, remove it from the labels
+                        // map
+                        if jumping_offsets.is_empty() {
+                            self.labels.remove(&target_offset);
+                        }
+                    }
+                }
+            }
+
+            if let Some(new_jump_offset) = maybe_new_jump_offset {
+                let target_offset = new_jump_offset.normalize(instruction_offset);
+                if let None = self.labels.get(&target_offset) {
+                    match new_jump_offset {
+                        JumpOffset::Branch(_) => {
+                            self.labels.insert(target_offset, format!("branch_target_{}", self.branch_label_count));
+                            self.branch_label_count += 1;
+                        },
+                        JumpOffset::JumpAbsolute(_) => {
+                            self.labels.insert(target_offset, format!("jmp_target_{}", self.jump_label_count));
+                            self.jump_label_count += 1;
+                        },
+                        JumpOffset::JumpIndirect(_) => {
+                            self.labels.insert(target_offset, format!("ind_jmp_target_{}", self.indirect_jump_label_count));
+                            self.indirect_jump_label_count += 1;
+                        },
+                        JumpOffset::Subroutine(_) => {
+                            self.labels.insert(target_offset, format!("subroutine_{}", self.subroutine_label_count));
+                            self.subroutine_label_count += 1;
+                        }
+                    }
+                }
+                self.jump_offsets.entry(target_offset).or_insert_with(|| FnvHashSet::default()).insert(instruction_offset);
+            }
+
             let operand_len = operand_length(instr);
             self.instructions.insert(instruction_offset, instr);
             self.decoded.insert(instruction_offset, instruction_offset);
