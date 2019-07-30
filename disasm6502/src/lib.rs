@@ -583,13 +583,15 @@ enum JumpOffset {
     JumpAbsolute(u16),
     JumpIndirect(u16),
     Branch(i8),
-    Subroutine(u16)
+    Subroutine(u16),
 }
 
 impl JumpOffset {
     fn normalize(self, instruction_offset: u16) -> u16 {
         match self {
-            JumpOffset::Subroutine(offset) | JumpOffset::JumpAbsolute(offset) | JumpOffset::JumpIndirect(offset) => offset,
+            JumpOffset::Subroutine(offset)
+            | JumpOffset::JumpAbsolute(offset)
+            | JumpOffset::JumpIndirect(offset) => offset,
             JumpOffset::Branch(relative_offset) => {
                 let target_offset = i32::from(instruction_offset) + 2 + i32::from(relative_offset);
                 if target_offset < 0 || target_offset > i32::from(u16::MAX) {
@@ -627,7 +629,7 @@ pub struct Disassembly {
     branch_label_count: u16,
 
     /// Tracks the number of subroutine labels created.
-    subroutine_label_count: u16
+    subroutine_label_count: u16,
 }
 
 impl Disassembly {
@@ -657,7 +659,7 @@ impl Disassembly {
             jump_label_count: 0,
             indirect_jump_label_count: 0,
             branch_label_count: 0,
-            subroutine_label_count: 0
+            subroutine_label_count: 0,
         };
         disassembly.update_decoding(disassembler);
         Ok(disassembly)
@@ -721,12 +723,10 @@ impl Disassembly {
 
     fn get_jump_offset(&self, instruction: Instruction) -> Option<JumpOffset> {
         match instruction.opcode {
-            Op::Jmp => {
-                match instruction.operand {
-                    Operand::Absolute(offset) => Some(JumpOffset::JumpAbsolute(offset)),
-                    Operand::Indirect(offset) => Some(JumpOffset::JumpIndirect(offset)),
-                    _ => None
-                }
+            Op::Jmp => match instruction.operand {
+                Operand::Absolute(offset) => Some(JumpOffset::JumpAbsolute(offset)),
+                Operand::Indirect(offset) => Some(JumpOffset::JumpIndirect(offset)),
+                _ => None,
             },
             Op::Bne | Op::Beq | Op::Bcc | Op::Bcs | Op::Bmi | Op::Bpl | Op::Bvc | Op::Bvs => {
                 if let Operand::Relative(offset) = instruction.operand {
@@ -742,7 +742,7 @@ impl Disassembly {
                     None
                 }
             }
-            _ => None
+            _ => None,
         }
     }
 
@@ -761,7 +761,6 @@ impl Disassembly {
                     let target_offset = old_jump_offset.normalize(instruction_offset);
                     // If the instruction being updated jumped to target_offset, remove it from the set
                     if let Some(jumping_offsets) = self.jump_offsets.get_mut(&target_offset) {
-
                         if let Some(new_jump_offset) = maybe_new_jump_offset {
                             if new_jump_offset.normalize(instruction_offset) != target_offset {
                                 jumping_offsets.remove(&instruction_offset);
@@ -782,24 +781,39 @@ impl Disassembly {
                 if let None = self.labels.get(&target_offset) {
                     match new_jump_offset {
                         JumpOffset::Branch(_) => {
-                            self.labels.insert(target_offset, format!("branch_target_{}", self.branch_label_count));
+                            self.labels.insert(
+                                target_offset,
+                                format!("branch_target_{}", self.branch_label_count),
+                            );
                             self.branch_label_count += 1;
-                        },
+                        }
                         JumpOffset::JumpAbsolute(_) => {
-                            self.labels.insert(target_offset, format!("jmp_target_{}", self.jump_label_count));
+                            self.labels.insert(
+                                target_offset,
+                                format!("jmp_target_{}", self.jump_label_count),
+                            );
                             self.jump_label_count += 1;
-                        },
+                        }
                         JumpOffset::JumpIndirect(_) => {
-                            self.labels.insert(target_offset, format!("ind_jmp_target_{}", self.indirect_jump_label_count));
+                            self.labels.insert(
+                                target_offset,
+                                format!("ind_jmp_target_{}", self.indirect_jump_label_count),
+                            );
                             self.indirect_jump_label_count += 1;
-                        },
+                        }
                         JumpOffset::Subroutine(_) => {
-                            self.labels.insert(target_offset, format!("subroutine_{}", self.subroutine_label_count));
+                            self.labels.insert(
+                                target_offset,
+                                format!("subroutine_{}", self.subroutine_label_count),
+                            );
                             self.subroutine_label_count += 1;
                         }
                     }
                 }
-                self.jump_offsets.entry(target_offset).or_insert_with(|| FnvHashSet::default()).insert(instruction_offset);
+                self.jump_offsets
+                    .entry(target_offset)
+                    .or_insert_with(|| FnvHashSet::default())
+                    .insert(instruction_offset);
             }
 
             let operand_len = operand_length(instr);

@@ -12,7 +12,12 @@ pub fn main() -> Result<(), Error> {
         }
         if let Some((offset, instr)) = disassembly.instruction_at(i) {
             if offset == i {
-                println!("{:04X}: {:?} {}", i, instr.opcode(), instr.operand().to_string());
+                println!(
+                    "{:04X}: {:?} {}",
+                    i,
+                    instr.opcode(),
+                    instr.operand().to_string()
+                );
             }
         }
     }
