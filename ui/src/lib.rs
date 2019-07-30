@@ -9,7 +9,7 @@ use {
     emu6502::{BasicMapper, Cpu, DebuggableCpu, Debugger, Mapper},
     futures::future::Future,
     js_sys::Promise,
-    log::{debug, warn},
+    log::{debug, info},
     seed::prelude::*,
     std::io::Cursor,
     wasm_bindgen::JsCast,
@@ -87,7 +87,6 @@ fn update<M: Mapper + Debugger + 'static>(
         Msg::RomSelected(event) => {
             let file_input: HtmlInputElement = event.target().unwrap().dyn_into().unwrap();
             if let Some(file) = file_input.files().unwrap().get(0) {
-                debug!("file selected!");
                 let promise = read_as_array_buffer(file);
                 let future = JsFuture::from(promise)
                     .map(|arr| Msg::RomBytesRead(arr.dyn_into::<js_sys::Uint8Array>().unwrap()))
@@ -95,7 +94,6 @@ fn update<M: Mapper + Debugger + 'static>(
 
                 orders.perform_cmd(future);
             } else {
-                debug!("No file selected!");
                 model.console_buffer.push("No file was selected");
             }
         }
@@ -115,7 +113,6 @@ fn update<M: Mapper + Debugger + 'static>(
                 if let State::RomLoaded(ref mut state) = model.state {
                     for _i in 0..steps {
                         state.cpu.step();
-                        debug!("stepped cpu pc = {:4X}", state.cpu.pc());
                     }
 
                     let mut offsets_to_disassemble: fnv::FnvHashSet<u16> = state
@@ -126,9 +123,14 @@ fn update<M: Mapper + Debugger + 'static>(
                         .filter_map(|offset| state.disassembly.instruction_offset(offset))
                         .collect();
 
+                    if !offsets_to_disassemble.is_empty() {
+                        info!("Self modifying code detected. Re-disassembling modified offsets.");
+                    }
+
                     // If the program counter points to an an offset that has not been
                     // disassembled, ensure it is also disassembled
-                    if let None = state.disassembly.instruction_at(state.cpu.pc()) {
+                    if state.disassembly.instruction_at(state.cpu.pc()).is_none() {
+                        info!("Program counter points to un-disassembled code. Disassembling.");
                         offsets_to_disassemble.insert(state.cpu.pc());
                     }
 
@@ -213,26 +215,27 @@ fn status_widget<M: Mapper + Debugger>(cpu: &Cpu<M>) -> Node<Msg> {
 }
 
 fn disassembly(disassembly: &Disassembly, offset: u16) -> Node<Msg> {
-    if disassembly.instruction_at(offset) == None {
-        warn!("No instruction at {:04X}", offset);
-    }
-
     let disassembly_rows: Vec<Node<Msg>> = disassembly
         .window(offset, 100)
         .map(|(addr, i)| {
-            let instruction_classes = if *addr != offset {
-                class!["instruction"]
-            } else {
-                class!["instruction", "current"]
-            };
-
-            div![
-                div![class!["gutter"], div![format!("{:04X}", addr)]],
+            let label_text = disassembly.label_at(*addr).unwrap_or_else(|| "".into());
+            let row = div![
                 div![
-                    instruction_classes,
-                    format!("{:?} {}", i.opcode(), i.operand().to_string())
+                    class!["gutter"],
+                    div![class!["label"], label_text],
+                    div![class!["offset"], format!("{:04X}", addr)]
+                ],
+                div![
+                    class!["instruction"],
+                    format!("{:?} {}", i.opcode(), i.operand().to_string()),
                 ]
-            ]
+            ];
+
+            if *addr != offset {
+                row
+            } else {
+                row.add_class("current")
+            }
         })
         .collect();
 
@@ -241,7 +244,7 @@ fn disassembly(disassembly: &Disassembly, offset: u16) -> Node<Msg> {
 
 #[wasm_bindgen(start)]
 pub fn bootstrap() {
-    wasm_logger::init(wasm_logger::Config::new(log::Level::Debug).message_on_new_line());
+    wasm_logger::init(wasm_logger::Config::new(log::Level::Info).message_on_new_line());
 
     seed::App::build(|_, _| Model::<BasicMapper>::default(), update, view)
         .finish()

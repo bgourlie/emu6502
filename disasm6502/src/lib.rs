@@ -4,7 +4,7 @@ use {
     byteorder::{LittleEndian, ReadBytesExt},
     failure::{Error, Fail},
     fnv::{FnvHashMap, FnvHashSet},
-    log::{error, info},
+    log::{debug, error, info, warn},
     std::{
         cmp,
         collections::BTreeMap,
@@ -508,7 +508,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
 
     fn push_decode_stack(&mut self, offset: u16) {
         if !self.is_visited(offset) {
-            info!("Pushed {:04X} onto the unexplored stack", offset);
+            debug!("Pushed {:04X} onto the unexplored stack", offset);
             self.decode_stack.push(offset);
         }
     }
@@ -526,10 +526,10 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
                             break Ok(Some(next_decode_location));
                         } else {
                             self.mark_visited(next_decode_location);
-                            info!("{:04X} isn't mapped, skipping", next_decode_location);
+                            warn!("{:04X} isn't mapped, skipping", next_decode_location);
                         }
                     } else {
-                        info!("Already decoded {:04X}", opcode_location);
+                        debug!("Already decoded {:04X}", opcode_location);
                     }
                 } else {
                     break Ok(None);
@@ -539,7 +539,7 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
     }
 
     fn jump_to(&mut self, offset: u16) -> Result<(), Error> {
-        info!("Decoder jumped to {:04X}", offset);
+        debug!("Decoder jumped to {:04X}", offset);
         let stream_offset = u64::from(offset - self.mapping_start_offset);
         self.stream.seek(SeekFrom::Start(stream_offset))?;
         Ok(())
@@ -718,7 +718,7 @@ impl Disassembly {
     /// Given an offset that may point to somewhere within an instruction, return the offset to the
     /// beginning of the instruction.
     pub fn instruction_offset(&self, offset: u16) -> Option<u16> {
-        self.decoded.get(&offset).map(|offset| *offset)
+        self.decoded.get(&offset).copied()
     }
 
     fn get_jump_offset(&self, instruction: Instruction) -> Option<JumpOffset> {
@@ -778,33 +778,33 @@ impl Disassembly {
 
             if let Some(new_jump_offset) = maybe_new_jump_offset {
                 let target_offset = new_jump_offset.normalize(instruction_offset);
-                if let None = self.labels.get(&target_offset) {
+                if self.labels.get(&target_offset).is_none() {
                     match new_jump_offset {
                         JumpOffset::Branch(_) => {
                             self.labels.insert(
                                 target_offset,
-                                format!("branch_target_{}", self.branch_label_count),
+                                format!("branch_target{:0X}", self.branch_label_count),
                             );
                             self.branch_label_count += 1;
                         }
                         JumpOffset::JumpAbsolute(_) => {
                             self.labels.insert(
                                 target_offset,
-                                format!("jmp_target_{}", self.jump_label_count),
+                                format!("jmp_target{:0X}", self.jump_label_count),
                             );
                             self.jump_label_count += 1;
                         }
                         JumpOffset::JumpIndirect(_) => {
                             self.labels.insert(
                                 target_offset,
-                                format!("ind_jmp_target_{}", self.indirect_jump_label_count),
+                                format!("ind_jmp_target{:0X}", self.indirect_jump_label_count),
                             );
                             self.indirect_jump_label_count += 1;
                         }
                         JumpOffset::Subroutine(_) => {
                             self.labels.insert(
                                 target_offset,
-                                format!("subroutine_{}", self.subroutine_label_count),
+                                format!("subroutine{:0X}", self.subroutine_label_count),
                             );
                             self.subroutine_label_count += 1;
                         }
@@ -812,7 +812,7 @@ impl Disassembly {
                 }
                 self.jump_offsets
                     .entry(target_offset)
-                    .or_insert_with(|| FnvHashSet::default())
+                    .or_insert_with(FnvHashSet::default)
                     .insert(instruction_offset);
             }
 
