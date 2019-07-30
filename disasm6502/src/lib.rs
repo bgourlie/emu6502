@@ -680,6 +680,12 @@ impl Disassembly {
         Ok(())
     }
 
+    /// Retrieve a grouping of contiguous instructions.
+    ///
+    /// # Arguments
+    ///
+    /// * `offset` - The offset that the grouping of instructions should center around.
+    /// * `size` - The number of total instructions to return.
     pub fn window(&self, offset: u16, size: u16) -> impl Iterator<Item = (&u16, &Instruction)> {
         let half_size = usize::from(size / 2);
         let mut window = Vec::with_capacity(half_size);
@@ -707,6 +713,8 @@ impl Disassembly {
         })
     }
 
+    /// Given an offset that may point to somewhere within an instruction, return the offset to the
+    /// beginning of the instruction.
     pub fn instruction_offset(&self, offset: u16) -> Option<u16> {
         self.decoded.get(&offset).map(|offset| *offset)
     }
@@ -738,6 +746,7 @@ impl Disassembly {
         }
     }
 
+    /// Retrieve the label associated with the supplied offset, if one exists.
     pub fn label_at(&self, offset: u16) -> Option<std::borrow::Cow<str>> {
         self.labels.get(&offset).map(|label| label.into())
     }
