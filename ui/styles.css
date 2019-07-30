@@ -66,6 +66,8 @@ body {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: #b8b8b8;
+  font-style: italic;
 }
 #disassembly > div > .instruction {
   padding: 0 0 0 0.25em;

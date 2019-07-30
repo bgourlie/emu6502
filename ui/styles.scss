@@ -77,6 +77,8 @@ body {
         flex: 1;
         overflow: hidden;
         text-overflow: ellipsis;
+        color: desaturate($fontColor, 50%);
+        font-style: italic;
       }
     }
 
