@@ -49,17 +49,35 @@ body {
 #disassembly > div {
   display: flex;
 }
+#disassembly > div.current {
+  background-color: #2d6099;
+}
+#disassembly > div.current > .gutter {
+  background-color: #2f4a67;
+}
 #disassembly > div > .gutter {
+  display: flex;
+  width: 12em;
   background-color: #313335;
   border-right: 1px solid #606366;
-  padding: 0 1em 0 0;
+  padding: 0 0.3rem 0 0.3rem;
+}
+#disassembly > div > .gutter > .label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #b8b8b8;
+  font-style: italic;
 }
 #disassembly > div > .instruction {
-  padding: 0 0 0 0.25em;
+  padding: 0 0 0 0.3rem;
   flex: 1;
 }
-#disassembly > div > .instruction.current {
-  background-color: #2d6099;
+#disassembly > div > .instruction > .opcode {
+  font-weight: bold;
+}
+#disassembly > div > .instruction > .opcode::after {
+  content: " ";
 }
 
 .icon {

@@ -58,18 +58,39 @@ body {
   > div {
     display: flex;
 
+    &.current {
+      background-color: $currentInstructionBackgroundColor;
+
+      >.gutter {
+        background-color: mix($gutterBackgroundColor, $currentInstructionBackgroundColor);
+      }
+    }
+
     > .gutter {
+      display: flex;
+      width: 12em;
       background-color: $gutterBackgroundColor;
       border-right: 1px solid $gutterBorderColor;
-      padding: 0 1em 0 0;
+      padding: 0 0.3rem 0 0.3rem;
+
+      > .label {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: desaturate($fontColor, 50%);
+        font-style: italic;
+      }
     }
 
     > .instruction {
-      padding: 0 0 0 0.25em;
+      padding: 0 0 0 0.3rem;
       flex: 1;
 
-      &.current {
-        background-color: $currentInstructionBackgroundColor;
+      > .opcode {
+        font-weight: bold;
+        &::after {
+          content: ' ';
+        }
       }
     }
   }

@@ -19,12 +19,15 @@ fn opcodes() {
     let mut last_pc = PC_START;
 
     for i in 0.. {
-        if let Some(instr) = disassembly.display_at(cpu.pc()) {
-            println!(
-                "{:04X}: {: <15}PC    SP    A    X    Y   NVssDIZC",
-                cpu.pc(),
-                instr
-            );
+        if let Some((offset, instr)) = disassembly.instruction_at(cpu.pc()) {
+            if cpu.pc() == offset {
+                let instr_string = format!("{:?} {}", instr.opcode(), instr.operand().to_string());
+                println!(
+                    "{:04X}: {: <15}PC    SP    A    X    Y   NVssDIZC",
+                    cpu.pc(),
+                    instr_string
+                );
+            }
         } else {
             println!(
                 "{:04X}: Unmapped address encountered: (probably disasm issue)",
