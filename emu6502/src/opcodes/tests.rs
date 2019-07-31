@@ -1079,7 +1079,6 @@ mod shifts {
     fn lsr_3() {
         shift_right_base_3(lsr);
     }
-
 }
 
 mod bitwise {

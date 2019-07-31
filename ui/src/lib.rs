@@ -218,16 +218,21 @@ fn disassembly(disassembly: &Disassembly, offset: u16) -> Node<Msg> {
     let disassembly_rows: Vec<Node<Msg>> = disassembly
         .window(offset, 100)
         .map(|(addr, i)| {
-            let label_text = disassembly.label_at(*addr).unwrap_or_else(|| "".into());
+            let offset_label = disassembly.label_at(*addr).unwrap_or_else(|| "".into());
+            let operand_text = disassembly
+                .find_target_label(*addr, *i)
+                .unwrap_or_else(|| i.operand().to_string().into());
+
             let row = div![
                 div![
                     class!["gutter"],
-                    div![class!["label"], label_text],
+                    div![class!["label"], offset_label],
                     div![class!["offset"], format!("{:04X}", addr)]
                 ],
                 div![
                     class!["instruction"],
-                    format!("{:?} {}", i.opcode(), i.operand().to_string()),
+                    span![class!["opcode"], format!("{:?}", i.opcode())],
+                    span![class!["operand"], operand_text],
                 ]
             ];
 

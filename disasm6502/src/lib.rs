@@ -6,6 +6,7 @@ use {
     fnv::{FnvHashMap, FnvHashSet},
     log::{debug, error, info, warn},
     std::{
+        borrow::Cow,
         cmp,
         collections::BTreeMap,
         io::{Seek, SeekFrom},
@@ -578,6 +579,15 @@ impl<'a, R: ReadBytesExt + Seek> Disassembler<'a, R> {
     }
 }
 
+fn calc_absolute_offset(instruction_offset: u16, relative_offset: i8) -> u16 {
+    let target_offset = i32::from(instruction_offset) + 2 + i32::from(relative_offset);
+    if target_offset < 0 || target_offset > i32::from(u16::MAX) {
+        panic!("TODO: have this function return a result instead of panic")
+    } else {
+        target_offset as u16
+    }
+}
+
 #[derive(Copy, Clone, Eq, PartialEq)]
 enum JumpOffset {
     JumpAbsolute(u16),
@@ -593,12 +603,7 @@ impl JumpOffset {
             | JumpOffset::JumpAbsolute(offset)
             | JumpOffset::JumpIndirect(offset) => offset,
             JumpOffset::Branch(relative_offset) => {
-                let target_offset = i32::from(instruction_offset) + 2 + i32::from(relative_offset);
-                if target_offset < 0 || target_offset > i32::from(u16::MAX) {
-                    panic!("TODO: have this function return a result instead of panic")
-                } else {
-                    target_offset as u16
-                }
+                calc_absolute_offset(instruction_offset, relative_offset)
             }
         }
     }
@@ -746,8 +751,38 @@ impl Disassembly {
         }
     }
 
+    /// For any operand that represents an offset into program code, return the label associated
+    /// with it, if one exists.
+    ///
+    /// # Arguments
+    ///
+    /// * `instruction` - The instruction to find an associated label for.
+    /// * `offset` - The offset that the instruction resides at.
+    pub fn find_target_label(&self, offset: u16, instruction: Instruction) -> Option<Cow<str>> {
+        match instruction.opcode() {
+            Op::Jsr
+            | Op::Jmp
+            | Op::Bne
+            | Op::Beq
+            | Op::Bcc
+            | Op::Bcs
+            | Op::Bmi
+            | Op::Bpl
+            | Op::Bvc
+            | Op::Bvs => Some(instruction.operand),
+            _ => None,
+        }
+        .map(|operand| match operand {
+            Operand::Absolute(offset) | Operand::Indirect(offset) => offset,
+            Operand::Relative(relative_offset) => calc_absolute_offset(offset, relative_offset),
+            _ => panic!("Unexpected operand encountered."),
+        })
+        .and_then(|label_offset| self.labels.get(&label_offset))
+        .map(|label| label.into())
+    }
+
     /// Retrieve the label associated with the supplied offset, if one exists.
-    pub fn label_at(&self, offset: u16) -> Option<std::borrow::Cow<str>> {
+    pub fn label_at(&self, offset: u16) -> Option<Cow<str>> {
         self.labels.get(&offset).map(|label| label.into())
     }
 
