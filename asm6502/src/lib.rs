@@ -1,15 +1,59 @@
+#![allow(dead_code)]
 use nom::branch::alt;
-use nom::bytes::complete::{tag, tag_no_case, take_while1};
+use nom::bytes::complete::{tag, tag_no_case, take, take_while1};
 use nom::character::complete::{alphanumeric0, digit1, hex_digit1, space0, space1};
-use nom::character::is_alphanumeric;
 use nom::combinator::{map, map_res, opt, recognize};
-use nom::sequence::{pair, preceded, separated_pair, tuple};
+use nom::sequence::{pair, preceded, separated_pair, terminated, tuple};
 use nom::IResult;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum Token<'a> {
     Comment { text: &'a str },
-    SymbolDeclaration { name: &'a str, value: i32 },
+    SymbolDecl { name: &'a str, value: i32 },
+    MacroDecl { name: &'a str },
+    MacroPositionalArg { pos: u8 },
+    MacroInvocationCountArg,
+}
+
+fn macro_invocation_count_arg(input: &str) -> IResult<&str, Token> {
+    map(preceded(tag("\\"), tag("?")), |_| {
+        Token::MacroInvocationCountArg
+    })(input)
+}
+
+#[test]
+fn test_macro_invocation_count_arg() {
+    assert_eq!(
+        macro_invocation_count_arg("\\?"),
+        Ok(("", Token::MacroInvocationCountArg))
+    );
+    assert_eq!(
+        macro_invocation_count_arg("\\??"),
+        Ok(("?", Token::MacroInvocationCountArg))
+    );
+}
+
+fn macro_positional_arg(input: &str) -> IResult<&str, Token> {
+    map(
+        map_res(preceded(tag("\\"), take(1usize)), parse_u8_dec),
+        |pos| Token::MacroPositionalArg { pos },
+    )(input)
+}
+
+#[test]
+fn test_macro_positional_arg() {
+    assert_eq!(
+        macro_positional_arg("\\0"),
+        Ok(("", Token::MacroPositionalArg { pos: 0 }))
+    );
+    assert_eq!(
+        macro_positional_arg("\\9"),
+        Ok(("", Token::MacroPositionalArg { pos: 9 }))
+    );
+    assert_eq!(
+        macro_positional_arg("\\91"),
+        Ok(("1", Token::MacroPositionalArg { pos: 9 }))
+    );
 }
 
 fn comment(input: &str) -> IResult<&str, Token> {
@@ -18,17 +62,35 @@ fn comment(input: &str) -> IResult<&str, Token> {
     })(input)
 }
 
+fn macro_declaration(input: &str) -> IResult<&str, Token> {
+    map(
+        terminated(
+            terminated(label_or_symbol_name, space1),
+            tag_no_case("macro"),
+        ),
+        |name| Token::MacroDecl { name },
+    )(input)
+}
+
+#[test]
+fn test_macro_declaration() {
+    assert_eq!(
+        macro_declaration("foo_bar macro"),
+        Ok(("", Token::MacroDecl { name: "foo_bar" }))
+    )
+}
+
 fn symbol_declaration(input: &str) -> IResult<&str, Token> {
     map(
         separated_pair(
-            label_or_variable_name,
+            label_or_symbol_name,
             alt((
                 tuple((space0, tag("="), space0)),
                 tuple((space1, tag_no_case("equ"), space1)),
             )),
             i32_literal,
         ),
-        |(name, value)| Token::SymbolDeclaration { name, value },
+        |(name, value)| Token::SymbolDecl { name, value },
     )(input)
 }
 
@@ -38,7 +100,7 @@ fn test_symbol_declaration() {
         symbol_declaration("foo = 1"),
         Ok((
             "",
-            Token::SymbolDeclaration {
+            Token::SymbolDecl {
                 name: "foo",
                 value: 1
             }
@@ -48,7 +110,7 @@ fn test_symbol_declaration() {
         symbol_declaration("foo_bar = %11111111"),
         Ok((
             "",
-            Token::SymbolDeclaration {
+            Token::SymbolDecl {
                 name: "foo_bar",
                 value: 255
             }
@@ -59,7 +121,7 @@ fn test_symbol_declaration() {
         symbol_declaration("baz equ $fe"),
         Ok((
             "",
-            Token::SymbolDeclaration {
+            Token::SymbolDecl {
                 name: "baz",
                 value: 254
             }
@@ -67,7 +129,7 @@ fn test_symbol_declaration() {
     );
 }
 
-fn label_or_variable_name(input: &str) -> IResult<&str, &str> {
+fn label_or_symbol_name(input: &str) -> IResult<&str, &str> {
     take_while1(|chr: char| chr.is_ascii_alphanumeric() || chr == '_')(input)
 }
 
@@ -127,4 +189,8 @@ fn parse_i32_bin(input: &str) -> Result<i32, std::num::ParseIntError> {
 
 fn parse_i32_dec(input: &str) -> Result<i32, std::num::ParseIntError> {
     i32::from_str_radix(input, 10)
+}
+
+fn parse_u8_dec(input: &str) -> Result<u8, std::num::ParseIntError> {
+    u8::from_str_radix(input, 10)
 }
