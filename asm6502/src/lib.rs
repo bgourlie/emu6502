@@ -1,74 +1,39 @@
 #![allow(dead_code)]
 use nom::branch::alt;
 use nom::bytes::complete::{tag, tag_no_case, take, take_while1};
-use nom::character::complete::{alphanumeric0, digit1, hex_digit1, space0, space1};
+use nom::character::complete::{alphanumeric0, digit1, hex_digit1, space1};
 use nom::combinator::{map, map_res, opt, recognize};
-use nom::sequence::{pair, preceded, separated_pair, terminated, tuple};
+use nom::sequence::{pair, preceded, terminated};
 use nom::IResult;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-enum OffsetArg<'a> {
-    Literal(u16),
-    Label(&'a str),
+enum Literal<'a> {
+    Str(&'a str),
+    Num(i32),
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-enum Directive<'a> {
+enum Directive {
     NoOptimization,
-    SymbolDecl { name: &'a str, value: i32 },
-    Org { offset: OffsetArg<'a> },
+    Org,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum Token<'a> {
-    Comment { text: &'a str },
-    MacroDecl { name: &'a str },
-    MacroPositionalArg { pos: u8 },
+    Comment(&'a str),
+    MacroDecl(&'a str),
+    MacroPositionalArg(u8),
     MacroInvocationCountArg,
-    Directive { directive: Directive<'a> },
-}
-
-fn offset_arg(input: &str) -> IResult<&str, OffsetArg> {
-    alt((
-        map(label_or_symbol_name, |label| OffsetArg::Label(label)),
-        map(u16_literal, |offset| OffsetArg::Literal(offset)),
-    ))(input)
-}
-
-#[test]
-fn test_offset_arg() {
-    assert_eq!(offset_arg("foo"), Ok(("", OffsetArg::Label("foo"))));
-    assert_eq!(offset_arg("$1234"), Ok(("", OffsetArg::Literal(0x1234))));
+    Directive(Directive),
 }
 
 fn org_directive(input: &str) -> IResult<&str, Directive> {
-    map(
-        preceded(terminated(tag_no_case("org"), space1), offset_arg),
-        |offset| Directive::Org { offset },
-    )(input)
+    map(tag_no_case("org"), |_| Directive::Org)(input)
 }
 
 #[test]
 fn test_org_directive() {
-    assert_eq!(
-        org_directive("org $1234"),
-        Ok((
-            "",
-            Directive::Org {
-                offset: OffsetArg::Literal(0x1234)
-            }
-        ))
-    );
-
-    assert_eq!(
-        org_directive("org foo"),
-        Ok((
-            "",
-            Directive::Org {
-                offset: OffsetArg::Label("foo")
-            }
-        ))
-    );
+    assert_eq!(org_directive("org $1234"), Ok((" $1234", Directive::Org)));
 }
 
 fn noopt_directive(input: &str) -> IResult<&str, Directive> {
@@ -104,7 +69,7 @@ fn test_macro_invocation_count_arg() {
 fn macro_positional_arg(input: &str) -> IResult<&str, Token> {
     map(
         map_res(preceded(tag("\\"), take(1usize)), parse_u8_dec),
-        |pos| Token::MacroPositionalArg { pos },
+        Token::MacroPositionalArg,
     )(input)
 }
 
@@ -112,31 +77,31 @@ fn macro_positional_arg(input: &str) -> IResult<&str, Token> {
 fn test_macro_positional_arg() {
     assert_eq!(
         macro_positional_arg("\\0"),
-        Ok(("", Token::MacroPositionalArg { pos: 0 }))
+        Ok(("", Token::MacroPositionalArg(0)))
     );
     assert_eq!(
         macro_positional_arg("\\9"),
-        Ok(("", Token::MacroPositionalArg { pos: 9 }))
+        Ok(("", Token::MacroPositionalArg(9)))
     );
     assert_eq!(
         macro_positional_arg("\\91"),
-        Ok(("1", Token::MacroPositionalArg { pos: 9 }))
+        Ok(("1", Token::MacroPositionalArg(9)))
     );
 }
 
 fn comment(input: &str) -> IResult<&str, Token> {
-    map(preceded(tag(";"), alphanumeric0), |text| Token::Comment {
-        text,
+    map(preceded(tag(";"), alphanumeric0), |text| {
+        Token::Comment(text)
     })(input)
 }
 
 fn macro_declaration(input: &str) -> IResult<&str, Token> {
     map(
         terminated(
-            terminated(label_or_symbol_name, space1),
+            terminated(label_symbol_macro_name, space1),
             tag_no_case("macro"),
         ),
-        |name| Token::MacroDecl { name },
+        |name| Token::MacroDecl(name),
     )(input)
 }
 
@@ -144,68 +109,11 @@ fn macro_declaration(input: &str) -> IResult<&str, Token> {
 fn test_macro_declaration() {
     assert_eq!(
         macro_declaration("foo_bar macro"),
-        Ok(("", Token::MacroDecl { name: "foo_bar" }))
+        Ok(("", Token::MacroDecl("foo_bar")))
     )
 }
 
-fn symbol_declaration(input: &str) -> IResult<&str, Token> {
-    map(
-        separated_pair(
-            label_or_symbol_name,
-            alt((
-                tuple((space0, tag("="), space0)),
-                tuple((space1, tag_no_case("equ"), space1)),
-            )),
-            i32_literal,
-        ),
-        |(name, value)| Token::Directive {
-            directive: Directive::SymbolDecl { name, value },
-        },
-    )(input)
-}
-
-#[test]
-fn test_symbol_declaration() {
-    assert_eq!(
-        symbol_declaration("foo = 1"),
-        Ok((
-            "",
-            Token::Directive {
-                directive: Directive::SymbolDecl {
-                    name: "foo",
-                    value: 1
-                }
-            }
-        ))
-    );
-    assert_eq!(
-        symbol_declaration("foo_bar = %11111111"),
-        Ok((
-            "",
-            Token::Directive {
-                directive: Directive::SymbolDecl {
-                    name: "foo_bar",
-                    value: 255
-                }
-            }
-        ))
-    );
-
-    assert_eq!(
-        symbol_declaration("baz equ $fe"),
-        Ok((
-            "",
-            Token::Directive {
-                directive: Directive::SymbolDecl {
-                    name: "baz",
-                    value: 254
-                }
-            }
-        ))
-    );
-}
-
-fn label_or_symbol_name(input: &str) -> IResult<&str, &str> {
+fn label_symbol_macro_name(input: &str) -> IResult<&str, &str> {
     take_while1(|chr: char| chr.is_ascii_alphanumeric() || chr == '_')(input)
 }
 
