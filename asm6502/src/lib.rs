@@ -5,6 +5,39 @@ use nom::character::complete::{alphanumeric0, digit1, hex_digit1, space1};
 use nom::combinator::{map, map_res, opt, recognize};
 use nom::sequence::{pair, preceded, terminated};
 use nom::IResult;
+use std::rc::Rc;
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+enum BinaryOperator {
+    Addition,
+    Equals,
+    NotEquals,
+    Subtraction,
+    RightShift,
+    LeftShift,
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum Expression<'a> {
+    Literal(Literal<'a>),
+    Unary(UnaryOperator, Rc<Box<Expression<'a>>>),
+    Binary(
+        Rc<Box<Expression<'a>>>,
+        BinaryOperator,
+        Rc<Box<Expression<'a>>>,
+    ),
+    Grouping(Rc<Box<Expression<'a>>>),
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+enum UnaryOperator {
+    Negate,
+    Not,
+}
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum Literal<'a> {
@@ -27,6 +60,35 @@ enum Token<'a> {
     Directive(Directive),
 }
 
+fn binary_operator(input: &str) -> IResult<&str, BinaryOperator> {
+    map(
+        alt((
+            tag("+"),
+            tag("="),
+            tag("!="),
+            tag("-"),
+            tag(">>"),
+            tag("<<"),
+            tag("<="),
+            tag("<"),
+            tag(">="),
+            tag(">"),
+        )),
+        |operator| match operator {
+            "+" => BinaryOperator::Addition,
+            "=" => BinaryOperator::Equals,
+            "!=" => BinaryOperator::NotEquals,
+            "-" => BinaryOperator::Subtraction,
+            ">>" => BinaryOperator::RightShift,
+            "<<" => BinaryOperator::LeftShift,
+            "<=" => BinaryOperator::LessThanOrEqual,
+            "<" => BinaryOperator::LessThan,
+            ">=" => BinaryOperator::GreaterThanOrEqual,
+            ">" => BinaryOperator::GreaterThan,
+            _ => unreachable!(),
+        },
+    )(input)
+}
 fn org_directive(input: &str) -> IResult<&str, Directive> {
     map(tag_no_case("org"), |_| Directive::Org)(input)
 }
