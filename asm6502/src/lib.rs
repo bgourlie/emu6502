@@ -1,6 +1,6 @@
 use nom::branch::alt;
-use nom::bytes::complete::{tag, take_while1};
-use nom::character::complete::{alphanumeric0, digit1, hex_digit1, space0};
+use nom::bytes::complete::{tag, tag_no_case, take_while1};
+use nom::character::complete::{alphanumeric0, digit1, hex_digit1, space0, space1};
 use nom::character::is_alphanumeric;
 use nom::combinator::{map, map_res, opt, recognize};
 use nom::sequence::{pair, preceded, separated_pair, tuple};
@@ -9,45 +9,59 @@ use nom::IResult;
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum Token<'a> {
     Comment { text: &'a str },
-    VariableDeclaration { name: &'a str, value: i32 },
+    SymbolDeclaration { name: &'a str, value: i32 },
 }
 
-fn comment_token(input: &str) -> IResult<&str, Token> {
+fn comment(input: &str) -> IResult<&str, Token> {
     map(preceded(tag(";"), alphanumeric0), |text| Token::Comment {
         text,
     })(input)
 }
 
-fn variable_declaration_token(input: &str) -> IResult<&str, Token> {
+fn symbol_declaration(input: &str) -> IResult<&str, Token> {
     map(
         separated_pair(
             label_or_variable_name,
-            tuple((space0, tag("="), space0)),
+            alt((
+                tuple((space0, tag("="), space0)),
+                tuple((space1, tag_no_case("equ"), space1)),
+            )),
             i32_literal,
         ),
-        |(name, value)| Token::VariableDeclaration { name, value },
+        |(name, value)| Token::SymbolDeclaration { name, value },
     )(input)
 }
 
 #[test]
-fn test_variable_declaration_token() {
+fn test_symbol_declaration() {
     assert_eq!(
-        variable_declaration_token("foo = 1"),
+        symbol_declaration("foo = 1"),
         Ok((
             "",
-            Token::VariableDeclaration {
+            Token::SymbolDeclaration {
                 name: "foo",
                 value: 1
             }
         ))
     );
     assert_eq!(
-        variable_declaration_token("foo_bar = %11111111"),
+        symbol_declaration("foo_bar = %11111111"),
         Ok((
             "",
-            Token::VariableDeclaration {
+            Token::SymbolDeclaration {
                 name: "foo_bar",
                 value: 255
+            }
+        ))
+    );
+
+    assert_eq!(
+        symbol_declaration("baz equ $fe"),
+        Ok((
+            "",
+            Token::SymbolDeclaration {
+                name: "baz",
+                value: 254
             }
         ))
     );
