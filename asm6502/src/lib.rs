@@ -7,12 +7,80 @@ use nom::sequence::{pair, preceded, separated_pair, terminated, tuple};
 use nom::IResult;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+enum OffsetArg<'a> {
+    Literal(u16),
+    Label(&'a str),
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+enum Directive<'a> {
+    NoOptimization,
+    SymbolDecl { name: &'a str, value: i32 },
+    Org { offset: OffsetArg<'a> },
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum Token<'a> {
     Comment { text: &'a str },
-    SymbolDecl { name: &'a str, value: i32 },
     MacroDecl { name: &'a str },
     MacroPositionalArg { pos: u8 },
     MacroInvocationCountArg,
+    Directive { directive: Directive<'a> },
+}
+
+fn offset_arg(input: &str) -> IResult<&str, OffsetArg> {
+    alt((
+        map(label_or_symbol_name, |label| OffsetArg::Label(label)),
+        map(u16_literal, |offset| OffsetArg::Literal(offset)),
+    ))(input)
+}
+
+#[test]
+fn test_offset_arg() {
+    assert_eq!(offset_arg("foo"), Ok(("", OffsetArg::Label("foo"))));
+    assert_eq!(offset_arg("$1234"), Ok(("", OffsetArg::Literal(0x1234))));
+}
+
+fn org_directive(input: &str) -> IResult<&str, Directive> {
+    map(
+        preceded(terminated(tag_no_case("org"), space1), offset_arg),
+        |offset| Directive::Org { offset },
+    )(input)
+}
+
+#[test]
+fn test_org_directive() {
+    assert_eq!(
+        org_directive("org $1234"),
+        Ok((
+            "",
+            Directive::Org {
+                offset: OffsetArg::Literal(0x1234)
+            }
+        ))
+    );
+
+    assert_eq!(
+        org_directive("org foo"),
+        Ok((
+            "",
+            Directive::Org {
+                offset: OffsetArg::Label("foo")
+            }
+        ))
+    );
+}
+
+fn noopt_directive(input: &str) -> IResult<&str, Directive> {
+    map(tag_no_case("noopt"), |_| Directive::NoOptimization)(input)
+}
+
+#[test]
+fn test_noopt_directive() {
+    assert_eq!(
+        noopt_directive("noopt"),
+        Ok(("", Directive::NoOptimization))
+    )
 }
 
 fn macro_invocation_count_arg(input: &str) -> IResult<&str, Token> {
@@ -90,7 +158,9 @@ fn symbol_declaration(input: &str) -> IResult<&str, Token> {
             )),
             i32_literal,
         ),
-        |(name, value)| Token::SymbolDecl { name, value },
+        |(name, value)| Token::Directive {
+            directive: Directive::SymbolDecl { name, value },
+        },
     )(input)
 }
 
@@ -100,9 +170,11 @@ fn test_symbol_declaration() {
         symbol_declaration("foo = 1"),
         Ok((
             "",
-            Token::SymbolDecl {
-                name: "foo",
-                value: 1
+            Token::Directive {
+                directive: Directive::SymbolDecl {
+                    name: "foo",
+                    value: 1
+                }
             }
         ))
     );
@@ -110,9 +182,11 @@ fn test_symbol_declaration() {
         symbol_declaration("foo_bar = %11111111"),
         Ok((
             "",
-            Token::SymbolDecl {
-                name: "foo_bar",
-                value: 255
+            Token::Directive {
+                directive: Directive::SymbolDecl {
+                    name: "foo_bar",
+                    value: 255
+                }
             }
         ))
     );
@@ -121,9 +195,11 @@ fn test_symbol_declaration() {
         symbol_declaration("baz equ $fe"),
         Ok((
             "",
-            Token::SymbolDecl {
-                name: "baz",
-                value: 254
+            Token::Directive {
+                directive: Directive::SymbolDecl {
+                    name: "baz",
+                    value: 254
+                }
             }
         ))
     );
@@ -177,6 +253,59 @@ fn test_i32_bin_literals() {
         i32_bin_literal("%11111111111111111111111111111111"),
         Ok(("", -1))
     );
+}
+
+fn u16_literal(input: &str) -> IResult<&str, u16> {
+    alt((u16_hex_literal, u16_dec_literal, u16_bin_literal))(input)
+}
+
+fn u16_dec_literal(input: &str) -> IResult<&str, u16> {
+    map_res(digit1, parse_u16_dec)(input)
+}
+
+#[test]
+fn test_u16_dec_literals() {
+    assert_eq!(u16_dec_literal("1"), Ok(("", 1)));
+    assert_eq!(u16_dec_literal("2"), Ok(("", 2)));
+    assert_eq!(u16_dec_literal("255"), Ok(("", 255)));
+}
+
+fn u16_hex_literal(input: &str) -> IResult<&str, u16> {
+    map_res(preceded(tag("$"), hex_digit1), parse_u16_hex)(input)
+}
+
+#[test]
+fn test_u16_hex_literals() {
+    assert_eq!(u16_hex_literal("$1"), Ok(("", 1)));
+    assert_eq!(u16_hex_literal("$2"), Ok(("", 2)));
+    assert_eq!(u16_hex_literal("$FF"), Ok(("", 255)));
+}
+
+fn u16_bin_literal(input: &str) -> IResult<&str, u16> {
+    map_res(
+        preceded(tag("%"), take_while1(|chr| chr == '0' || chr == '1')),
+        parse_u16_bin,
+    )(input)
+}
+
+#[test]
+fn test_u16_bin_literals() {
+    assert_eq!(u16_bin_literal("%1"), Ok(("", 1)));
+    assert_eq!(u16_bin_literal("%10"), Ok(("", 2)));
+    assert_eq!(u16_bin_literal("%11111111"), Ok(("", 255)));
+}
+// TODO: abstract these
+
+fn parse_u16_hex(input: &str) -> Result<u16, std::num::ParseIntError> {
+    u16::from_str_radix(input, 16)
+}
+
+fn parse_u16_bin(input: &str) -> Result<u16, std::num::ParseIntError> {
+    u16::from_str_radix(input, 2)
+}
+
+fn parse_u16_dec(input: &str) -> Result<u16, std::num::ParseIntError> {
+    u16::from_str_radix(input, 10)
 }
 
 fn parse_i32_hex(input: &str) -> Result<i32, std::num::ParseIntError> {
