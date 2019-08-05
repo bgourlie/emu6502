@@ -6,7 +6,6 @@ use nom::IResult;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum Token<'a> {
-    Whitespace,
     Comment(&'a str),
     Identifier(&'a str),
     StringLiteral(&'a str),
@@ -221,18 +220,10 @@ fn test_identifier() {
     )
 }
 
-fn whitespace(input: &str) -> IResult<&str, Token> {
-    map(space1, |_| Token::Whitespace)(input)
-}
-
 fn comment(input: &str) -> IResult<&str, Token> {
-    map(
-        preceded(
-            tag(";"),
-            terminated(take_while(is_valid_ascii), line_ending),
-        ),
-        |comment| Token::Comment(comment),
-    )(input)
+    map(preceded(tag(";"), take_while(is_valid_ascii)), |comment| {
+        Token::Comment(comment)
+    })(input)
 }
 
 #[test]
