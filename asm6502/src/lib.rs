@@ -1,4 +1,6 @@
 #![allow(dead_code)]
+mod parser;
+
 use nom::branch::alt;
 use nom::bytes::complete::{tag, tag_no_case, take, take_while1};
 use nom::character::complete::{alphanumeric0, digit1, hex_digit1, space1};
