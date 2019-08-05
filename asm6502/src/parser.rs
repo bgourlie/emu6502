@@ -1,5 +1,6 @@
+use nom::branch::alt;
 use nom::bytes::complete::{tag, tag_no_case, take_while, take_while1};
-use nom::character::complete::{char, digit1, hex_digit1, line_ending, oct_digit1, one_of, space1};
+use nom::character::complete::{char, digit1, hex_digit1, oct_digit1, one_of, space1};
 use nom::combinator::{map, map_res, opt, recognize};
 use nom::sequence::{delimited, preceded, terminated};
 use nom::IResult;
@@ -38,7 +39,12 @@ enum Token<'a> {
 }
 
 fn if_start(input: &str) -> IResult<&str, Token> {
-    map(tag_no_case("if"), |_| Token::IfStart)(input)
+    map(terminated(tag_no_case("if"), space1), |_| Token::IfStart)(input)
+}
+
+#[test]
+fn test_if_start() {
+    assert_eq!(if_start("if "), Ok(("", Token::IfStart)));
 }
 
 fn if_end(input: &str) -> IResult<&str, Token> {
@@ -46,7 +52,9 @@ fn if_end(input: &str) -> IResult<&str, Token> {
 }
 
 fn macro_start(input: &str) -> IResult<&str, Token> {
-    map(tag_no_case("macro"), |_| Token::MacroStart)(input)
+    map(preceded(space1, tag_no_case("macro")), |_| {
+        Token::MacroStart
+    })(input)
 }
 
 fn macro_end(input: &str) -> IResult<&str, Token> {
@@ -228,9 +236,9 @@ fn comment(input: &str) -> IResult<&str, Token> {
 
 #[test]
 fn test_comment() {
-    assert_eq!(comment(";\n"), Ok(("", Token::Comment(""))));
+    assert_eq!(comment(";"), Ok(("", Token::Comment(""))));
     assert_eq!(
-        comment("; hello world!\n"),
+        comment("; hello world!"),
         Ok(("", Token::Comment(" hello world!")))
     );
 }
