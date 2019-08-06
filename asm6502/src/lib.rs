@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-mod parser;
+mod lexer;
 
 use nom::branch::alt;
 use nom::bytes::complete::{tag, tag_no_case, take, take_while1};

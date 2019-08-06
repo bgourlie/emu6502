@@ -4,6 +4,7 @@ use nom::character::complete::{char, digit1, hex_digit1, oct_digit1, one_of, spa
 use nom::combinator::{map, map_res, opt, recognize};
 use nom::sequence::{delimited, preceded, terminated};
 use nom::IResult;
+use shared6502::Op;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum Token<'a> {
@@ -36,6 +37,82 @@ enum Token<'a> {
     MacroEnd,
     IfStart,
     IfEnd,
+    Mnemonic(Op),
+    ImmediatePrefix,
+}
+
+fn immediate_prefix(input: &str) -> IResult<&str, Token> {
+    map(preceded(space1, char('#')), |_| Token::ImmediatePrefix)(input)
+}
+
+fn mnemonic(input: &str) -> IResult<&str, Token> {
+    map(
+        alt((
+            alt((
+                map(tag_no_case("adc"), |_| Op::Adc),
+                map(tag_no_case("and"), |_| Op::And),
+                map(tag_no_case("asl"), |_| Op::Asl),
+                map(tag_no_case("bcc"), |_| Op::Bcc),
+                map(tag_no_case("bcs"), |_| Op::Bcs),
+                map(tag_no_case("beq"), |_| Op::Beq),
+                map(tag_no_case("bit"), |_| Op::Bit),
+                map(tag_no_case("bmi"), |_| Op::Bmi),
+                map(tag_no_case("bne"), |_| Op::Bne),
+                map(tag_no_case("bpl"), |_| Op::Bpl),
+                map(tag_no_case("brk"), |_| Op::Brk),
+                map(tag_no_case("bvc"), |_| Op::Bvc),
+                map(tag_no_case("bvs"), |_| Op::Bvs),
+                map(tag_no_case("clc"), |_| Op::Clc),
+                map(tag_no_case("cld"), |_| Op::Cld),
+                map(tag_no_case("cli"), |_| Op::Cli),
+                map(tag_no_case("clv"), |_| Op::Clv),
+                map(tag_no_case("cmp"), |_| Op::Cmp),
+                map(tag_no_case("cpx"), |_| Op::Cpx),
+                map(tag_no_case("cpy"), |_| Op::Cpy),
+                map(tag_no_case("dec"), |_| Op::Dec),
+            )),
+            alt((
+                map(tag_no_case("dex"), |_| Op::Dex),
+                map(tag_no_case("dey"), |_| Op::Dey),
+                map(tag_no_case("eor"), |_| Op::Eor),
+                map(tag_no_case("inc"), |_| Op::Inc),
+                map(tag_no_case("inx"), |_| Op::Inx),
+                map(tag_no_case("iny"), |_| Op::Iny),
+                map(tag_no_case("jmp"), |_| Op::Jmp),
+                map(tag_no_case("jsr"), |_| Op::Jsr),
+                map(tag_no_case("lda"), |_| Op::Lda),
+                map(tag_no_case("ldx"), |_| Op::Ldx),
+                map(tag_no_case("ldy"), |_| Op::Ldy),
+                map(tag_no_case("lsr"), |_| Op::Lsr),
+                map(tag_no_case("nop"), |_| Op::Nop),
+                map(tag_no_case("ora"), |_| Op::Ora),
+                map(tag_no_case("pha"), |_| Op::Pha),
+                map(tag_no_case("php"), |_| Op::Php),
+                map(tag_no_case("pla"), |_| Op::Pla),
+                map(tag_no_case("plp"), |_| Op::Plp),
+                map(tag_no_case("rol"), |_| Op::Rol),
+                map(tag_no_case("ror"), |_| Op::Ror),
+                map(tag_no_case("rti"), |_| Op::Rti),
+            )),
+            alt((
+                map(tag_no_case("rts"), |_| Op::Rts),
+                map(tag_no_case("sbc"), |_| Op::Sbc),
+                map(tag_no_case("sec"), |_| Op::Sec),
+                map(tag_no_case("sed"), |_| Op::Sed),
+                map(tag_no_case("sei"), |_| Op::Sei),
+                map(tag_no_case("sta"), |_| Op::Sta),
+                map(tag_no_case("stx"), |_| Op::Stx),
+                map(tag_no_case("sty"), |_| Op::Sty),
+                map(tag_no_case("tax"), |_| Op::Tax),
+                map(tag_no_case("tay"), |_| Op::Tay),
+                map(tag_no_case("tsx"), |_| Op::Tsx),
+                map(tag_no_case("txa"), |_| Op::Txa),
+                map(tag_no_case("txs"), |_| Op::Txs),
+                map(tag_no_case("tya"), |_| Op::Tya),
+            )),
+        )),
+        |op| Token::Mnemonic(op),
+    )(input)
 }
 
 fn if_start(input: &str) -> IResult<&str, Token> {
