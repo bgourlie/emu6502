@@ -5,6 +5,7 @@ authors = ["W. Brian Gourlie <bgourlie@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+shared6502 = {path = "../shared6502" }
 byteorder = "1.3.2"
 fnv = "1.0.6"
 failure = "0.1.5"

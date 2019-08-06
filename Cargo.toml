@@ -4,6 +4,7 @@ members = [
   "emu6502",
   "asm6502",
   "disasm6502",
+  "shared6502",
   "ui"
 ]
 
