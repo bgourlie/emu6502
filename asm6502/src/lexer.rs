@@ -1,15 +1,22 @@
-use nom::branch::alt;
-use nom::bytes::complete::{tag, tag_no_case, take_while, take_while1};
-use nom::character::complete::{char, digit1, hex_digit1, oct_digit1, one_of, space1};
-use nom::combinator::{map, map_res, opt, recognize};
-use nom::sequence::{delimited, preceded, terminated};
-use nom::IResult;
-use shared6502::Op;
+use {
+    nom::{
+        branch::alt,
+        bytes::complete::{tag, tag_no_case, take, take_while, take_while1},
+        character::complete::{char, digit1, hex_digit1, newline, oct_digit1, one_of, space1},
+        combinator::{map, map_res, opt, peek, recognize},
+        error::ErrorKind::MapRes,
+        multi::many_till,
+        sequence::{delimited, preceded, terminated},
+        Err, IResult,
+    },
+    shared6502::Op,
+};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum Token<'a> {
     Comment(&'a str),
     Identifier(&'a str),
+    CharacterLiteral(char), // TODO: write parser
     StringLiteral(&'a str),
     HexLiteral(i32),
     DecLiteral(i32),
@@ -39,6 +46,26 @@ enum Token<'a> {
     IfEnd,
     Mnemonic(Op),
     ImmediatePrefix,
+}
+
+fn line(input: &str) -> IResult<&str, Option<Vec<Token>>> {
+    opt(map(
+        many_till(
+            alt((
+                /* keywords first so they're not consumed by the literal parser  */
+                equ_directive,
+                noopt_directive,
+                macro_start,
+                macro_end,
+                if_start,
+                if_end,
+                mnemonic,
+                identifier,
+            )),
+            newline,
+        ),
+        |(tokens, _)| tokens,
+    ))(input)
 }
 
 fn immediate_prefix(input: &str) -> IResult<&str, Token> {
@@ -292,9 +319,22 @@ fn test_string_literal() {
 
 fn identifier(input: &str) -> IResult<&str, Token> {
     map(
-        take_while1(|chr: char| chr.is_ascii_alphanumeric() || chr == '_'),
+        preceded(
+            valid_identifier_start,
+            take_while1(|chr: char| chr.is_ascii_alphanumeric() || chr == '_'),
+        ),
         |identifier| Token::Identifier(identifier),
     )(input)
+}
+
+fn valid_identifier_start(input: &str) -> IResult<&str, &str> {
+    map_res(peek(take(1_u32)), |first_char: &str| {
+        if first_char.chars().nth(0).unwrap().is_ascii_alphabetic() {
+            Ok(first_char)
+        } else {
+            Err(())
+        }
+    })(input)
 }
 
 #[test]
@@ -302,7 +342,12 @@ fn test_identifier() {
     assert_eq!(
         identifier("some_thing123 abc"),
         Ok((" abc", Token::Identifier("some_thing123")))
-    )
+    );
+
+    assert_eq!(
+        identifier("123some_thing abc"),
+        Err(Err::Error(("123some_thing abc", MapRes)))
+    );
 }
 
 fn comment(input: &str) -> IResult<&str, Token> {
