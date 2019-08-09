@@ -46,21 +46,51 @@ enum Token<'a> {
     IfEnd,
     Mnemonic(Op),
     ImmediatePrefix,
+    OffsetByXOperand,
+    OffsetByYOperand,
 }
 
 fn line(input: &str) -> IResult<&str, Option<Vec<Token>>> {
     opt(map(
         many_till(
             alt((
-                /* keywords first so they're not consumed by the literal parser  */
-                equ_directive,
-                noopt_directive,
-                macro_start,
-                macro_end,
-                if_start,
-                if_end,
-                mnemonic,
-                identifier,
+                alt((
+                    comment,
+                    equ_directive,
+                    noopt_directive,
+                    macro_start,
+                    macro_end,
+                    macro_positional_arg,
+                    macro_invocation_count_arg,
+                    if_start,
+                    if_end,
+                    mnemonic,
+                    immediate_prefix,
+                    offset_by_x_operand,
+                    offset_by_y_operand,
+                    identifier,
+                    complement_operator,
+                    or_operator,
+                    and_operator,
+                    plus_operator,
+                    star_operator,
+                    left_shift_operator,
+                )),
+                alt((
+                    right_shift_operator,
+                    greater_than_or_equal_operator,
+                    less_than_or_equal_operator,
+                    greater_than_operator,
+                    less_than_operator,
+                    sub_expr_start,
+                    sub_expr_end,
+                    dec_literal,
+                    hex_literal,
+                    oct_literal,
+                    bin_literal,
+                    string_literal,
+                    character_literal,
+                )),
             )),
             newline,
         ),
@@ -68,6 +98,15 @@ fn line(input: &str) -> IResult<&str, Option<Vec<Token>>> {
     ))(input)
 }
 
+fn offset_by_x_operand(input: &str) -> IResult<&str, Token> {
+    map(tag_no_case(",x"), |_| Token::OffsetByXOperand)(input)
+}
+
+fn offset_by_y_operand(input: &str) -> IResult<&str, Token> {
+    map(tag_no_case(",y"), |_| Token::OffsetByYOperand)(input)
+}
+
+// TODO: Add escaping https://github.com/Geal/nom/issues/1014
 fn character_literal(input: &str) -> IResult<&str, Token> {
     map_res(
         delimited(char('\''), take(1_usize), char('\'')),
