@@ -16,7 +16,7 @@ use {
 enum Token<'a> {
     Comment(&'a str),
     Identifier(&'a str),
-    CharacterLiteral(char), // TODO: write parser
+    CharacterLiteral(char),
     StringLiteral(&'a str),
     HexLiteral(i32),
     DecLiteral(i32),
@@ -66,6 +66,29 @@ fn line(input: &str) -> IResult<&str, Option<Vec<Token>>> {
         ),
         |(tokens, _)| tokens,
     ))(input)
+}
+
+fn character_literal(input: &str) -> IResult<&str, Token> {
+    map_res(
+        delimited(char('\''), take(1_usize), char('\'')),
+        |chr: &str| {
+            let chr: char = chr.chars().nth(0_usize).unwrap();
+            if chr.is_ascii() && !chr.is_ascii_control() {
+                Ok(Token::CharacterLiteral(chr))
+            } else {
+                Err(())
+            }
+        },
+    )(input)
+}
+
+#[test]
+fn test_character_literal() {
+    assert_eq!(
+        character_literal("'a'"),
+        Ok(("", Token::CharacterLiteral('a')))
+    );
+    assert_eq!(character_literal("'\n'"), Err(Err::Error(("'\n'", MapRes))));
 }
 
 fn immediate_prefix(input: &str) -> IResult<&str, Token> {
