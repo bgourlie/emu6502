@@ -5,7 +5,7 @@ use {
     failure::{Error, Fail},
     fnv::{FnvHashMap, FnvHashSet},
     log::{debug, error, info, warn},
-    shared6502::{Op, Addressing},
+    shared6502::{Addressing, Op},
     std::{
         borrow::Cow,
         cmp,
@@ -163,7 +163,6 @@ fn operand_length(instruction: Instruction) -> u16 {
         }
     }
 }
-
 
 #[derive(Debug, Fail)]
 enum DisassemblyError {

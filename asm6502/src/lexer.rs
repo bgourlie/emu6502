@@ -48,6 +48,7 @@ enum Token<'a> {
     ImmediatePrefix,
     OffsetByXOperand,
     OffsetByYOperand,
+    Comma,
 }
 
 fn line(input: &str) -> IResult<&str, Option<Vec<Token>>> {
@@ -90,12 +91,17 @@ fn line(input: &str) -> IResult<&str, Option<Vec<Token>>> {
                     bin_literal,
                     string_literal,
                     character_literal,
+                    comma,
                 )),
             )),
             newline,
         ),
         |(tokens, _)| tokens,
     ))(input)
+}
+
+fn comma(input: &str) -> IResult<&str, Token> {
+    map(tag(","), |_| Token::Comma)(input)
 }
 
 fn offset_by_x_operand(input: &str) -> IResult<&str, Token> {
