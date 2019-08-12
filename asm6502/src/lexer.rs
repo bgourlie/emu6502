@@ -16,7 +16,7 @@ use {
 type Span<'a> = LocatedSpan<&'a str>;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-enum Token<'a> {
+pub enum Token<'a> {
     Newline,
     Comment(Span<'a>, &'a str),
     Identifier(Span<'a>, &'a str),
@@ -55,7 +55,7 @@ enum Token<'a> {
     Comma(Span<'a>),
 }
 
-fn line(input: Span) -> IResult<Span, Vec<Token>> {
+pub fn parse(input: Span) -> IResult<Span, Vec<Token>> {
     many0(alt((
         alt((
             comment,
