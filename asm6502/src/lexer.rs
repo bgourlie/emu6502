@@ -2,10 +2,10 @@ use {
     nom::{
         branch::alt,
         bytes::complete::{tag, tag_no_case, take, take_while, take_while1},
-        character::complete::{char, digit1, hex_digit1, newline, oct_digit1, one_of, space1},
+        character::complete::{char, digit1, hex_digit1, oct_digit1, one_of, space0, space1},
         combinator::{map, map_res, opt, peek, recognize},
         error::ErrorKind::MapRes,
-        multi::many_till,
+        multi::many0,
         sequence::{delimited, preceded, terminated},
         Err, IResult,
     },
@@ -17,6 +17,7 @@ type Span<'a> = LocatedSpan<&'a str>;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum Token<'a> {
+    Newline,
     Comment(Span<'a>, &'a str),
     Identifier(Span<'a>, &'a str),
     CharacterLiteral(Span<'a>, char),
@@ -54,53 +55,53 @@ enum Token<'a> {
     Comma(Span<'a>),
 }
 
-fn line(input: Span) -> IResult<Span, Option<Vec<Token>>> {
-    opt(map(
-        many_till(
-            alt((
-                alt((
-                    comment,
-                    equ_directive,
-                    noopt_directive,
-                    macro_start,
-                    macro_end,
-                    macro_positional_arg,
-                    macro_invocation_count_arg,
-                    if_start,
-                    if_end,
-                    mnemonic,
-                    immediate_prefix,
-                    offset_by_x_operand,
-                    offset_by_y_operand,
-                    identifier,
-                    complement_operator,
-                    or_operator,
-                    and_operator,
-                    plus_operator,
-                    star_operator,
-                    left_shift_operator,
-                )),
-                alt((
-                    right_shift_operator,
-                    greater_than_or_equal_operator,
-                    less_than_or_equal_operator,
-                    greater_than_operator,
-                    less_than_operator,
-                    sub_expr_start,
-                    sub_expr_end,
-                    dec_literal,
-                    hex_literal,
-                    oct_literal,
-                    bin_literal,
-                    string_literal,
-                    character_literal,
-                    comma,
-                )),
-            )),
-            newline,
-        ),
-        |(tokens, _)| tokens,
-    ))(input)
+fn line(input: Span) -> IResult<Span, Vec<Token>> {
+    many0(alt((
+        alt((
+            comment,
+            equ_directive,
+            noopt_directive,
+            macro_start,
+            macro_end,
+            macro_positional_arg,
+            macro_invocation_count_arg,
+            if_start,
+            if_end,
+            mnemonic,
+            immediate_prefix,
+            offset_by_x_operand,
+            offset_by_y_operand,
+            identifier,
+            complement_operator,
+            or_operator,
+            and_operator,
+            plus_operator,
+            star_operator,
+            left_shift_operator,
+        )),
+        alt((
+            right_shift_operator,
+            greater_than_or_equal_operator,
+            less_than_or_equal_operator,
+            greater_than_operator,
+            less_than_operator,
+            sub_expr_start,
+            sub_expr_end,
+            dec_literal,
+            hex_literal,
+            oct_literal,
+            bin_literal,
+            string_literal,
+            character_literal,
+            comma,
+        )),
+    )))(input)
+}
+
+fn newline(input: Span) -> IResult<Span, Token> {
+    map(preceded(space0, nom::character::complete::newline), |_| {
+        Token::Newline
+    })(input)
 }
 
 fn comma(input: Span) -> IResult<Span, Token> {
