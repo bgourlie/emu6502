@@ -3,7 +3,7 @@ use {
         branch::alt,
         bytes::complete::{tag, tag_no_case, take, take_while, take_while1},
         character::complete::{char, digit1, hex_digit1, oct_digit1, one_of, space0, space1},
-        combinator::{map, map_res, opt, peek, recognize},
+        combinator::{map, map_res, not, opt, peek, recognize},
         multi::many0,
         sequence::{delimited, preceded, terminated},
         IResult,
@@ -102,19 +102,20 @@ pub fn parse(input: Span) -> IResult<Span, Vec<Token>> {
             string_literal,
             character_literal,
             comma,
-            newline,
+            newline_token,
         )),
     )))(input)
 }
 
-fn newline(input: Span) -> IResult<Span, Token> {
-    map(
-        preceded(
-            space0,
-            preceded(opt(char('\r')), nom::character::complete::newline),
-        ),
-        |_| Token::Newline,
+fn newline(input: Span) -> IResult<Span, char> {
+    preceded(
+        space0,
+        preceded(opt(char('\r')), nom::character::complete::newline),
     )(input)
+}
+
+fn newline_token(input: Span) -> IResult<Span, Token> {
+    map(newline, |_| Token::Newline)(input)
 }
 
 fn error_directive(input: Span) -> IResult<Span, Token> {
@@ -224,63 +225,131 @@ fn mnemonic(input: Span) -> IResult<Span, Token> {
                     map(terminated(tag_no_case("adc"), space1), |_| Op::Adc),
                     map(terminated(tag_no_case("and"), space1), |_| Op::And),
                     map(terminated(tag_no_case("asl"), space1), |_| Op::Asl),
-                    map(tag_no_case("bcc"), |_| Op::Bcc),
-                    map(tag_no_case("bcs"), |_| Op::Bcs),
-                    map(tag_no_case("beq"), |_| Op::Beq),
-                    map(tag_no_case("bit"), |_| Op::Bit),
-                    map(tag_no_case("bmi"), |_| Op::Bmi),
-                    map(tag_no_case("bne"), |_| Op::Bne),
-                    map(tag_no_case("bpl"), |_| Op::Bpl),
-                    map(tag_no_case("brk"), |_| Op::Brk),
-                    map(tag_no_case("bvc"), |_| Op::Bvc),
-                    map(tag_no_case("bvs"), |_| Op::Bvs),
-                    map(tag_no_case("clc"), |_| Op::Clc),
-                    map(tag_no_case("cld"), |_| Op::Cld),
-                    map(tag_no_case("cli"), |_| Op::Cli),
-                    map(tag_no_case("clv"), |_| Op::Clv),
+                    map(terminated(tag_no_case("bcc"), comment_or_newline), |_| {
+                        Op::Bcc
+                    }),
+                    map(terminated(tag_no_case("bcs"), comment_or_newline), |_| {
+                        Op::Bcs
+                    }),
+                    map(terminated(tag_no_case("beq"), comment_or_newline), |_| {
+                        Op::Beq
+                    }),
+                    map(terminated(tag_no_case("bit"), comment_or_newline), |_| {
+                        Op::Bit
+                    }),
+                    map(terminated(tag_no_case("bmi"), comment_or_newline), |_| {
+                        Op::Bmi
+                    }),
+                    map(terminated(tag_no_case("bne"), comment_or_newline), |_| {
+                        Op::Bne
+                    }),
+                    map(terminated(tag_no_case("bpl"), comment_or_newline), |_| {
+                        Op::Bpl
+                    }),
+                    map(terminated(tag_no_case("brk"), comment_or_newline), |_| {
+                        Op::Brk
+                    }),
+                    map(terminated(tag_no_case("bvc"), comment_or_newline), |_| {
+                        Op::Bvc
+                    }),
+                    map(terminated(tag_no_case("bvs"), comment_or_newline), |_| {
+                        Op::Bvs
+                    }),
+                    map(terminated(tag_no_case("clc"), comment_or_newline), |_| {
+                        Op::Clc
+                    }),
+                    map(terminated(tag_no_case("cld"), comment_or_newline), |_| {
+                        Op::Cld
+                    }),
+                    map(terminated(tag_no_case("cli"), comment_or_newline), |_| {
+                        Op::Cli
+                    }),
+                    map(terminated(tag_no_case("clv"), comment_or_newline), |_| {
+                        Op::Clv
+                    }),
                     map(terminated(tag_no_case("cmp"), space1), |_| Op::Cmp),
                     map(terminated(tag_no_case("cpx"), space1), |_| Op::Cpx),
                     map(terminated(tag_no_case("cpy"), space1), |_| Op::Cpy),
                     map(terminated(tag_no_case("dec"), space1), |_| Op::Dec),
                 )),
                 alt((
-                    map(tag_no_case("dex"), |_| Op::Dex),
-                    map(tag_no_case("dey"), |_| Op::Dey),
+                    map(terminated(tag_no_case("dex"), comment_or_newline), |_| {
+                        Op::Dex
+                    }),
+                    map(terminated(tag_no_case("dey"), comment_or_newline), |_| {
+                        Op::Dey
+                    }),
                     map(terminated(tag_no_case("eor"), space1), |_| Op::Eor),
                     map(terminated(tag_no_case("inc"), space1), |_| Op::Inc),
-                    map(tag_no_case("inx"), |_| Op::Inx),
-                    map(tag_no_case("iny"), |_| Op::Iny),
+                    map(terminated(tag_no_case("inx"), comment_or_newline), |_| {
+                        Op::Inx
+                    }),
+                    map(terminated(tag_no_case("iny"), comment_or_newline), |_| {
+                        Op::Iny
+                    }),
                     map(terminated(tag_no_case("jmp"), space1), |_| Op::Jmp),
                     map(terminated(tag_no_case("jsr"), space1), |_| Op::Jsr),
                     map(terminated(tag_no_case("lda"), space1), |_| Op::Lda),
                     map(terminated(tag_no_case("ldx"), space1), |_| Op::Ldx),
                     map(terminated(tag_no_case("ldy"), space1), |_| Op::Ldy),
                     map(terminated(tag_no_case("lsr"), space1), |_| Op::Lsr),
-                    map(tag_no_case("nop"), |_| Op::Nop),
+                    map(terminated(tag_no_case("nop"), comment_or_newline), |_| {
+                        Op::Nop
+                    }),
                     map(terminated(tag_no_case("ora"), space1), |_| Op::Ora),
-                    map(tag_no_case("pha"), |_| Op::Pha),
-                    map(tag_no_case("php"), |_| Op::Php),
-                    map(tag_no_case("pla"), |_| Op::Pla),
-                    map(tag_no_case("plp"), |_| Op::Plp),
+                    map(terminated(tag_no_case("pha"), comment_or_newline), |_| {
+                        Op::Pha
+                    }),
+                    map(terminated(tag_no_case("php"), comment_or_newline), |_| {
+                        Op::Php
+                    }),
+                    map(terminated(tag_no_case("pla"), comment_or_newline), |_| {
+                        Op::Pla
+                    }),
+                    map(terminated(tag_no_case("plp"), comment_or_newline), |_| {
+                        Op::Plp
+                    }),
                     map(terminated(tag_no_case("rol"), space1), |_| Op::Rol),
                     map(terminated(tag_no_case("ror"), space1), |_| Op::Ror),
-                    map(tag_no_case("rti"), |_| Op::Rti),
+                    map(terminated(tag_no_case("rti"), comment_or_newline), |_| {
+                        Op::Rti
+                    }),
                 )),
                 alt((
-                    map(tag_no_case("rts"), |_| Op::Rts),
+                    map(terminated(tag_no_case("rts"), comment_or_newline), |_| {
+                        Op::Rts
+                    }),
                     map(terminated(tag_no_case("sbc"), space1), |_| Op::Sbc),
-                    map(tag_no_case("sec"), |_| Op::Sec),
-                    map(tag_no_case("sed"), |_| Op::Sed),
-                    map(tag_no_case("sei"), |_| Op::Sei),
+                    map(terminated(tag_no_case("sec"), comment_or_newline), |_| {
+                        Op::Sec
+                    }),
+                    map(terminated(tag_no_case("sed"), comment_or_newline), |_| {
+                        Op::Sed
+                    }),
+                    map(terminated(tag_no_case("sei"), comment_or_newline), |_| {
+                        Op::Sei
+                    }),
                     map(terminated(tag_no_case("sta"), space1), |_| Op::Sta),
                     map(terminated(tag_no_case("stx"), space1), |_| Op::Stx),
                     map(terminated(tag_no_case("sty"), space1), |_| Op::Sty),
-                    map(tag_no_case("tax"), |_| Op::Tax),
-                    map(tag_no_case("tay"), |_| Op::Tay),
-                    map(tag_no_case("tsx"), |_| Op::Tsx),
-                    map(tag_no_case("txa"), |_| Op::Txa),
-                    map(tag_no_case("txs"), |_| Op::Txs),
-                    map(tag_no_case("tya"), |_| Op::Tya),
+                    map(terminated(tag_no_case("tax"), comment_or_newline), |_| {
+                        Op::Tax
+                    }),
+                    map(terminated(tag_no_case("tay"), comment_or_newline), |_| {
+                        Op::Tay
+                    }),
+                    map(terminated(tag_no_case("tsx"), comment_or_newline), |_| {
+                        Op::Tsx
+                    }),
+                    map(terminated(tag_no_case("txa"), comment_or_newline), |_| {
+                        Op::Txa
+                    }),
+                    map(terminated(tag_no_case("txs"), comment_or_newline), |_| {
+                        Op::Txs
+                    }),
+                    map(terminated(tag_no_case("tya"), comment_or_newline), |_| {
+                        Op::Tya
+                    }),
                 )),
             )),
             space0, // TODO: use space0 for implied instructions, space1 for non-implied
@@ -294,6 +363,10 @@ fn if_start(input: Span) -> IResult<Span, Token> {
     map(delimited(space0, tag_no_case("if"), space1), move |_| {
         Token::IfStart(span)
     })(input)
+}
+
+fn comment_or_newline(input: Span) -> IResult<Span, ()> {
+    peek(alt((map(newline, |_| ()), map(comment, |_| ()))))(input)
 }
 
 #[test]
