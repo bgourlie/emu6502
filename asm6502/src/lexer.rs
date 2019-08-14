@@ -3,7 +3,7 @@ use {
         branch::alt,
         bytes::complete::{tag, tag_no_case, take, take_while, take_while1},
         character::complete::{char, digit1, hex_digit1, oct_digit1, one_of, space0, space1},
-        combinator::{map, map_res, not, opt, peek, recognize},
+        combinator::{map, map_res, opt, peek, recognize},
         multi::many0,
         sequence::{delimited, preceded, terminated},
         IResult,
@@ -56,6 +56,7 @@ pub enum Token<'a> {
     OffsetByYOperand(Span<'a>),
     Comma(Span<'a>),
     ErrorDirective(Span<'a>, &'a str),
+    EndDirective(Span<'a>),
 }
 
 pub fn parse(input: Span) -> IResult<Span, Vec<Token>> {
@@ -65,6 +66,7 @@ pub fn parse(input: Span) -> IResult<Span, Vec<Token>> {
             error_directive,
             equ_directive,
             noopt_directive,
+            end_directive,
             macro_start,
             macro_end,
             macro_positional_arg,
@@ -81,9 +83,9 @@ pub fn parse(input: Span) -> IResult<Span, Vec<Token>> {
             complement_operator,
             or_operator,
             xor_operator,
-            and_operator,
         )),
         alt((
+            and_operator,
             plus_operator,
             minus_operator,
             star_operator,
@@ -116,6 +118,13 @@ fn newline(input: Span) -> IResult<Span, char> {
 
 fn newline_token(input: Span) -> IResult<Span, Token> {
     map(newline, |_| Token::Newline)(input)
+}
+
+fn end_directive(input: Span) -> IResult<Span, Token> {
+    let (input, span) = position(input)?;
+    map(preceded(space0, tag_no_case("end")), move |_| {
+        Token::EndDirective(span)
+    })(input)
 }
 
 fn error_directive(input: Span) -> IResult<Span, Token> {
