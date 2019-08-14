@@ -5,7 +5,7 @@ use {
         character::complete::{char, digit1, hex_digit1, oct_digit1, one_of, space0, space1},
         combinator::{map, map_res, opt, peek, recognize},
         multi::many0,
-        sequence::{delimited, preceded},
+        sequence::{delimited, preceded, terminated},
         IResult,
     },
     nom_locate::{position, LocatedSpan},
@@ -43,6 +43,7 @@ pub enum Token<'a> {
     ComplementOperator(Span<'a>),
     AndOperator(Span<'a>),
     OrOperator(Span<'a>),
+    XorOperator(Span<'a>),
     MacroStart(Span<'a>),
     MacroPositionalArg(Span<'a>, u8),
     MacroInvokeCountArg(Span<'a>),
@@ -79,10 +80,12 @@ pub fn parse(input: Span) -> IResult<Span, Vec<Token>> {
             not_equals_operator,
             complement_operator,
             or_operator,
+            xor_operator,
             and_operator,
         )),
         alt((
             plus_operator,
+            minus_operator,
             star_operator,
             left_shift_operator,
             right_shift_operator,
@@ -218,9 +221,9 @@ fn mnemonic(input: Span) -> IResult<Span, Token> {
             space0,
             alt((
                 alt((
-                    map(tag_no_case("adc"), |_| Op::Adc),
-                    map(tag_no_case("and"), |_| Op::And),
-                    map(tag_no_case("asl"), |_| Op::Asl),
+                    map(terminated(tag_no_case("adc"), space1), |_| Op::Adc),
+                    map(terminated(tag_no_case("and"), space1), |_| Op::And),
+                    map(terminated(tag_no_case("asl"), space1), |_| Op::Asl),
                     map(tag_no_case("bcc"), |_| Op::Bcc),
                     map(tag_no_case("bcs"), |_| Op::Bcs),
                     map(tag_no_case("beq"), |_| Op::Beq),
@@ -235,43 +238,43 @@ fn mnemonic(input: Span) -> IResult<Span, Token> {
                     map(tag_no_case("cld"), |_| Op::Cld),
                     map(tag_no_case("cli"), |_| Op::Cli),
                     map(tag_no_case("clv"), |_| Op::Clv),
-                    map(tag_no_case("cmp"), |_| Op::Cmp),
-                    map(tag_no_case("cpx"), |_| Op::Cpx),
-                    map(tag_no_case("cpy"), |_| Op::Cpy),
-                    map(tag_no_case("dec"), |_| Op::Dec),
+                    map(terminated(tag_no_case("cmp"), space1), |_| Op::Cmp),
+                    map(terminated(tag_no_case("cpx"), space1), |_| Op::Cpx),
+                    map(terminated(tag_no_case("cpy"), space1), |_| Op::Cpy),
+                    map(terminated(tag_no_case("dec"), space1), |_| Op::Dec),
                 )),
                 alt((
                     map(tag_no_case("dex"), |_| Op::Dex),
                     map(tag_no_case("dey"), |_| Op::Dey),
-                    map(tag_no_case("eor"), |_| Op::Eor),
-                    map(tag_no_case("inc"), |_| Op::Inc),
+                    map(terminated(tag_no_case("eor"), space1), |_| Op::Eor),
+                    map(terminated(tag_no_case("inc"), space1), |_| Op::Inc),
                     map(tag_no_case("inx"), |_| Op::Inx),
                     map(tag_no_case("iny"), |_| Op::Iny),
-                    map(tag_no_case("jmp"), |_| Op::Jmp),
-                    map(tag_no_case("jsr"), |_| Op::Jsr),
-                    map(tag_no_case("lda"), |_| Op::Lda),
-                    map(tag_no_case("ldx"), |_| Op::Ldx),
-                    map(tag_no_case("ldy"), |_| Op::Ldy),
-                    map(tag_no_case("lsr"), |_| Op::Lsr),
+                    map(terminated(tag_no_case("jmp"), space1), |_| Op::Jmp),
+                    map(terminated(tag_no_case("jsr"), space1), |_| Op::Jsr),
+                    map(terminated(tag_no_case("lda"), space1), |_| Op::Lda),
+                    map(terminated(tag_no_case("ldx"), space1), |_| Op::Ldx),
+                    map(terminated(tag_no_case("ldy"), space1), |_| Op::Ldy),
+                    map(terminated(tag_no_case("lsr"), space1), |_| Op::Lsr),
                     map(tag_no_case("nop"), |_| Op::Nop),
-                    map(tag_no_case("ora"), |_| Op::Ora),
+                    map(terminated(tag_no_case("ora"), space1), |_| Op::Ora),
                     map(tag_no_case("pha"), |_| Op::Pha),
                     map(tag_no_case("php"), |_| Op::Php),
                     map(tag_no_case("pla"), |_| Op::Pla),
                     map(tag_no_case("plp"), |_| Op::Plp),
-                    map(tag_no_case("rol"), |_| Op::Rol),
-                    map(tag_no_case("ror"), |_| Op::Ror),
+                    map(terminated(tag_no_case("rol"), space1), |_| Op::Rol),
+                    map(terminated(tag_no_case("ror"), space1), |_| Op::Ror),
                     map(tag_no_case("rti"), |_| Op::Rti),
                 )),
                 alt((
                     map(tag_no_case("rts"), |_| Op::Rts),
-                    map(tag_no_case("sbc"), |_| Op::Sbc),
+                    map(terminated(tag_no_case("sbc"), space1), |_| Op::Sbc),
                     map(tag_no_case("sec"), |_| Op::Sec),
                     map(tag_no_case("sed"), |_| Op::Sed),
                     map(tag_no_case("sei"), |_| Op::Sei),
-                    map(tag_no_case("sta"), |_| Op::Sta),
-                    map(tag_no_case("stx"), |_| Op::Stx),
-                    map(tag_no_case("sty"), |_| Op::Sty),
+                    map(terminated(tag_no_case("sta"), space1), |_| Op::Sta),
+                    map(terminated(tag_no_case("stx"), space1), |_| Op::Stx),
+                    map(terminated(tag_no_case("sty"), space1), |_| Op::Sty),
                     map(tag_no_case("tax"), |_| Op::Tax),
                     map(tag_no_case("tay"), |_| Op::Tay),
                     map(tag_no_case("tsx"), |_| Op::Tsx),
@@ -386,6 +389,13 @@ fn or_operator(input: Span) -> IResult<Span, Token> {
     })(input)
 }
 
+fn xor_operator(input: Span) -> IResult<Span, Token> {
+    let (input, span) = position(input)?;
+    map(delimited(space0, char('^'), space0), move |_| {
+        Token::XorOperator(span)
+    })(input)
+}
+
 fn and_operator(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, char('&'), space0), move |_| {
@@ -397,6 +407,13 @@ fn plus_operator(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, char('+'), space0), move |_| {
         Token::PlusOperator(span)
+    })(input)
+}
+
+fn minus_operator(input: Span) -> IResult<Span, Token> {
+    let (input, span) = position(input)?;
+    map(delimited(space0, char('-'), space0), move |_| {
+        Token::MinusOperator(span)
     })(input)
 }
 
