@@ -62,48 +62,48 @@ pub enum Token<'a> {
 pub fn parse(input: Span) -> IResult<Span, Vec<Token>> {
     many0(alt((
         alt((
-            comment,
-            error_directive,
-            equ_directive,
-            noopt_directive,
-            end_directive,
-            macro_start,
-            macro_end,
-            macro_positional_arg,
-            macro_invocation_count_arg,
-            if_start,
-            if_end,
-            mnemonic,
-            immediate_prefix,
-            offset_by_x_operand,
-            offset_by_y_operand,
-            identifier,
-            equals_operator,
-            not_equals_operator,
-            complement_operator,
-            or_operator,
-            xor_operator,
+            comment_token,
+            error_directive_token,
+            equ_directive_token,
+            noopt_directive_token,
+            end_directive_token,
+            macro_start_token,
+            macro_end_token,
+            macro_positional_arg_token,
+            macro_invocation_count_arg_token,
+            if_start_token,
+            if_end_token,
+            mnemonic_token,
+            immediate_prefix_token,
+            offset_by_x_operand_token,
+            offset_by_y_operand_token,
+            identifier_token,
+            equals_operator_token,
+            not_equals_operator_token,
+            complement_operator_token,
+            or_operator_token,
+            xor_operator_token,
         )),
         alt((
-            and_operator,
-            plus_operator,
-            minus_operator,
-            star_operator,
-            left_shift_operator,
-            right_shift_operator,
-            greater_than_or_equal_operator,
-            less_than_or_equal_operator,
-            greater_than_operator,
-            less_than_operator,
-            sub_expr_start,
-            sub_expr_end,
-            dec_literal,
-            hex_literal,
-            oct_literal,
-            bin_literal,
-            string_literal,
-            character_literal,
-            comma,
+            and_operator_token,
+            plus_operator_token,
+            minus_operator_token,
+            star_operator_token,
+            left_shift_operator_token,
+            right_shift_operator_token,
+            greater_than_or_equal_operator_token,
+            less_than_or_equal_operator_token,
+            greater_than_operator_token,
+            less_than_operator_token,
+            sub_expr_start_token,
+            sub_expr_end_token,
+            dec_literal_token,
+            hex_literal_token,
+            oct_literal_token,
+            bin_literal_token,
+            string_literal_token,
+            character_literal_token,
+            comma_token,
             newline_token,
         )),
     )))(input)
@@ -120,14 +120,14 @@ fn newline_token(input: Span) -> IResult<Span, Token> {
     map(newline, |_| Token::Newline)(input)
 }
 
-fn end_directive(input: Span) -> IResult<Span, Token> {
+fn end_directive_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(preceded(space0, tag_no_case("end")), move |_| {
         Token::EndDirective(span)
     })(input)
 }
 
-fn error_directive(input: Span) -> IResult<Span, Token> {
+fn error_directive_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(
         preceded(
@@ -138,37 +138,37 @@ fn error_directive(input: Span) -> IResult<Span, Token> {
     )(input)
 }
 
-fn equals_operator(input: Span) -> IResult<Span, Token> {
+fn equals_operator_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, char('='), space0), move |_| {
         Token::EqualsOperator(span)
     })(input)
 }
 
-fn not_equals_operator(input: Span) -> IResult<Span, Token> {
+fn not_equals_operator_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, tag("!="), space0), move |_| {
         Token::EqualsOperator(span)
     })(input)
 }
 
-fn comma(input: Span) -> IResult<Span, Token> {
+fn comma_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(tag(","), move |_| Token::Comma(span))(input)
 }
 
-fn offset_by_x_operand(input: Span) -> IResult<Span, Token> {
+fn offset_by_x_operand_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(tag_no_case(",x"), move |_| Token::OffsetByXOperand(span))(input)
 }
 
-fn offset_by_y_operand(input: Span) -> IResult<Span, Token> {
+fn offset_by_y_operand_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(tag_no_case(",y"), move |_| Token::OffsetByYOperand(span))(input)
 }
 
 // TODO: Add escaping https://github.com/Geal/nom/issues/1014
-fn character_literal(input: Span) -> IResult<Span, Token> {
+fn character_literal_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map_res(
         delimited(char('\''), take(1_usize), char('\'')),
@@ -184,9 +184,9 @@ fn character_literal(input: Span) -> IResult<Span, Token> {
 }
 
 #[test]
-fn test_character_literal() {
+fn test_character_literal_token() {
     assert_eq!(
-        character_literal(Span::new("'a'")),
+        character_literal_token(Span::new("'a'")),
         Ok((
             Span {
                 offset: 3,
@@ -206,7 +206,7 @@ fn test_character_literal() {
         ))
     );
     assert_eq!(
-        character_literal(Span::new("'\n'")),
+        character_literal_token(Span::new("'\n'")),
         Err(nom::Err::Error((
             Span {
                 offset: 0,
@@ -219,12 +219,12 @@ fn test_character_literal() {
     );
 }
 
-fn immediate_prefix(input: Span) -> IResult<Span, Token> {
+fn immediate_prefix_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(char('#'), move |_| Token::ImmediatePrefix(span))(input)
 }
 
-fn mnemonic(input: Span) -> IResult<Span, Token> {
+fn mnemonic_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(
         delimited(
@@ -367,7 +367,7 @@ fn mnemonic(input: Span) -> IResult<Span, Token> {
     )(input)
 }
 
-fn if_start(input: Span) -> IResult<Span, Token> {
+fn if_start_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, tag_no_case("if"), space1), move |_| {
         Token::IfStart(span)
@@ -375,13 +375,13 @@ fn if_start(input: Span) -> IResult<Span, Token> {
 }
 
 fn comment_or_newline(input: Span) -> IResult<Span, ()> {
-    peek(alt((map(newline, |_| ()), map(comment, |_| ()))))(input)
+    peek(alt((map(newline, |_| ()), map(comment_token, |_| ()))))(input)
 }
 
 #[test]
-fn test_if_start() {
+fn test_if_start_token() {
     assert_eq!(
-        if_start(Span::new("if ")),
+        if_start_token(Span::new("if ")),
         Ok((
             Span {
                 offset: 3,
@@ -399,33 +399,33 @@ fn test_if_start() {
     );
 }
 
-fn if_end(input: Span) -> IResult<Span, Token> {
+fn if_end_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, tag_no_case("endif"), space0), move |_| {
         Token::IfEnd(span)
     })(input)
 }
 
-fn macro_start(input: Span) -> IResult<Span, Token> {
+fn macro_start_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(preceded(space1, tag_no_case("macro")), move |_| {
         Token::MacroStart(span)
     })(input)
 }
 
-fn macro_end(input: Span) -> IResult<Span, Token> {
+fn macro_end_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, tag_no_case("endm"), space0), move |_| {
         Token::MacroEnd(span)
     })(input)
 }
 
-fn macro_invocation_count_arg(input: Span) -> IResult<Span, Token> {
+fn macro_invocation_count_arg_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(tag("\\?"), move |_| Token::MacroInvokeCountArg(span))(input)
 }
 
-fn macro_positional_arg(input: Span) -> IResult<Span, Token> {
+fn macro_positional_arg_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(
         map_res(preceded(char('\\'), one_of("123456789")), parse_u8_dec),
@@ -434,9 +434,9 @@ fn macro_positional_arg(input: Span) -> IResult<Span, Token> {
 }
 
 #[test]
-fn test_macro_arg() {
+fn test_macro_arg_token() {
     assert_eq!(
-        macro_positional_arg(Span::new("\\1")),
+        macro_positional_arg_token(Span::new("\\1")),
         Ok((
             Span {
                 offset: 2,
@@ -457,121 +457,121 @@ fn test_macro_arg() {
     )
 }
 
-fn complement_operator(input: Span) -> IResult<Span, Token> {
+fn complement_operator_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, char('~'), space0), move |_| {
         Token::ComplementOperator(span)
     })(input)
 }
 
-fn or_operator(input: Span) -> IResult<Span, Token> {
+fn or_operator_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, char('|'), space0), move |_| {
         Token::OrOperator(span)
     })(input)
 }
 
-fn xor_operator(input: Span) -> IResult<Span, Token> {
+fn xor_operator_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, char('^'), space0), move |_| {
         Token::XorOperator(span)
     })(input)
 }
 
-fn and_operator(input: Span) -> IResult<Span, Token> {
+fn and_operator_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, char('&'), space0), move |_| {
         Token::AndOperator(span)
     })(input)
 }
 
-fn plus_operator(input: Span) -> IResult<Span, Token> {
+fn plus_operator_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, char('+'), space0), move |_| {
         Token::PlusOperator(span)
     })(input)
 }
 
-fn minus_operator(input: Span) -> IResult<Span, Token> {
+fn minus_operator_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, char('-'), space0), move |_| {
         Token::MinusOperator(span)
     })(input)
 }
 
-fn star_operator(input: Span) -> IResult<Span, Token> {
+fn star_operator_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, char('*'), space0), move |_| {
         Token::StarOperator(span)
     })(input)
 }
 
-fn less_than_operator(input: Span) -> IResult<Span, Token> {
+fn less_than_operator_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, char('<'), space0), move |_| {
         Token::LessThanOperator(span)
     })(input)
 }
 
-fn greater_than_operator(input: Span) -> IResult<Span, Token> {
+fn greater_than_operator_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, char('>'), space0), move |_| {
         Token::GreaterThanOperator(span)
     })(input)
 }
 
-fn less_than_or_equal_operator(input: Span) -> IResult<Span, Token> {
+fn less_than_or_equal_operator_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, tag("<="), space0), move |_| {
         Token::LessThanOrEqualToOperator(span)
     })(input)
 }
 
-fn greater_than_or_equal_operator(input: Span) -> IResult<Span, Token> {
+fn greater_than_or_equal_operator_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, tag(">="), space0), move |_| {
         Token::GreaterThanOrEqualToOperator(span)
     })(input)
 }
 
-fn right_shift_operator(input: Span) -> IResult<Span, Token> {
+fn right_shift_operator_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, tag(">>"), space0), move |_| {
         Token::RightShiftOperator(span)
     })(input)
 }
 
-fn left_shift_operator(input: Span) -> IResult<Span, Token> {
+fn left_shift_operator_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, tag("<<"), space0), move |_| {
         Token::LeftShiftOperator(span)
     })(input)
 }
 
-fn noopt_directive(input: Span) -> IResult<Span, Token> {
+fn noopt_directive_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(preceded(space0, tag_no_case("noopt")), move |_| {
         Token::NoOptDirective(span)
     })(input)
 }
-fn sub_expr_start(input: Span) -> IResult<Span, Token> {
+fn sub_expr_start_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(char('('), move |_| Token::SubExprStart(span))(input)
 }
 
-fn sub_expr_end(input: Span) -> IResult<Span, Token> {
+fn sub_expr_end_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(char(')'), move |_| Token::SubExprEnd(span))(input)
 }
 
-fn equ_directive(input: Span) -> IResult<Span, Token> {
+fn equ_directive_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(delimited(space0, tag_no_case("equ"), space1), move |_| {
         Token::EquDirective(span)
     })(input)
 }
 
-fn hex_literal(input: Span) -> IResult<Span, Token> {
+fn hex_literal_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(
         map_res(preceded(char('$'), hex_digit1), parse_i32_hex),
@@ -580,9 +580,9 @@ fn hex_literal(input: Span) -> IResult<Span, Token> {
 }
 
 #[test]
-fn test_hex_literal() {
+fn test_hex_literal_token() {
     assert_eq!(
-        hex_literal(Span::new("$1")),
+        hex_literal_token(Span::new("$1")),
         Ok((
             Span {
                 offset: 2,
@@ -602,7 +602,7 @@ fn test_hex_literal() {
         ))
     );
     assert_eq!(
-        hex_literal(Span::new("$ff")),
+        hex_literal_token(Span::new("$ff")),
         Ok((
             Span {
                 offset: 3,
@@ -623,7 +623,7 @@ fn test_hex_literal() {
     );
 }
 
-fn dec_literal(input: Span) -> IResult<Span, Token> {
+fn dec_literal_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(
         map_res(recognize(preceded(opt(char('-')), digit1)), parse_i32_dec),
@@ -632,9 +632,9 @@ fn dec_literal(input: Span) -> IResult<Span, Token> {
 }
 
 #[test]
-fn test_dec_literal() {
+fn test_dec_literal_token() {
     assert_eq!(
-        dec_literal(Span::new("-234")),
+        dec_literal_token(Span::new("-234")),
         Ok((
             Span {
                 offset: 4,
@@ -654,7 +654,7 @@ fn test_dec_literal() {
         ))
     );
     assert_eq!(
-        dec_literal(Span::new("8234")),
+        dec_literal_token(Span::new("8234")),
         Ok((
             Span {
                 offset: 4,
@@ -675,7 +675,7 @@ fn test_dec_literal() {
     );
 }
 
-fn oct_literal(input: Span) -> IResult<Span, Token> {
+fn oct_literal_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(
         map_res(preceded(char('@'), oct_digit1), parse_i32_oct),
@@ -684,9 +684,9 @@ fn oct_literal(input: Span) -> IResult<Span, Token> {
 }
 
 #[test]
-fn test_oct_literal() {
+fn test_oct_literal_token() {
     assert_eq!(
-        oct_literal(Span::new("@1")),
+        oct_literal_token(Span::new("@1")),
         Ok((
             Span {
                 offset: 2,
@@ -706,7 +706,7 @@ fn test_oct_literal() {
         ))
     );
     assert_eq!(
-        oct_literal(Span::new("@10")),
+        oct_literal_token(Span::new("@10")),
         Ok((
             Span {
                 offset: 3,
@@ -727,7 +727,7 @@ fn test_oct_literal() {
     );
 }
 
-fn bin_literal(input: Span) -> IResult<Span, Token> {
+fn bin_literal_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(
         map_res(
@@ -739,9 +739,9 @@ fn bin_literal(input: Span) -> IResult<Span, Token> {
 }
 
 #[test]
-fn test_bin_literal() {
+fn test_bin_literal_token() {
     assert_eq!(
-        bin_literal(Span::new("%00000001")),
+        bin_literal_token(Span::new("%00000001")),
         Ok((
             Span {
                 offset: 9,
@@ -761,7 +761,7 @@ fn test_bin_literal() {
         ))
     );
     assert_eq!(
-        bin_literal(Span::new("%11111111")),
+        bin_literal_token(Span::new("%11111111")),
         Ok((
             Span {
                 offset: 9,
@@ -783,7 +783,7 @@ fn test_bin_literal() {
 }
 
 // TODO: Add escaping https://github.com/Geal/nom/issues/1014
-fn string_literal(input: Span) -> IResult<Span, Token> {
+fn string_literal_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(
         delimited(
@@ -796,9 +796,9 @@ fn string_literal(input: Span) -> IResult<Span, Token> {
 }
 
 #[test]
-fn test_string_literal() {
+fn test_string_literal_token() {
     assert_eq!(
-        string_literal(Span::new("\"Why ~hello~ there!\" abc")),
+        string_literal_token(Span::new("\"Why ~hello~ there!\" abc")),
         Ok((
             Span {
                 offset: 20,
@@ -819,7 +819,7 @@ fn test_string_literal() {
     );
 }
 
-fn identifier(input: Span) -> IResult<Span, Token> {
+fn identifier_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(
         delimited(
@@ -851,9 +851,9 @@ fn valid_identifier_start(input: Span) -> IResult<Span, Span> {
 }
 
 #[test]
-fn test_identifier() {
+fn test_identifier_token() {
     assert_eq!(
-        identifier(Span::new("some_thing123 abc")),
+        identifier_token(Span::new("some_thing123 abc")),
         Ok((
             Span {
                 offset: 14,
@@ -874,7 +874,7 @@ fn test_identifier() {
     );
 
     assert_eq!(
-        identifier(Span::new("123some_thing abc")),
+        identifier_token(Span::new("123some_thing abc")),
         Err(nom::Err::Error((
             Span {
                 offset: 0,
@@ -887,7 +887,7 @@ fn test_identifier() {
     );
 }
 
-fn comment(input: Span) -> IResult<Span, Token> {
+fn comment_token(input: Span) -> IResult<Span, Token> {
     let (input, span) = position(input)?;
     map(
         preceded(
@@ -902,9 +902,9 @@ fn comment(input: Span) -> IResult<Span, Token> {
 }
 
 #[test]
-fn test_comment() {
+fn test_comment_token() {
     assert_eq!(
-        comment(Span::new(";")),
+        comment_token(Span::new(";")),
         Ok((
             Span {
                 offset: 1,
@@ -924,7 +924,7 @@ fn test_comment() {
         ))
     );
     assert_eq!(
-        comment(Span::new("; hello world!")),
+        comment_token(Span::new("; hello world!")),
         Ok((
             Span {
                 offset: 14,
