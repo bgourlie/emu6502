@@ -78,23 +78,23 @@ pub fn parse(input: Span) -> IResult<Span, Vec<Token>> {
             offset_by_y_operand_token,
             end_directive_token,
             identifier_token,
-            equals_operator_token,
-            not_equals_operator_token,
-            complement_operator_token,
-            or_operator_token,
-            xor_operator_token,
+            operator_token("=", |(pos, _)| Token::EqualsOperator(pos)),
+            operator_token("!=", |(pos, _)| Token::NotEqualsOperator(pos)),
+            operator_token("~", |(pos, _)| Token::ComplementOperator(pos)),
+            operator_token("|", |(pos, _)| Token::OrOperator(pos)),
+            operator_token("^", |(pos, _)| Token::XorOperator(pos)),
         )),
         alt((
-            and_operator_token,
-            plus_operator_token,
-            minus_operator_token,
-            star_operator_token,
-            left_shift_operator_token,
-            right_shift_operator_token,
-            greater_than_or_equal_operator_token,
-            less_than_or_equal_operator_token,
-            greater_than_operator_token,
-            less_than_operator_token,
+            operator_token("&", |(pos, _)| Token::AndOperator(pos)),
+            operator_token("+", |(pos, _)| Token::PlusOperator(pos)),
+            operator_token("-", |(pos, _)| Token::MinusOperator(pos)),
+            operator_token("*", |(pos, _)| Token::StarOperator(pos)),
+            operator_token("<<", |(pos, _)| Token::LeftShiftOperator(pos)),
+            operator_token(">>", |(pos, _)| Token::RightShiftOperator(pos)),
+            operator_token(">=", |(pos, _)| Token::GreaterThanOrEqualToOperator(pos)),
+            operator_token("<=", |(pos, _)| Token::LessThanOrEqualToOperator(pos)),
+            operator_token(">", |(pos, _)| Token::GreaterThanOperator(pos)),
+            operator_token("<", |(pos, _)| Token::LessThanOperator(pos)),
             sub_expr_start_token,
             sub_expr_end_token,
             dec_literal_token,
@@ -137,20 +137,6 @@ fn error_directive_token(input: Span) -> IResult<Span, Token> {
             ),
         ),
         |(pos, msg)| Token::ErrorDirective(pos, msg.fragment),
-    )(input)
-}
-
-fn equals_operator_token(input: Span) -> IResult<Span, Token> {
-    map(
-        pair(position, delimited(space0, char('='), space0)),
-        |(pos, _)| Token::EqualsOperator(pos),
-    )(input)
-}
-
-fn not_equals_operator_token(input: Span) -> IResult<Span, Token> {
-    map(
-        pair(position, delimited(space0, tag("!="), space0)),
-        |(pos, _)| Token::EqualsOperator(pos),
     )(input)
 }
 
@@ -465,95 +451,17 @@ fn test_macro_arg_token() {
     )
 }
 
-fn complement_operator_token(input: Span) -> IResult<Span, Token> {
+fn operator_token<'a, F>(
+    chars: &'static str,
+    mapper: F,
+) -> impl Fn(Span<'a>) -> IResult<Span<'a>, Token<'a>>
+where
+    F: Fn((Span<'a>, Span<'a>)) -> Token<'a>,
+{
     map(
-        pair(position, delimited(space0, char('~'), space0)),
-        |(pos, _)| Token::ComplementOperator(pos),
-    )(input)
-}
-
-fn or_operator_token(input: Span) -> IResult<Span, Token> {
-    map(
-        pair(position, delimited(space0, char('|'), space0)),
-        |(pos, _)| Token::OrOperator(pos),
-    )(input)
-}
-
-fn xor_operator_token(input: Span) -> IResult<Span, Token> {
-    map(
-        pair(position, delimited(space0, char('^'), space0)),
-        |(pos, _)| Token::XorOperator(pos),
-    )(input)
-}
-
-fn and_operator_token(input: Span) -> IResult<Span, Token> {
-    map(
-        pair(position, delimited(space0, char('&'), space0)),
-        |(pos, _)| Token::AndOperator(pos),
-    )(input)
-}
-
-fn plus_operator_token(input: Span) -> IResult<Span, Token> {
-    map(
-        pair(position, delimited(space0, char('+'), space0)),
-        |(pos, _)| Token::PlusOperator(pos),
-    )(input)
-}
-
-fn minus_operator_token(input: Span) -> IResult<Span, Token> {
-    map(
-        pair(position, delimited(space0, char('-'), space0)),
-        |(pos, _)| Token::MinusOperator(pos),
-    )(input)
-}
-
-fn star_operator_token(input: Span) -> IResult<Span, Token> {
-    map(
-        pair(position, delimited(space0, char('*'), space0)),
-        |(pos, _)| Token::StarOperator(pos),
-    )(input)
-}
-
-fn less_than_operator_token(input: Span) -> IResult<Span, Token> {
-    map(
-        pair(position, delimited(space0, char('<'), space0)),
-        |(pos, _)| Token::LessThanOperator(pos),
-    )(input)
-}
-
-fn greater_than_operator_token(input: Span) -> IResult<Span, Token> {
-    map(
-        pair(position, delimited(space0, char('>'), space0)),
-        |(pos, _)| Token::GreaterThanOperator(pos),
-    )(input)
-}
-
-fn less_than_or_equal_operator_token(input: Span) -> IResult<Span, Token> {
-    map(
-        pair(position, delimited(space0, tag("<="), space0)),
-        |(pos, _)| Token::LessThanOrEqualToOperator(pos),
-    )(input)
-}
-
-fn greater_than_or_equal_operator_token(input: Span) -> IResult<Span, Token> {
-    map(
-        pair(position, delimited(space0, tag(">="), space0)),
-        |(pos, _)| Token::GreaterThanOrEqualToOperator(pos),
-    )(input)
-}
-
-fn right_shift_operator_token(input: Span) -> IResult<Span, Token> {
-    map(
-        pair(position, delimited(space0, tag(">>"), space0)),
-        |(pos, _)| Token::RightShiftOperator(pos),
-    )(input)
-}
-
-fn left_shift_operator_token(input: Span) -> IResult<Span, Token> {
-    map(
-        pair(position, delimited(space0, tag("<<"), space0)),
-        |(pos, _)| Token::LeftShiftOperator(pos),
-    )(input)
+        pair(position, delimited(space0, tag(chars), space0)),
+        mapper,
+    )
 }
 
 fn noopt_directive_token(input: Span) -> IResult<Span, Token> {
