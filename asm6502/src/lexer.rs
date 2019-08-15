@@ -5,7 +5,7 @@ use {
         character::complete::{char, digit1, hex_digit1, oct_digit1, one_of, space0, space1},
         combinator::{map, map_res, opt, peek, recognize},
         multi::many0,
-        sequence::{delimited, preceded, terminated},
+        sequence::{delimited, pair, preceded, terminated},
         IResult,
     },
     nom_locate::{position, LocatedSpan},
@@ -121,61 +121,63 @@ fn newline_token(input: Span) -> IResult<Span, Token> {
 }
 
 fn end_directive_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(preceded(space0, tag_no_case("end")), move |_| {
-        Token::EndDirective(span)
-    })(input)
+    map(
+        pair(position, preceded(space0, tag_no_case("end"))),
+        |(pos, _)| Token::EndDirective(pos),
+    )(input)
 }
 
 fn error_directive_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
     map(
-        preceded(
-            delimited(space0, tag("ERROR ERROR ERROR"), space1),
-            take_while1(|chr: char| chr.is_ascii() && !chr.is_ascii_control()),
+        pair(
+            position,
+            preceded(
+                delimited(space0, tag("ERROR ERROR ERROR"), space1),
+                take_while1(|chr: char| chr.is_ascii() && !chr.is_ascii_control()),
+            ),
         ),
-        move |msg: Span| Token::ErrorDirective(span, msg.fragment),
+        |(pos, msg)| Token::ErrorDirective(pos, msg.fragment),
     )(input)
 }
 
 fn equals_operator_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(delimited(space0, char('='), space0), move |_| {
-        Token::EqualsOperator(span)
-    })(input)
+    map(
+        pair(position, delimited(space0, char('='), space0)),
+        |(pos, _)| Token::EqualsOperator(pos),
+    )(input)
 }
 
 fn not_equals_operator_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(delimited(space0, tag("!="), space0), move |_| {
-        Token::EqualsOperator(span)
-    })(input)
+    map(
+        pair(position, delimited(space0, tag("!="), space0)),
+        |(pos, _)| Token::EqualsOperator(pos),
+    )(input)
 }
 
 fn comma_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(tag(","), move |_| Token::Comma(span))(input)
+    map(pair(position, tag(",")), |(pos, _)| Token::Comma(pos))(input)
 }
 
 fn offset_by_x_operand_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(tag_no_case(",x"), move |_| Token::OffsetByXOperand(span))(input)
+    map(pair(position, tag_no_case(",x")), |(pos, _)| {
+        Token::OffsetByXOperand(pos)
+    })(input)
 }
 
 fn offset_by_y_operand_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(tag_no_case(",y"), move |_| Token::OffsetByYOperand(span))(input)
+    map(pair(position, tag_no_case(",y")), |(pos, _)| {
+        Token::OffsetByYOperand(pos)
+    })(input)
 }
 
 // TODO: Add escaping https://github.com/Geal/nom/issues/1014
 fn character_literal_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
     map_res(
-        delimited(char('\''), take(1_usize), char('\'')),
-        move |chr: Span| {
+        pair(position, delimited(char('\''), take(1_usize), char('\''))),
+        |(pos, chr): (Span, Span)| {
             let chr: char = chr.fragment.chars().nth(0_usize).unwrap();
             if chr.is_ascii() && !chr.is_ascii_control() {
-                Ok(Token::CharacterLiteral(span, chr))
+                Ok(Token::CharacterLiteral(pos, chr))
             } else {
                 Err(())
             }
@@ -220,158 +222,161 @@ fn test_character_literal_token() {
 }
 
 fn immediate_prefix_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(char('#'), move |_| Token::ImmediatePrefix(span))(input)
+    map(pair(position, char('#')), |(pos, _)| {
+        Token::ImmediatePrefix(pos)
+    })(input)
 }
 
 fn mnemonic_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
     map(
-        delimited(
-            space0,
-            alt((
+        pair(
+            position,
+            delimited(
+                space0,
                 alt((
-                    map(terminated(tag_no_case("adc"), space1), |_| Op::Adc),
-                    map(terminated(tag_no_case("and"), space1), |_| Op::And),
-                    map(terminated(tag_no_case("asl"), space1), |_| Op::Asl),
-                    map(terminated(tag_no_case("bcc"), comment_or_newline), |_| {
-                        Op::Bcc
-                    }),
-                    map(terminated(tag_no_case("bcs"), comment_or_newline), |_| {
-                        Op::Bcs
-                    }),
-                    map(terminated(tag_no_case("beq"), comment_or_newline), |_| {
-                        Op::Beq
-                    }),
-                    map(terminated(tag_no_case("bit"), comment_or_newline), |_| {
-                        Op::Bit
-                    }),
-                    map(terminated(tag_no_case("bmi"), comment_or_newline), |_| {
-                        Op::Bmi
-                    }),
-                    map(terminated(tag_no_case("bne"), comment_or_newline), |_| {
-                        Op::Bne
-                    }),
-                    map(terminated(tag_no_case("bpl"), comment_or_newline), |_| {
-                        Op::Bpl
-                    }),
-                    map(terminated(tag_no_case("brk"), comment_or_newline), |_| {
-                        Op::Brk
-                    }),
-                    map(terminated(tag_no_case("bvc"), comment_or_newline), |_| {
-                        Op::Bvc
-                    }),
-                    map(terminated(tag_no_case("bvs"), comment_or_newline), |_| {
-                        Op::Bvs
-                    }),
-                    map(terminated(tag_no_case("clc"), comment_or_newline), |_| {
-                        Op::Clc
-                    }),
-                    map(terminated(tag_no_case("cld"), comment_or_newline), |_| {
-                        Op::Cld
-                    }),
-                    map(terminated(tag_no_case("cli"), comment_or_newline), |_| {
-                        Op::Cli
-                    }),
-                    map(terminated(tag_no_case("clv"), comment_or_newline), |_| {
-                        Op::Clv
-                    }),
-                    map(terminated(tag_no_case("cmp"), space1), |_| Op::Cmp),
-                    map(terminated(tag_no_case("cpx"), space1), |_| Op::Cpx),
-                    map(terminated(tag_no_case("cpy"), space1), |_| Op::Cpy),
-                    map(terminated(tag_no_case("dec"), space1), |_| Op::Dec),
+                    alt((
+                        map(terminated(tag_no_case("adc"), space1), |_| Op::Adc),
+                        map(terminated(tag_no_case("and"), space1), |_| Op::And),
+                        map(terminated(tag_no_case("asl"), space1), |_| Op::Asl),
+                        map(terminated(tag_no_case("bcc"), comment_or_newline), |_| {
+                            Op::Bcc
+                        }),
+                        map(terminated(tag_no_case("bcs"), comment_or_newline), |_| {
+                            Op::Bcs
+                        }),
+                        map(terminated(tag_no_case("beq"), comment_or_newline), |_| {
+                            Op::Beq
+                        }),
+                        map(terminated(tag_no_case("bit"), comment_or_newline), |_| {
+                            Op::Bit
+                        }),
+                        map(terminated(tag_no_case("bmi"), comment_or_newline), |_| {
+                            Op::Bmi
+                        }),
+                        map(terminated(tag_no_case("bne"), comment_or_newline), |_| {
+                            Op::Bne
+                        }),
+                        map(terminated(tag_no_case("bpl"), comment_or_newline), |_| {
+                            Op::Bpl
+                        }),
+                        map(terminated(tag_no_case("brk"), comment_or_newline), |_| {
+                            Op::Brk
+                        }),
+                        map(terminated(tag_no_case("bvc"), comment_or_newline), |_| {
+                            Op::Bvc
+                        }),
+                        map(terminated(tag_no_case("bvs"), comment_or_newline), |_| {
+                            Op::Bvs
+                        }),
+                        map(terminated(tag_no_case("clc"), comment_or_newline), |_| {
+                            Op::Clc
+                        }),
+                        map(terminated(tag_no_case("cld"), comment_or_newline), |_| {
+                            Op::Cld
+                        }),
+                        map(terminated(tag_no_case("cli"), comment_or_newline), |_| {
+                            Op::Cli
+                        }),
+                        map(terminated(tag_no_case("clv"), comment_or_newline), |_| {
+                            Op::Clv
+                        }),
+                        map(terminated(tag_no_case("cmp"), space1), |_| Op::Cmp),
+                        map(terminated(tag_no_case("cpx"), space1), |_| Op::Cpx),
+                        map(terminated(tag_no_case("cpy"), space1), |_| Op::Cpy),
+                        map(terminated(tag_no_case("dec"), space1), |_| Op::Dec),
+                    )),
+                    alt((
+                        map(terminated(tag_no_case("dex"), comment_or_newline), |_| {
+                            Op::Dex
+                        }),
+                        map(terminated(tag_no_case("dey"), comment_or_newline), |_| {
+                            Op::Dey
+                        }),
+                        map(terminated(tag_no_case("eor"), space1), |_| Op::Eor),
+                        map(terminated(tag_no_case("inc"), space1), |_| Op::Inc),
+                        map(terminated(tag_no_case("inx"), comment_or_newline), |_| {
+                            Op::Inx
+                        }),
+                        map(terminated(tag_no_case("iny"), comment_or_newline), |_| {
+                            Op::Iny
+                        }),
+                        map(terminated(tag_no_case("jmp"), space1), |_| Op::Jmp),
+                        map(terminated(tag_no_case("jsr"), space1), |_| Op::Jsr),
+                        map(terminated(tag_no_case("lda"), space1), |_| Op::Lda),
+                        map(terminated(tag_no_case("ldx"), space1), |_| Op::Ldx),
+                        map(terminated(tag_no_case("ldy"), space1), |_| Op::Ldy),
+                        map(terminated(tag_no_case("lsr"), space1), |_| Op::Lsr),
+                        map(terminated(tag_no_case("nop"), comment_or_newline), |_| {
+                            Op::Nop
+                        }),
+                        map(terminated(tag_no_case("ora"), space1), |_| Op::Ora),
+                        map(terminated(tag_no_case("pha"), comment_or_newline), |_| {
+                            Op::Pha
+                        }),
+                        map(terminated(tag_no_case("php"), comment_or_newline), |_| {
+                            Op::Php
+                        }),
+                        map(terminated(tag_no_case("pla"), comment_or_newline), |_| {
+                            Op::Pla
+                        }),
+                        map(terminated(tag_no_case("plp"), comment_or_newline), |_| {
+                            Op::Plp
+                        }),
+                        map(terminated(tag_no_case("rol"), space1), |_| Op::Rol),
+                        map(terminated(tag_no_case("ror"), space1), |_| Op::Ror),
+                        map(terminated(tag_no_case("rti"), comment_or_newline), |_| {
+                            Op::Rti
+                        }),
+                    )),
+                    alt((
+                        map(terminated(tag_no_case("rts"), comment_or_newline), |_| {
+                            Op::Rts
+                        }),
+                        map(terminated(tag_no_case("sbc"), space1), |_| Op::Sbc),
+                        map(terminated(tag_no_case("sec"), comment_or_newline), |_| {
+                            Op::Sec
+                        }),
+                        map(terminated(tag_no_case("sed"), comment_or_newline), |_| {
+                            Op::Sed
+                        }),
+                        map(terminated(tag_no_case("sei"), comment_or_newline), |_| {
+                            Op::Sei
+                        }),
+                        map(terminated(tag_no_case("sta"), space1), |_| Op::Sta),
+                        map(terminated(tag_no_case("stx"), space1), |_| Op::Stx),
+                        map(terminated(tag_no_case("sty"), space1), |_| Op::Sty),
+                        map(terminated(tag_no_case("tax"), comment_or_newline), |_| {
+                            Op::Tax
+                        }),
+                        map(terminated(tag_no_case("tay"), comment_or_newline), |_| {
+                            Op::Tay
+                        }),
+                        map(terminated(tag_no_case("tsx"), comment_or_newline), |_| {
+                            Op::Tsx
+                        }),
+                        map(terminated(tag_no_case("txa"), comment_or_newline), |_| {
+                            Op::Txa
+                        }),
+                        map(terminated(tag_no_case("txs"), comment_or_newline), |_| {
+                            Op::Txs
+                        }),
+                        map(terminated(tag_no_case("tya"), comment_or_newline), |_| {
+                            Op::Tya
+                        }),
+                    )),
                 )),
-                alt((
-                    map(terminated(tag_no_case("dex"), comment_or_newline), |_| {
-                        Op::Dex
-                    }),
-                    map(terminated(tag_no_case("dey"), comment_or_newline), |_| {
-                        Op::Dey
-                    }),
-                    map(terminated(tag_no_case("eor"), space1), |_| Op::Eor),
-                    map(terminated(tag_no_case("inc"), space1), |_| Op::Inc),
-                    map(terminated(tag_no_case("inx"), comment_or_newline), |_| {
-                        Op::Inx
-                    }),
-                    map(terminated(tag_no_case("iny"), comment_or_newline), |_| {
-                        Op::Iny
-                    }),
-                    map(terminated(tag_no_case("jmp"), space1), |_| Op::Jmp),
-                    map(terminated(tag_no_case("jsr"), space1), |_| Op::Jsr),
-                    map(terminated(tag_no_case("lda"), space1), |_| Op::Lda),
-                    map(terminated(tag_no_case("ldx"), space1), |_| Op::Ldx),
-                    map(terminated(tag_no_case("ldy"), space1), |_| Op::Ldy),
-                    map(terminated(tag_no_case("lsr"), space1), |_| Op::Lsr),
-                    map(terminated(tag_no_case("nop"), comment_or_newline), |_| {
-                        Op::Nop
-                    }),
-                    map(terminated(tag_no_case("ora"), space1), |_| Op::Ora),
-                    map(terminated(tag_no_case("pha"), comment_or_newline), |_| {
-                        Op::Pha
-                    }),
-                    map(terminated(tag_no_case("php"), comment_or_newline), |_| {
-                        Op::Php
-                    }),
-                    map(terminated(tag_no_case("pla"), comment_or_newline), |_| {
-                        Op::Pla
-                    }),
-                    map(terminated(tag_no_case("plp"), comment_or_newline), |_| {
-                        Op::Plp
-                    }),
-                    map(terminated(tag_no_case("rol"), space1), |_| Op::Rol),
-                    map(terminated(tag_no_case("ror"), space1), |_| Op::Ror),
-                    map(terminated(tag_no_case("rti"), comment_or_newline), |_| {
-                        Op::Rti
-                    }),
-                )),
-                alt((
-                    map(terminated(tag_no_case("rts"), comment_or_newline), |_| {
-                        Op::Rts
-                    }),
-                    map(terminated(tag_no_case("sbc"), space1), |_| Op::Sbc),
-                    map(terminated(tag_no_case("sec"), comment_or_newline), |_| {
-                        Op::Sec
-                    }),
-                    map(terminated(tag_no_case("sed"), comment_or_newline), |_| {
-                        Op::Sed
-                    }),
-                    map(terminated(tag_no_case("sei"), comment_or_newline), |_| {
-                        Op::Sei
-                    }),
-                    map(terminated(tag_no_case("sta"), space1), |_| Op::Sta),
-                    map(terminated(tag_no_case("stx"), space1), |_| Op::Stx),
-                    map(terminated(tag_no_case("sty"), space1), |_| Op::Sty),
-                    map(terminated(tag_no_case("tax"), comment_or_newline), |_| {
-                        Op::Tax
-                    }),
-                    map(terminated(tag_no_case("tay"), comment_or_newline), |_| {
-                        Op::Tay
-                    }),
-                    map(terminated(tag_no_case("tsx"), comment_or_newline), |_| {
-                        Op::Tsx
-                    }),
-                    map(terminated(tag_no_case("txa"), comment_or_newline), |_| {
-                        Op::Txa
-                    }),
-                    map(terminated(tag_no_case("txs"), comment_or_newline), |_| {
-                        Op::Txs
-                    }),
-                    map(terminated(tag_no_case("tya"), comment_or_newline), |_| {
-                        Op::Tya
-                    }),
-                )),
-            )),
-            space0, // TODO: use space0 for implied instructions, space1 for non-implied
+                space0,
+            ),
         ),
-        move |op| Token::Mnemonic(span, op),
+        |(pos, op)| Token::Mnemonic(pos, op),
     )(input)
 }
 
 fn if_start_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(delimited(space0, tag_no_case("if"), space1), move |_| {
-        Token::IfStart(span)
-    })(input)
+    map(
+        pair(position, delimited(space0, tag_no_case("if"), space1)),
+        |(pos, _)| Token::IfStart(pos),
+    )(input)
 }
 
 fn comment_or_newline(input: Span) -> IResult<Span, ()> {
@@ -400,36 +405,39 @@ fn test_if_start_token() {
 }
 
 fn if_end_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(delimited(space0, tag_no_case("endif"), space0), move |_| {
-        Token::IfEnd(span)
-    })(input)
+    map(
+        pair(position, delimited(space0, tag_no_case("endif"), space0)),
+        |(pos, _)| Token::IfEnd(pos),
+    )(input)
 }
 
 fn macro_start_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(preceded(space1, tag_no_case("macro")), move |_| {
-        Token::MacroStart(span)
-    })(input)
+    map(
+        pair(position, preceded(space1, tag_no_case("macro"))),
+        |(pos, _)| Token::MacroStart(pos),
+    )(input)
 }
 
 fn macro_end_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(delimited(space0, tag_no_case("endm"), space0), move |_| {
-        Token::MacroEnd(span)
-    })(input)
+    map(
+        pair(position, delimited(space0, tag_no_case("endm"), space0)),
+        |(pos, _)| Token::MacroEnd(pos),
+    )(input)
 }
 
 fn macro_invocation_count_arg_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(tag("\\?"), move |_| Token::MacroInvokeCountArg(span))(input)
+    map(pair(position, tag("\\?")), |(pos, _)| {
+        Token::MacroInvokeCountArg(pos)
+    })(input)
 }
 
 fn macro_positional_arg_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
     map(
-        map_res(preceded(char('\\'), one_of("123456789")), parse_u8_dec),
-        move |arg| Token::MacroPositionalArg(span, arg),
+        pair(
+            position,
+            map_res(preceded(char('\\'), one_of("123456789")), parse_u8_dec),
+        ),
+        |(pos, arg)| Token::MacroPositionalArg(pos, arg),
     )(input)
 }
 
@@ -458,124 +466,126 @@ fn test_macro_arg_token() {
 }
 
 fn complement_operator_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(delimited(space0, char('~'), space0), move |_| {
-        Token::ComplementOperator(span)
-    })(input)
+    map(
+        pair(position, delimited(space0, char('~'), space0)),
+        |(pos, _)| Token::ComplementOperator(pos),
+    )(input)
 }
 
 fn or_operator_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(delimited(space0, char('|'), space0), move |_| {
-        Token::OrOperator(span)
-    })(input)
+    map(
+        pair(position, delimited(space0, char('|'), space0)),
+        |(pos, _)| Token::OrOperator(pos),
+    )(input)
 }
 
 fn xor_operator_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(delimited(space0, char('^'), space0), move |_| {
-        Token::XorOperator(span)
-    })(input)
+    map(
+        pair(position, delimited(space0, char('^'), space0)),
+        |(pos, _)| Token::XorOperator(pos),
+    )(input)
 }
 
 fn and_operator_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(delimited(space0, char('&'), space0), move |_| {
-        Token::AndOperator(span)
-    })(input)
+    map(
+        pair(position, delimited(space0, char('&'), space0)),
+        |(pos, _)| Token::AndOperator(pos),
+    )(input)
 }
 
 fn plus_operator_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(delimited(space0, char('+'), space0), move |_| {
-        Token::PlusOperator(span)
-    })(input)
+    map(
+        pair(position, delimited(space0, char('+'), space0)),
+        |(pos, _)| Token::PlusOperator(pos),
+    )(input)
 }
 
 fn minus_operator_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(delimited(space0, char('-'), space0), move |_| {
-        Token::MinusOperator(span)
-    })(input)
+    map(
+        pair(position, delimited(space0, char('-'), space0)),
+        |(pos, _)| Token::MinusOperator(pos),
+    )(input)
 }
 
 fn star_operator_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(delimited(space0, char('*'), space0), move |_| {
-        Token::StarOperator(span)
-    })(input)
+    map(
+        pair(position, delimited(space0, char('*'), space0)),
+        |(pos, _)| Token::StarOperator(pos),
+    )(input)
 }
 
 fn less_than_operator_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(delimited(space0, char('<'), space0), move |_| {
-        Token::LessThanOperator(span)
-    })(input)
+    map(
+        pair(position, delimited(space0, char('<'), space0)),
+        |(pos, _)| Token::LessThanOperator(pos),
+    )(input)
 }
 
 fn greater_than_operator_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(delimited(space0, char('>'), space0), move |_| {
-        Token::GreaterThanOperator(span)
-    })(input)
+    map(
+        pair(position, delimited(space0, char('>'), space0)),
+        |(pos, _)| Token::GreaterThanOperator(pos),
+    )(input)
 }
 
 fn less_than_or_equal_operator_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(delimited(space0, tag("<="), space0), move |_| {
-        Token::LessThanOrEqualToOperator(span)
-    })(input)
+    map(
+        pair(position, delimited(space0, tag("<="), space0)),
+        |(pos, _)| Token::LessThanOrEqualToOperator(pos),
+    )(input)
 }
 
 fn greater_than_or_equal_operator_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(delimited(space0, tag(">="), space0), move |_| {
-        Token::GreaterThanOrEqualToOperator(span)
-    })(input)
+    map(
+        pair(position, delimited(space0, tag(">="), space0)),
+        |(pos, _)| Token::GreaterThanOrEqualToOperator(pos),
+    )(input)
 }
 
 fn right_shift_operator_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(delimited(space0, tag(">>"), space0), move |_| {
-        Token::RightShiftOperator(span)
-    })(input)
+    map(
+        pair(position, delimited(space0, tag(">>"), space0)),
+        |(pos, _)| Token::RightShiftOperator(pos),
+    )(input)
 }
 
 fn left_shift_operator_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(delimited(space0, tag("<<"), space0), move |_| {
-        Token::LeftShiftOperator(span)
-    })(input)
+    map(
+        pair(position, delimited(space0, tag("<<"), space0)),
+        |(pos, _)| Token::LeftShiftOperator(pos),
+    )(input)
 }
 
 fn noopt_directive_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(preceded(space0, tag_no_case("noopt")), move |_| {
-        Token::NoOptDirective(span)
-    })(input)
+    map(
+        pair(position, preceded(space0, tag_no_case("noopt"))),
+        |(pos, _)| Token::NoOptDirective(pos),
+    )(input)
 }
 fn sub_expr_start_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(char('('), move |_| Token::SubExprStart(span))(input)
+    map(pair(position, char('(')), |(pos, _)| {
+        Token::SubExprStart(pos)
+    })(input)
 }
 
 fn sub_expr_end_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(char(')'), move |_| Token::SubExprEnd(span))(input)
+    map(pair(position, char(')')), |(pos, _)| Token::SubExprEnd(pos))(input)
 }
 
 fn equ_directive_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
-    map(delimited(space0, tag_no_case("equ"), space1), move |_| {
-        Token::EquDirective(span)
-    })(input)
+    map(
+        pair(position, delimited(space0, tag_no_case("equ"), space1)),
+        |(pos, _)| Token::EquDirective(pos),
+    )(input)
 }
 
 fn hex_literal_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
     map(
-        map_res(preceded(char('$'), hex_digit1), parse_i32_hex),
-        move |val| Token::HexLiteral(span, val),
+        pair(
+            position,
+            map_res(preceded(char('$'), hex_digit1), parse_i32_hex),
+        ),
+        |(pos, val)| Token::HexLiteral(pos, val),
     )(input)
 }
 
@@ -624,10 +634,12 @@ fn test_hex_literal_token() {
 }
 
 fn dec_literal_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
     map(
-        map_res(recognize(preceded(opt(char('-')), digit1)), parse_i32_dec),
-        move |val| Token::DecLiteral(span, val),
+        pair(
+            position,
+            map_res(recognize(preceded(opt(char('-')), digit1)), parse_i32_dec),
+        ),
+        |(pos, val)| Token::DecLiteral(pos, val),
     )(input)
 }
 
@@ -676,10 +688,12 @@ fn test_dec_literal_token() {
 }
 
 fn oct_literal_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
     map(
-        map_res(preceded(char('@'), oct_digit1), parse_i32_oct),
-        move |val| Token::OctLiteral(span, val),
+        pair(
+            position,
+            map_res(preceded(char('@'), oct_digit1), parse_i32_oct),
+        ),
+        |(pos, val)| Token::OctLiteral(pos, val),
     )(input)
 }
 
@@ -728,13 +742,15 @@ fn test_oct_literal_token() {
 }
 
 fn bin_literal_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
     map(
-        map_res(
-            preceded(char('%'), take_while1(|chr| chr == '0' || chr == '1')),
-            parse_i32_bin,
+        pair(
+            position,
+            map_res(
+                preceded(char('%'), take_while1(|chr| chr == '0' || chr == '1')),
+                parse_i32_bin,
+            ),
         ),
-        move |val| Token::BinLiteral(span, val),
+        |(pos, val)| Token::BinLiteral(pos, val),
     )(input)
 }
 
@@ -784,14 +800,16 @@ fn test_bin_literal_token() {
 
 // TODO: Add escaping https://github.com/Geal/nom/issues/1014
 fn string_literal_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
     map(
-        delimited(
-            char('"'),
-            take_while(|chr: char| chr.is_ascii() && !chr.is_ascii_control() && chr != '\"'),
-            char('"'),
+        pair(
+            position,
+            delimited(
+                char('"'),
+                take_while(|chr: char| chr.is_ascii() && !chr.is_ascii_control() && chr != '\"'),
+                char('"'),
+            ),
         ),
-        move |string: Span| Token::StringLiteral(span, string.fragment),
+        |(pos, string)| Token::StringLiteral(pos, string.fragment),
     )(input)
 }
 
@@ -820,17 +838,19 @@ fn test_string_literal_token() {
 }
 
 fn identifier_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
     map(
-        delimited(
-            space0,
-            preceded(
-                valid_identifier_start,
-                take_while1(|chr: char| chr.is_ascii_alphanumeric() || chr == '_'),
+        pair(
+            position,
+            delimited(
+                space0,
+                preceded(
+                    valid_identifier_start,
+                    take_while1(|chr: char| chr.is_ascii_alphanumeric() || chr == '_'),
+                ),
+                space0,
             ),
-            space0,
         ),
-        move |identifier| Token::Identifier(span, identifier.fragment),
+        |(pos, identifier)| Token::Identifier(pos, identifier.fragment),
     )(input)
 }
 
@@ -888,16 +908,18 @@ fn test_identifier_token() {
 }
 
 fn comment_token(input: Span) -> IResult<Span, Token> {
-    let (input, span) = position(input)?;
     map(
-        preceded(
-            space0,
+        pair(
+            position,
             preceded(
-                char(';'),
-                take_while(|chr: char| chr.is_ascii() && !chr.is_ascii_control()),
+                space0,
+                preceded(
+                    char(';'),
+                    take_while(|chr: char| chr.is_ascii() && !chr.is_ascii_control()),
+                ),
             ),
         ),
-        move |comment: Span| Token::Comment(span, comment.fragment),
+        |(pos, comment)| Token::Comment(pos, comment.fragment),
     )(input)
 }
 
