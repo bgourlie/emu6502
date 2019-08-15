@@ -213,6 +213,36 @@ fn immediate_prefix_token(input: Span) -> IResult<Span, Token> {
     })(input)
 }
 
+fn operator_token<'a, F>(
+    chars: &'static str,
+    mapper: F,
+) -> impl Fn(Span<'a>) -> IResult<Span<'a>, Token<'a>>
+where
+    F: Fn((Span<'a>, Span<'a>)) -> Token<'a>,
+{
+    map(
+        pair(position, delimited(space0, tag(chars), space0)),
+        mapper,
+    )
+}
+
+fn mnemonic_implied<'a>(
+    mnemonic: &'static str,
+    op: Op,
+) -> impl Fn(Span<'a>) -> IResult<Span<'a>, Op> {
+    map(
+        terminated(tag_no_case(mnemonic), comment_or_newline),
+        move |_| op,
+    )
+}
+
+fn mnemonic_operand<'a>(
+    mnemonic: &'static str,
+    op: Op,
+) -> impl Fn(Span<'a>) -> IResult<Span<'a>, Op> {
+    map(terminated(tag_no_case(mnemonic), space1), move |_| op)
+}
+
 fn mnemonic_token(input: Span) -> IResult<Span, Token> {
     map(
         pair(
@@ -221,134 +251,66 @@ fn mnemonic_token(input: Span) -> IResult<Span, Token> {
                 space0,
                 alt((
                     alt((
-                        map(terminated(tag_no_case("adc"), space1), |_| Op::Adc),
-                        map(terminated(tag_no_case("and"), space1), |_| Op::And),
-                        map(terminated(tag_no_case("asl"), space1), |_| Op::Asl),
-                        map(terminated(tag_no_case("bcc"), comment_or_newline), |_| {
-                            Op::Bcc
-                        }),
-                        map(terminated(tag_no_case("bcs"), comment_or_newline), |_| {
-                            Op::Bcs
-                        }),
-                        map(terminated(tag_no_case("beq"), comment_or_newline), |_| {
-                            Op::Beq
-                        }),
-                        map(terminated(tag_no_case("bit"), comment_or_newline), |_| {
-                            Op::Bit
-                        }),
-                        map(terminated(tag_no_case("bmi"), comment_or_newline), |_| {
-                            Op::Bmi
-                        }),
-                        map(terminated(tag_no_case("bne"), comment_or_newline), |_| {
-                            Op::Bne
-                        }),
-                        map(terminated(tag_no_case("bpl"), comment_or_newline), |_| {
-                            Op::Bpl
-                        }),
-                        map(terminated(tag_no_case("brk"), comment_or_newline), |_| {
-                            Op::Brk
-                        }),
-                        map(terminated(tag_no_case("bvc"), comment_or_newline), |_| {
-                            Op::Bvc
-                        }),
-                        map(terminated(tag_no_case("bvs"), comment_or_newline), |_| {
-                            Op::Bvs
-                        }),
-                        map(terminated(tag_no_case("clc"), comment_or_newline), |_| {
-                            Op::Clc
-                        }),
-                        map(terminated(tag_no_case("cld"), comment_or_newline), |_| {
-                            Op::Cld
-                        }),
-                        map(terminated(tag_no_case("cli"), comment_or_newline), |_| {
-                            Op::Cli
-                        }),
-                        map(terminated(tag_no_case("clv"), comment_or_newline), |_| {
-                            Op::Clv
-                        }),
-                        map(terminated(tag_no_case("cmp"), space1), |_| Op::Cmp),
-                        map(terminated(tag_no_case("cpx"), space1), |_| Op::Cpx),
-                        map(terminated(tag_no_case("cpy"), space1), |_| Op::Cpy),
-                        map(terminated(tag_no_case("dec"), space1), |_| Op::Dec),
+                        mnemonic_operand("adc", Op::Adc),
+                        mnemonic_operand("and", Op::And),
+                        mnemonic_operand("asl", Op::Asl),
+                        mnemonic_operand("bcc", Op::Bcc),
+                        mnemonic_operand("bcs", Op::Bcs),
+                        mnemonic_operand("beq", Op::Beq),
+                        mnemonic_implied("bit", Op::Bit),
+                        mnemonic_operand("bmi", Op::Bmi),
+                        mnemonic_operand("bne", Op::Bne),
+                        mnemonic_operand("bpl", Op::Bpl),
+                        mnemonic_implied("brk", Op::Brk),
+                        mnemonic_operand("bvc", Op::Bvc),
+                        mnemonic_operand("bvs", Op::Bvs),
+                        mnemonic_implied("clc", Op::Clc),
+                        mnemonic_implied("cld", Op::Cld),
+                        mnemonic_implied("cli", Op::Cli),
+                        mnemonic_implied("clv", Op::Clv),
+                        mnemonic_operand("cmp", Op::Cmp),
+                        mnemonic_operand("cpx", Op::Cpx),
+                        mnemonic_operand("cpy", Op::Cpy),
+                        mnemonic_operand("dec", Op::Dec),
                     )),
                     alt((
-                        map(terminated(tag_no_case("dex"), comment_or_newline), |_| {
-                            Op::Dex
-                        }),
-                        map(terminated(tag_no_case("dey"), comment_or_newline), |_| {
-                            Op::Dey
-                        }),
-                        map(terminated(tag_no_case("eor"), space1), |_| Op::Eor),
-                        map(terminated(tag_no_case("inc"), space1), |_| Op::Inc),
-                        map(terminated(tag_no_case("inx"), comment_or_newline), |_| {
-                            Op::Inx
-                        }),
-                        map(terminated(tag_no_case("iny"), comment_or_newline), |_| {
-                            Op::Iny
-                        }),
-                        map(terminated(tag_no_case("jmp"), space1), |_| Op::Jmp),
-                        map(terminated(tag_no_case("jsr"), space1), |_| Op::Jsr),
-                        map(terminated(tag_no_case("lda"), space1), |_| Op::Lda),
-                        map(terminated(tag_no_case("ldx"), space1), |_| Op::Ldx),
-                        map(terminated(tag_no_case("ldy"), space1), |_| Op::Ldy),
-                        map(terminated(tag_no_case("lsr"), space1), |_| Op::Lsr),
-                        map(terminated(tag_no_case("nop"), comment_or_newline), |_| {
-                            Op::Nop
-                        }),
-                        map(terminated(tag_no_case("ora"), space1), |_| Op::Ora),
-                        map(terminated(tag_no_case("pha"), comment_or_newline), |_| {
-                            Op::Pha
-                        }),
-                        map(terminated(tag_no_case("php"), comment_or_newline), |_| {
-                            Op::Php
-                        }),
-                        map(terminated(tag_no_case("pla"), comment_or_newline), |_| {
-                            Op::Pla
-                        }),
-                        map(terminated(tag_no_case("plp"), comment_or_newline), |_| {
-                            Op::Plp
-                        }),
-                        map(terminated(tag_no_case("rol"), space1), |_| Op::Rol),
-                        map(terminated(tag_no_case("ror"), space1), |_| Op::Ror),
-                        map(terminated(tag_no_case("rti"), comment_or_newline), |_| {
-                            Op::Rti
-                        }),
+                        mnemonic_implied("dex", Op::Dex),
+                        mnemonic_implied("dey", Op::Dey),
+                        mnemonic_operand("eor", Op::Eor),
+                        mnemonic_operand("inc", Op::Inc),
+                        mnemonic_implied("inx", Op::Inx),
+                        mnemonic_implied("iny", Op::Iny),
+                        mnemonic_operand("jmp", Op::Jmp),
+                        mnemonic_operand("jsr", Op::Jsr),
+                        mnemonic_operand("lda", Op::Lda),
+                        mnemonic_operand("ldx", Op::Ldx),
+                        mnemonic_operand("ldy", Op::Ldy),
+                        mnemonic_operand("lsr", Op::Lsr),
+                        mnemonic_implied("nop", Op::Nop),
+                        mnemonic_operand("ora", Op::Ora),
+                        mnemonic_implied("pha", Op::Pha),
+                        mnemonic_implied("php", Op::Php),
+                        mnemonic_implied("pla", Op::Pla),
+                        mnemonic_implied("plp", Op::Plp),
+                        mnemonic_operand("rol", Op::Rol),
+                        mnemonic_operand("ror", Op::Ror),
+                        mnemonic_implied("rti", Op::Rti),
                     )),
                     alt((
-                        map(terminated(tag_no_case("rts"), comment_or_newline), |_| {
-                            Op::Rts
-                        }),
-                        map(terminated(tag_no_case("sbc"), space1), |_| Op::Sbc),
-                        map(terminated(tag_no_case("sec"), comment_or_newline), |_| {
-                            Op::Sec
-                        }),
-                        map(terminated(tag_no_case("sed"), comment_or_newline), |_| {
-                            Op::Sed
-                        }),
-                        map(terminated(tag_no_case("sei"), comment_or_newline), |_| {
-                            Op::Sei
-                        }),
-                        map(terminated(tag_no_case("sta"), space1), |_| Op::Sta),
-                        map(terminated(tag_no_case("stx"), space1), |_| Op::Stx),
-                        map(terminated(tag_no_case("sty"), space1), |_| Op::Sty),
-                        map(terminated(tag_no_case("tax"), comment_or_newline), |_| {
-                            Op::Tax
-                        }),
-                        map(terminated(tag_no_case("tay"), comment_or_newline), |_| {
-                            Op::Tay
-                        }),
-                        map(terminated(tag_no_case("tsx"), comment_or_newline), |_| {
-                            Op::Tsx
-                        }),
-                        map(terminated(tag_no_case("txa"), comment_or_newline), |_| {
-                            Op::Txa
-                        }),
-                        map(terminated(tag_no_case("txs"), comment_or_newline), |_| {
-                            Op::Txs
-                        }),
-                        map(terminated(tag_no_case("tya"), comment_or_newline), |_| {
-                            Op::Tya
-                        }),
+                        mnemonic_implied("rts", Op::Rts),
+                        mnemonic_operand("sbc", Op::Sbc),
+                        mnemonic_implied("sec", Op::Sec),
+                        mnemonic_implied("sed", Op::Sed),
+                        mnemonic_implied("sei", Op::Sei),
+                        mnemonic_operand("sta", Op::Sta),
+                        mnemonic_operand("stx", Op::Stx),
+                        mnemonic_operand("sty", Op::Sty),
+                        mnemonic_implied("tax", Op::Tax),
+                        mnemonic_implied("tay", Op::Tay),
+                        mnemonic_implied("tsx", Op::Tsx),
+                        mnemonic_implied("txa", Op::Txa),
+                        mnemonic_implied("txs", Op::Txs),
+                        mnemonic_implied("tya", Op::Tya),
                     )),
                 )),
                 space0,
@@ -448,19 +410,6 @@ fn test_macro_arg_token() {
                 1
             )
         ))
-    )
-}
-
-fn operator_token<'a, F>(
-    chars: &'static str,
-    mapper: F,
-) -> impl Fn(Span<'a>) -> IResult<Span<'a>, Token<'a>>
-where
-    F: Fn((Span<'a>, Span<'a>)) -> Token<'a>,
-{
-    map(
-        pair(position, delimited(space0, tag(chars), space0)),
-        mapper,
     )
 }
 
