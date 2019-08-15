@@ -247,7 +247,7 @@ fn mnemonic_token(input: Span) -> IResult<Span, Token> {
     map(
         pair(
             position,
-            delimited(
+            preceded(
                 space0,
                 alt((
                     alt((
@@ -313,7 +313,6 @@ fn mnemonic_token(input: Span) -> IResult<Span, Token> {
                         mnemonic_implied("tya", Op::Tya),
                     )),
                 )),
-                space0,
             ),
         ),
         |(pos, op)| Token::Mnemonic(pos, op),
