@@ -60,6 +60,9 @@ pub enum Token<'a> {
     Comma(Span<'a>),
     ErrorDirective(Span<'a>, &'a str),
     EndDirective(Span<'a>),
+    DbDirective(Span<'a>),
+    DsDirective(Span<'a>),
+    DwDirective(Span<'a>),
 }
 
 pub fn parse(input: Span) -> IResult<Span, Vec<Token>> {
@@ -77,17 +80,20 @@ pub fn parse(input: Span) -> IResult<Span, Vec<Token>> {
             if_end_token,
             mnemonic_token,
             immediate_prefix_token,
+            define_directive_token("db", |(pos, _)| Token::DbDirective(pos)),
+            define_directive_token("dw", |(pos, _)| Token::DwDirective(pos)),
+            define_directive_token("ds", |(pos, _)| Token::DsDirective(pos)),
             offset_operand_token(",x", |(pos, _)| Token::OffsetByXOperand(pos)),
             offset_operand_token(",y", |(pos, _)| Token::OffsetByYOperand(pos)),
             end_directive_token,
             identifier_token,
             operator_token("=", |(pos, _)| Token::EqualsOperator(pos)),
             operator_token("!=", |(pos, _)| Token::NotEqualsOperator(pos)),
+        )),
+        alt((
             operator_token("~", |(pos, _)| Token::ComplementOperator(pos)),
             operator_token("|", |(pos, _)| Token::OrOperator(pos)),
             operator_token("^", |(pos, _)| Token::XorOperator(pos)),
-        )),
-        alt((
             operator_token("&", |(pos, _)| Token::AndOperator(pos)),
             operator_token("+", |(pos, _)| Token::PlusOperator(pos)),
             operator_token("-", |(pos, _)| Token::MinusOperator(pos)),
@@ -105,10 +111,8 @@ pub fn parse(input: Span) -> IResult<Span, Vec<Token>> {
             oct_literal_token,
             bin_literal_token,
             string_literal_token,
-            character_literal_token,
-            comma_token,
-            newline_token,
         )),
+        alt((character_literal_token, comma_token, newline_token)),
     )))(input)
 }
 
@@ -317,7 +321,7 @@ fn macro_end_token(input: Span) -> IResult<Span, Token> {
 }
 
 fn macro_invocation_count_arg_token(input: Span) -> IResult<Span, Token> {
-    map(pair(position, tag("\\?")), |(pos, _)| {
+    map(pair(position, preceded(space0, tag("\\?"))), |(pos, _)| {
         Token::MacroInvokeCountArg(pos)
     })(input)
 }
@@ -326,7 +330,10 @@ fn macro_positional_arg_token(input: Span) -> IResult<Span, Token> {
     map(
         pair(
             position,
-            map_res(preceded(char('\\'), one_of("123456789")), parse_u8_dec),
+            map_res(
+                preceded(space0, preceded(char('\\'), one_of("123456789"))),
+                parse_u8_dec,
+            ),
         ),
         |(pos, arg)| Token::MacroPositionalArg(pos, arg),
     )(input)
@@ -356,11 +363,24 @@ fn equ_directive_token(input: Span) -> IResult<Span, Token> {
     )(input)
 }
 
+fn define_directive_token<'a, F>(
+    chars: &'static str,
+    mapper: F,
+) -> impl Fn(Span<'a>) -> IResult<Span<'a>, Token<'a>>
+where
+    F: Fn((Span<'a>, Span<'a>)) -> Token<'a>,
+{
+    map(
+        pair(position, delimited(space1, tag_no_case(chars), space1)),
+        mapper,
+    )
+}
+
 fn hex_literal_token(input: Span) -> IResult<Span, Token> {
     map(
         pair(
             position,
-            map_res(preceded(char('$'), hex_digit1), parse_i32_hex),
+            map_res(preceded(pair(space0, char('$')), hex_digit1), parse_i32_hex),
         ),
         |(pos, val)| Token::HexLiteral(pos, val),
     )(input)
@@ -370,7 +390,10 @@ fn dec_literal_token(input: Span) -> IResult<Span, Token> {
     map(
         pair(
             position,
-            map_res(recognize(preceded(opt(char('-')), digit1)), parse_i32_dec),
+            map_res(
+                preceded(space0, recognize(preceded(opt(char('-')), digit1))),
+                parse_i32_dec,
+            ),
         ),
         |(pos, val)| Token::DecLiteral(pos, val),
     )(input)
@@ -380,7 +403,7 @@ fn oct_literal_token(input: Span) -> IResult<Span, Token> {
     map(
         pair(
             position,
-            map_res(preceded(char('@'), oct_digit1), parse_i32_oct),
+            map_res(preceded(pair(space0, char('@')), oct_digit1), parse_i32_oct),
         ),
         |(pos, val)| Token::OctLiteral(pos, val),
     )(input)
@@ -391,7 +414,10 @@ fn bin_literal_token(input: Span) -> IResult<Span, Token> {
         pair(
             position,
             map_res(
-                preceded(char('%'), take_while1(|chr| chr == '0' || chr == '1')),
+                preceded(
+                    pair(space0, char('%')),
+                    take_while1(|chr| chr == '0' || chr == '1'),
+                ),
                 parse_i32_bin,
             ),
         ),
@@ -405,7 +431,7 @@ fn string_literal_token(input: Span) -> IResult<Span, Token> {
         pair(
             position,
             delimited(
-                char('"'),
+                pair(space0, char('"')),
                 take_while(|chr: char| chr.is_ascii() && !chr.is_ascii_control() && chr != '\"'),
                 char('"'),
             ),
@@ -418,13 +444,12 @@ fn identifier_token(input: Span) -> IResult<Span, Token> {
     map(
         pair(
             position,
-            delimited(
+            preceded(
                 space0,
                 preceded(
                     valid_identifier_start,
                     take_while1(|chr: char| chr.is_ascii_alphanumeric() || chr == '_'),
                 ),
-                space0,
             ),
         ),
         |(pos, identifier)| Token::Identifier(pos, identifier.fragment),
