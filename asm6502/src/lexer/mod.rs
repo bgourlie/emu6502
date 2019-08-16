@@ -77,8 +77,8 @@ pub fn parse(input: Span) -> IResult<Span, Vec<Token>> {
             if_end_token,
             mnemonic_token,
             immediate_prefix_token,
-            offset_by_x_operand_token,
-            offset_by_y_operand_token,
+            offset_operand_token(",x", |(pos, _)| Token::OffsetByXOperand(pos)),
+            offset_operand_token(",y", |(pos, _)| Token::OffsetByYOperand(pos)),
             end_directive_token,
             identifier_token,
             operator_token("=", |(pos, _)| Token::EqualsOperator(pos)),
@@ -147,16 +147,14 @@ fn comma_token(input: Span) -> IResult<Span, Token> {
     map(pair(position, tag(",")), |(pos, _)| Token::Comma(pos))(input)
 }
 
-fn offset_by_x_operand_token(input: Span) -> IResult<Span, Token> {
-    map(pair(position, tag_no_case(",x")), |(pos, _)| {
-        Token::OffsetByXOperand(pos)
-    })(input)
-}
-
-fn offset_by_y_operand_token(input: Span) -> IResult<Span, Token> {
-    map(pair(position, tag_no_case(",y")), |(pos, _)| {
-        Token::OffsetByYOperand(pos)
-    })(input)
+fn offset_operand_token<'a, F>(
+    chars: &'static str,
+    mapper: F,
+) -> impl Fn(Span<'a>) -> IResult<Span<'a>, Token<'a>>
+where
+    F: Fn((Span<'a>, Span<'a>)) -> Token<'a>,
+{
+    map(pair(position, tag_no_case(chars)), mapper)
 }
 
 // TODO: Add escaping https://github.com/Geal/nom/issues/1014
