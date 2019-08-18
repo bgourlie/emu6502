@@ -7,7 +7,7 @@ use nom::{
     character::complete::{char, digit1, hex_digit1, oct_digit1, one_of, space0, space1},
     combinator::{map, map_res, opt, peek, recognize},
     multi::many0,
-    sequence::{delimited, pair, preceded, terminated},
+    sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
 };
 use nom_locate::{position, LocatedSpan};
@@ -61,6 +61,7 @@ pub enum Token<'a> {
     DbDirective(Span<'a>),
     DsDirective(Span<'a>),
     DwDirective(Span<'a>),
+    IncludeDirective(Span<'a>, &'a str),
 }
 
 pub fn parse(input: Span) -> IResult<Span, Vec<Token>> {
@@ -74,6 +75,7 @@ pub fn parse(input: Span) -> IResult<Span, Vec<Token>> {
             macro_end_token,
             macro_positional_arg_token,
             macro_invocation_count_arg_token,
+            include_directive_token,
             if_start_token,
             if_end_token,
             mnemonic_token,
@@ -86,9 +88,9 @@ pub fn parse(input: Span) -> IResult<Span, Vec<Token>> {
             end_directive_token,
             identifier_token,
             operator_token("=", |(pos, _)| Token::EqualsOperator(pos)),
-            operator_token("!=", |(pos, _)| Token::NotEqualsOperator(pos)),
         )),
         alt((
+            operator_token("!=", |(pos, _)| Token::NotEqualsOperator(pos)),
             operator_token("~", |(pos, _)| Token::ComplementOperator(pos)),
             operator_token("|", |(pos, _)| Token::OrOperator(pos)),
             operator_token("^", |(pos, _)| Token::XorOperator(pos)),
@@ -468,6 +470,25 @@ fn valid_identifier_start(input: Span) -> IResult<Span, Span> {
             Err(())
         }
     })(input)
+}
+
+fn include_directive_token(input: Span) -> IResult<Span, Token> {
+    map(
+        pair(
+            position,
+            preceded(
+                space0,
+                delimited(
+                    tuple((tag_no_case("include"), space1, char('"'))),
+                    take_while(|chr: char| {
+                        chr.is_ascii() && !chr.is_ascii_control() && chr != '\"'
+                    }),
+                    char('"'),
+                ),
+            ),
+        ),
+        |(pos, path)| Token::IncludeDirective(pos, path.fragment),
+    )(input)
 }
 
 fn comment_token(input: Span) -> IResult<Span, Token> {
