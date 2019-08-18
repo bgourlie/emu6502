@@ -1,7 +1,5 @@
-use {
-    crate::{Cpu, Mapper},
-    std::fmt::Debug,
-};
+use crate::{Cpu, Mapper};
+use std::fmt::Debug;
 
 pub trait AddressingMode<M: Mapper, R: Copy + Clone + Debug, W: Copy + Clone + Debug> {
     fn read(cpu: &mut Cpu<M>) -> R;

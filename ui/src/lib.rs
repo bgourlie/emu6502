@@ -3,19 +3,17 @@ extern crate seed;
 
 mod console_buffer;
 
-use {
-    console_buffer::ConsoleBuffer,
-    disasm6502::Disassembly,
-    emu6502::{BasicMapper, Cpu, DebuggableCpu, Debugger, Mapper},
-    futures::future::Future,
-    js_sys::Promise,
-    log::{debug, info},
-    seed::prelude::*,
-    std::io::Cursor,
-    wasm_bindgen::JsCast,
-    wasm_bindgen_futures::JsFuture,
-    web_sys::{Event, File, HtmlInputElement},
-};
+use console_buffer::ConsoleBuffer;
+use disasm6502::Disassembly;
+use emu6502::{BasicMapper, Cpu, DebuggableCpu, Debugger, Mapper};
+use futures::future::Future;
+use js_sys::Promise;
+use log::{debug, info};
+use seed::prelude::*;
+use std::io::Cursor;
+use wasm_bindgen::JsCast;
+use wasm_bindgen_futures::JsFuture;
+use web_sys::{Event, File, HtmlInputElement};
 
 #[wasm_bindgen(module = "/util.js")]
 extern "C" {

@@ -1,10 +1,8 @@
 #[cfg(test)]
 mod tests;
 
-use {
-    crate::{addressing_modes::*, Cpu, Mapper},
-    std::fmt::Debug,
-};
+use crate::{addressing_modes::*, Cpu, Mapper};
+use std::fmt::Debug;
 
 pub trait Instruction<M: Mapper, R: Copy + Clone + Debug, W: Copy + Clone + Debug> {
     fn execute<AM: AddressingMode<M, R, W>>(cpu: &mut Cpu<M>);

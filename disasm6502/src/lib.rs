@@ -1,19 +1,17 @@
 #![feature(seek_convenience)]
 
-use {
-    byteorder::{LittleEndian, ReadBytesExt},
-    failure::{Error, Fail},
-    fnv::{FnvHashMap, FnvHashSet},
-    log::{debug, error, info, warn},
-    shared6502::{Addressing, Op},
-    std::{
-        borrow::Cow,
-        cmp,
-        collections::BTreeMap,
-        io::{Seek, SeekFrom},
-        iter::{IntoIterator, Iterator},
-        u16,
-    },
+use byteorder::{LittleEndian, ReadBytesExt};
+use failure::{Error, Fail};
+use fnv::{FnvHashMap, FnvHashSet};
+use log::{debug, error, info, warn};
+use shared6502::{Addressing, Op};
+use std::{
+    borrow::Cow,
+    cmp,
+    collections::BTreeMap,
+    io::{Seek, SeekFrom},
+    iter::{IntoIterator, Iterator},
+    u16,
 };
 
 #[rustfmt::skip]

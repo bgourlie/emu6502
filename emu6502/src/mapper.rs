@@ -1,10 +1,8 @@
-use {
-    crate::Debugger,
-    fnv::FnvHashSet,
-    std::{
-        io::{Cursor, Read},
-        iter::FromIterator,
-    },
+use crate::Debugger;
+use fnv::FnvHashSet;
+use std::{
+    io::{Cursor, Read},
+    iter::FromIterator,
 };
 
 const ADDRESSABLE_MEMORY: usize = 0x10000;

@@ -1,8 +1,6 @@
-use {
-    super::{BasicMapper, Cpu, Mapper},
-    disasm6502::Disassembly,
-    std::fs::File,
-};
+use super::{BasicMapper, Cpu, Mapper};
+use disasm6502::Disassembly;
+use std::fs::File;
 
 const PC_START: u16 = 0x400;
 const ADDRESS_SPACE_MAPPING_START: u16 = 0xa;

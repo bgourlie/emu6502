@@ -1,19 +1,17 @@
 #[cfg(test)]
 mod tests;
 
-use {
-    nom::{
-        branch::alt,
-        bytes::complete::{tag, tag_no_case, take, take_while, take_while1},
-        character::complete::{char, digit1, hex_digit1, oct_digit1, one_of, space0, space1},
-        combinator::{map, map_res, opt, peek, recognize},
-        multi::many0,
-        sequence::{delimited, pair, preceded, terminated},
-        IResult,
-    },
-    nom_locate::{position, LocatedSpan},
-    shared6502::Op,
+use nom::{
+    branch::alt,
+    bytes::complete::{tag, tag_no_case, take, take_while, take_while1},
+    character::complete::{char, digit1, hex_digit1, oct_digit1, one_of, space0, space1},
+    combinator::{map, map_res, opt, peek, recognize},
+    multi::many0,
+    sequence::{delimited, pair, preceded, terminated},
+    IResult,
 };
+use nom_locate::{position, LocatedSpan};
+use shared6502::Op;
 
 pub type Span<'a> = LocatedSpan<&'a str>;
 

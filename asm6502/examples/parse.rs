@@ -1,6 +1,5 @@
 use asm6502::Span;
-use std::fs::File;
-use std::io::Read;
+use std::{fs::File, io::Read};
 
 fn main() -> Result<(), std::io::Error> {
     let mut file = File::open("./test_roms/6502_functional_test.a65")?;

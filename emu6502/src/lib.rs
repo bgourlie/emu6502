@@ -12,6 +12,5 @@ mod opcodes;
 pub use crate::{
     cpu::{Cpu, DebuggableCpu},
     debugger::Debugger,
-    mapper::BasicMapper,
-    mapper::Mapper,
+    mapper::{BasicMapper, Mapper},
 };

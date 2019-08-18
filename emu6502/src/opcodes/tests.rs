@@ -1,12 +1,10 @@
 // TODO: cmp, cpx, cpy tests
-use {
-    crate::{
-        addressing_modes::{AddressingMode, Implied},
-        opcodes::*,
-        Cpu, Mapper,
-    },
-    std::{cell::RefCell, rc::Rc},
+use crate::{
+    addressing_modes::{AddressingMode, Implied},
+    opcodes::*,
+    Cpu, Mapper,
 };
+use std::{cell::RefCell, rc::Rc};
 
 type Memory = Rc<RefCell<[u8; 0x10000]>>;
 
