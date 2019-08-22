@@ -1,5 +1,13 @@
+#[cfg(test)]
+mod tests;
+
 use crate::Token;
-use nom::{combinator::map_res, Err, IResult, Needed};
+use nom::{
+    branch::alt,
+    combinator::{map, map_res},
+    sequence::{delimited, tuple},
+    Err, IResult, Needed,
+};
 use std::rc::Rc;
 
 enum Line<'a> {
@@ -12,10 +20,12 @@ enum Directive<'a> {
     MacroDecl(&'a str),
 }
 
+#[derive(Debug)]
 enum Expr<'a> {
     Symbol(&'a str),
     Literal(i32),
-    SubExpr(Rc<Box<Expr<'a>>>, Operator, Rc<Box<Expr<'a>>>),
+    BinaryExpr(Rc<Box<Expr<'a>>>, Operator, Rc<Box<Expr<'a>>>),
+    SubExpr(Rc<Box<Expr<'a>>>),
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -37,33 +47,62 @@ enum Operator {
     ShiftLeft,
 }
 
-//fn expr<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], Expr<'a>> {}
+fn expr<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], Expr<'a>> {
+    alt((
+        literal,
+        map(identifier, |id| Expr::Symbol(id)),
+        map(tuple((expr, operator, expr)), |(left, op, right)| {
+            Expr::BinaryExpr(Rc::new(Box::new(left)), op, Rc::new(Box::new(right)))
+        }),
+        map(delimited(start_subexpr, expr, end_subexpr), |e| {
+            Expr::SubExpr(Rc::new(Box::new(e)))
+        }),
+    ))(input)
+}
 
-fn operator<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], Operator> {
-    map_res(next_token(), |t| {
-        match t {
-            Token::OrOperator(_) => Ok(Operator::Or),
-            Token::AndOperator(_) => Ok(Operator::And),
-            Token::PlusOperator(_) => Ok(Operator::Plus),
-            Token::MinusOperator(_) => Ok(Operator::Minus),
-            Token::StarOperator(_) => Ok(Operator::Product),
-            Token::EqualsOperator(_) => Ok(Operator::Equals),
-            Token::NotEqualsOperator(_) => Ok(Operator::NotEquals),
-            Token::GreaterThanOperator(_) => Ok(Operator::GreaterThan),
-            Token::GreaterThanOrEqualToOperator(_) => Ok(Operator::GreaterThanOrEquals),
-            Token::LessThanOperator(_) => Ok(Operator::LessThan),
-            Token::LessThanOrEqualToOperator(_) => Ok(Operator::LessThanOrEquals),
-            Token::LeftShiftOperator(_) => Ok(Operator::ShiftLeft),
-            Token::RightShiftOperator(_) => Ok(Operator::ShiftRight),
-            Token::ComplementOperator(_) => Ok(Operator::Complement),
-            Token::XorOperator(_) => Ok(Operator::Xor),
-            _  => Err(())
+fn start_subexpr<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], ()> {
+    map_res(next_token, |token| {
+        if let Token::SubExprStart(_) = token {
+            Ok(())
+        } else {
+            Err(())
         }
     })(input)
 }
 
+fn end_subexpr<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], ()> {
+    map_res(next_token, |token| {
+        if let Token::SubExprEnd(_) = token {
+            Ok(())
+        } else {
+            Err(())
+        }
+    })(input)
+}
+
+fn operator<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], Operator> {
+    map_res(next_token, |t| match t {
+        Token::OrOperator(_) => Ok(Operator::Or),
+        Token::AndOperator(_) => Ok(Operator::And),
+        Token::PlusOperator(_) => Ok(Operator::Plus),
+        Token::MinusOperator(_) => Ok(Operator::Minus),
+        Token::StarOperator(_) => Ok(Operator::Product),
+        Token::EqualsOperator(_) => Ok(Operator::Equals),
+        Token::NotEqualsOperator(_) => Ok(Operator::NotEquals),
+        Token::GreaterThanOperator(_) => Ok(Operator::GreaterThan),
+        Token::GreaterThanOrEqualToOperator(_) => Ok(Operator::GreaterThanOrEquals),
+        Token::LessThanOperator(_) => Ok(Operator::LessThan),
+        Token::LessThanOrEqualToOperator(_) => Ok(Operator::LessThanOrEquals),
+        Token::LeftShiftOperator(_) => Ok(Operator::ShiftLeft),
+        Token::RightShiftOperator(_) => Ok(Operator::ShiftRight),
+        Token::ComplementOperator(_) => Ok(Operator::Complement),
+        Token::XorOperator(_) => Ok(Operator::Xor),
+        _ => Err(()),
+    })(input)
+}
+
 fn literal<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], Expr<'a>> {
-    map_res(next_token(), |token| match token {
+    map_res(next_token, |token| match token {
         Token::BinLiteral(_, val)
         | Token::OctLiteral(_, val)
         | Token::HexLiteral(_, val)
@@ -74,7 +113,7 @@ fn literal<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], Expr<'a>> {
 }
 
 fn identifier<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], &'a str> {
-    map_res(next_token(), |token| {
+    map_res(next_token, |token| {
         if let Token::Identifier(_, name) = token {
             Ok(name)
         } else {
@@ -94,11 +133,9 @@ fn identifier<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], &'a str> {
 //    })(input)
 //}
 
-fn next_token<'a>() -> impl Fn(&'a [Token<'a>]) -> IResult<&'a [Token<'a>], Token<'a>> {
-    |input: &'a [Token<'a>]| {
-        input
-            .get(0)
-            .and_then(|token| Some((&input[1..], *token)))
-            .ok_or(Err::Incomplete(Needed::Size(1)))
-    }
+fn next_token<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], Token<'a>> {
+    input
+        .get(0)
+        .and_then(|token| Some((&input[1..], *token)))
+        .ok_or(Err::Incomplete(Needed::Size(1)))
 }
