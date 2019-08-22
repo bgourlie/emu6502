@@ -11,14 +11,14 @@ fn test_character_literal_token() {
                 fragment: "",
                 extra: ()
             },
-            Token::CharacterLiteral(
+            (
                 Span {
                     offset: 0,
                     line: 1,
                     fragment: "",
                     extra: ()
                 },
-                'a'
+                Token::CharacterLiteral('a')
             )
         ))
     );
@@ -47,12 +47,15 @@ fn test_if_start_token() {
                 fragment: "",
                 extra: ()
             },
-            Token::IfStart(Span {
-                offset: 0,
-                line: 1,
-                fragment: "",
-                extra: ()
-            })
+            (
+                Span {
+                    offset: 0,
+                    line: 1,
+                    fragment: "",
+                    extra: ()
+                },
+                Token::IfStart
+            )
         ))
     );
 }
@@ -68,14 +71,14 @@ fn test_macro_arg_token() {
                 fragment: "",
                 extra: ()
             },
-            Token::MacroPositionalArg(
+            (
                 Span {
                     offset: 0,
                     line: 1,
                     fragment: "",
                     extra: ()
                 },
-                1
+                Token::MacroPositionalArg(1)
             )
         ))
     )
@@ -92,14 +95,14 @@ fn test_hex_literal_token() {
                 fragment: "",
                 extra: ()
             },
-            Token::HexLiteral(
+            (
                 Span {
                     offset: 0,
                     line: 1,
                     fragment: "",
                     extra: ()
                 },
-                1
+                Token::HexLiteral(1)
             )
         ))
     );
@@ -112,14 +115,14 @@ fn test_hex_literal_token() {
                 fragment: "",
                 extra: ()
             },
-            Token::HexLiteral(
+            (
                 Span {
                     offset: 0,
                     line: 1,
                     fragment: "",
                     extra: ()
                 },
-                255
+                Token::HexLiteral(255)
             )
         ))
     );
@@ -136,14 +139,14 @@ fn test_dec_literal_token() {
                 fragment: "",
                 extra: ()
             },
-            Token::DecLiteral(
+            (
                 Span {
                     offset: 0,
                     line: 1,
                     fragment: "",
                     extra: ()
                 },
-                -234
+                Token::DecLiteral(-234)
             )
         ))
     );
@@ -156,14 +159,14 @@ fn test_dec_literal_token() {
                 fragment: "",
                 extra: ()
             },
-            Token::DecLiteral(
+            (
                 Span {
                     offset: 0,
                     line: 1,
                     fragment: "",
                     extra: ()
                 },
-                8234
+                Token::DecLiteral(8234)
             )
         ))
     );
@@ -180,14 +183,14 @@ fn test_oct_literal_token() {
                 fragment: "",
                 extra: ()
             },
-            Token::OctLiteral(
+            (
                 Span {
                     offset: 0,
                     line: 1,
                     fragment: "",
                     extra: ()
                 },
-                1
+                Token::OctLiteral(1)
             )
         ))
     );
@@ -200,14 +203,14 @@ fn test_oct_literal_token() {
                 fragment: "",
                 extra: ()
             },
-            Token::OctLiteral(
+            (
                 Span {
                     offset: 0,
                     line: 1,
                     fragment: "",
                     extra: ()
                 },
-                8
+                Token::OctLiteral(8)
             )
         ))
     );
@@ -224,14 +227,14 @@ fn test_bin_literal_token() {
                 fragment: "",
                 extra: ()
             },
-            Token::BinLiteral(
+            (
                 Span {
                     offset: 0,
                     line: 1,
                     fragment: "",
                     extra: ()
                 },
-                1
+                Token::BinLiteral(1)
             )
         ))
     );
@@ -244,14 +247,14 @@ fn test_bin_literal_token() {
                 fragment: "",
                 extra: ()
             },
-            Token::BinLiteral(
+            (
                 Span {
                     offset: 0,
                     line: 1,
                     fragment: "",
                     extra: ()
                 },
-                255
+                Token::BinLiteral(255)
             )
         ))
     );
@@ -268,14 +271,14 @@ fn test_identifier_token() {
                 fragment: "abc",
                 extra: ()
             },
-            Token::Identifier(
+            (
                 Span {
                     offset: 0,
                     line: 1,
                     fragment: "",
                     extra: ()
                 },
-                "some_thing123"
+                Token::Identifier("some_thing123")
             )
         ))
     );
@@ -305,14 +308,14 @@ fn test_comment_token() {
                 fragment: "",
                 extra: ()
             },
-            Token::Comment(
+            (
                 Span {
                     offset: 0,
                     line: 1,
                     fragment: "",
                     extra: ()
                 },
-                ""
+                Token::Comment("")
             )
         ))
     );
@@ -325,14 +328,14 @@ fn test_comment_token() {
                 fragment: "",
                 extra: ()
             },
-            Token::Comment(
+            (
                 Span {
                     offset: 0,
                     line: 1,
                     fragment: "",
                     extra: ()
                 },
-                " hello world!"
+                Token::Comment(" hello world!")
             )
         ))
     );
@@ -348,14 +351,14 @@ fn test_string_literal_token() {
                 fragment: " abc",
                 extra: ()
             },
-            Token::StringLiteral(
+            (
                 Span {
                     offset: 0,
                     line: 1,
                     fragment: "",
                     extra: ()
                 },
-                "Why ~hello~ there!"
+                Token::StringLiteral("Why ~hello~ there!")
             )
         ))
     );

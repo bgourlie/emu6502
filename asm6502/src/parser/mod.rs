@@ -62,7 +62,7 @@ fn expr<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], Expr<'a>> {
 
 fn start_subexpr<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], ()> {
     map_res(next_token, |token| {
-        if let Token::SubExprStart(_) = token {
+        if let Token::SubExprStart = token {
             Ok(())
         } else {
             Err(())
@@ -72,7 +72,7 @@ fn start_subexpr<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], ()> {
 
 fn end_subexpr<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], ()> {
     map_res(next_token, |token| {
-        if let Token::SubExprEnd(_) = token {
+        if let Token::SubExprEnd = token {
             Ok(())
         } else {
             Err(())
@@ -82,39 +82,39 @@ fn end_subexpr<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], ()> {
 
 fn operator<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], Operator> {
     map_res(next_token, |t| match t {
-        Token::OrOperator(_) => Ok(Operator::Or),
-        Token::AndOperator(_) => Ok(Operator::And),
-        Token::PlusOperator(_) => Ok(Operator::Plus),
-        Token::MinusOperator(_) => Ok(Operator::Minus),
-        Token::StarOperator(_) => Ok(Operator::Product),
-        Token::EqualsOperator(_) => Ok(Operator::Equals),
-        Token::NotEqualsOperator(_) => Ok(Operator::NotEquals),
-        Token::GreaterThanOperator(_) => Ok(Operator::GreaterThan),
-        Token::GreaterThanOrEqualToOperator(_) => Ok(Operator::GreaterThanOrEquals),
-        Token::LessThanOperator(_) => Ok(Operator::LessThan),
-        Token::LessThanOrEqualToOperator(_) => Ok(Operator::LessThanOrEquals),
-        Token::LeftShiftOperator(_) => Ok(Operator::ShiftLeft),
-        Token::RightShiftOperator(_) => Ok(Operator::ShiftRight),
-        Token::ComplementOperator(_) => Ok(Operator::Complement),
-        Token::XorOperator(_) => Ok(Operator::Xor),
+        Token::OrOperator => Ok(Operator::Or),
+        Token::AndOperator => Ok(Operator::And),
+        Token::PlusOperator => Ok(Operator::Plus),
+        Token::MinusOperator => Ok(Operator::Minus),
+        Token::StarOperator => Ok(Operator::Product),
+        Token::EqualsOperator => Ok(Operator::Equals),
+        Token::NotEqualsOperator => Ok(Operator::NotEquals),
+        Token::GreaterThanOperator => Ok(Operator::GreaterThan),
+        Token::GreaterThanOrEqualToOperator => Ok(Operator::GreaterThanOrEquals),
+        Token::LessThanOperator => Ok(Operator::LessThan),
+        Token::LessThanOrEqualToOperator => Ok(Operator::LessThanOrEquals),
+        Token::LeftShiftOperator => Ok(Operator::ShiftLeft),
+        Token::RightShiftOperator => Ok(Operator::ShiftRight),
+        Token::ComplementOperator => Ok(Operator::Complement),
+        Token::XorOperator => Ok(Operator::Xor),
         _ => Err(()),
     })(input)
 }
 
 fn literal<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], Expr<'a>> {
     map_res(next_token, |token| match token {
-        Token::BinLiteral(_, val)
-        | Token::OctLiteral(_, val)
-        | Token::HexLiteral(_, val)
-        | Token::DecLiteral(_, val) => Ok(Expr::Literal(val)),
-        Token::CharacterLiteral(_, val) => Ok(Expr::Literal(val as i32)),
+        Token::BinLiteral(val)
+        | Token::OctLiteral(val)
+        | Token::HexLiteral(val)
+        | Token::DecLiteral(val) => Ok(Expr::Literal(val)),
+        Token::CharacterLiteral(val) => Ok(Expr::Literal(val as i32)),
         _ => Err(()),
     })(input)
 }
 
 fn identifier<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], &'a str> {
     map_res(next_token, |token| {
-        if let Token::Identifier(_, name) = token {
+        if let Token::Identifier(name) = token {
             Ok(name)
         } else {
             Err(())

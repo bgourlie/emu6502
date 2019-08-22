@@ -18,53 +18,53 @@ pub type Span<'a> = LocatedSpan<&'a str>;
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Token<'a> {
     Newline,
-    Comment(Span<'a>, &'a str),
-    Identifier(Span<'a>, &'a str),
-    CharacterLiteral(Span<'a>, char),
-    StringLiteral(Span<'a>, &'a str),
-    HexLiteral(Span<'a>, i32),
-    DecLiteral(Span<'a>, i32),
-    BinLiteral(Span<'a>, i32),
-    OctLiteral(Span<'a>, i32),
-    NoOptDirective(Span<'a>),
-    EquDirective(Span<'a>),
-    SubExprStart(Span<'a>),
-    SubExprEnd(Span<'a>),
-    EqualsOperator(Span<'a>),
-    NotEqualsOperator(Span<'a>),
-    PlusOperator(Span<'a>),
-    MinusOperator(Span<'a>),
-    StarOperator(Span<'a>),
-    RightShiftOperator(Span<'a>),
-    LeftShiftOperator(Span<'a>),
-    GreaterThanOperator(Span<'a>),
-    GreaterThanOrEqualToOperator(Span<'a>),
-    LessThanOperator(Span<'a>),
-    LessThanOrEqualToOperator(Span<'a>),
-    ComplementOperator(Span<'a>),
-    AndOperator(Span<'a>),
-    OrOperator(Span<'a>),
-    XorOperator(Span<'a>),
-    MacroStart(Span<'a>),
-    MacroPositionalArg(Span<'a>, u8),
-    MacroInvokeCountArg(Span<'a>),
-    MacroEnd(Span<'a>),
-    IfStart(Span<'a>),
-    IfEnd(Span<'a>),
-    Mnemonic(Span<'a>, Op),
-    ImmediatePrefix(Span<'a>),
-    OffsetByXOperand(Span<'a>),
-    OffsetByYOperand(Span<'a>),
-    Comma(Span<'a>),
-    ErrorDirective(Span<'a>, &'a str),
-    EndDirective(Span<'a>),
-    DbDirective(Span<'a>),
-    DsDirective(Span<'a>),
-    DwDirective(Span<'a>),
-    IncludeDirective(Span<'a>, &'a str),
+    Comment(&'a str),
+    Identifier(&'a str),
+    CharacterLiteral(char),
+    StringLiteral(&'a str),
+    HexLiteral(i32),
+    DecLiteral(i32),
+    BinLiteral(i32),
+    OctLiteral(i32),
+    NoOptDirective,
+    EquDirective,
+    SubExprStart,
+    SubExprEnd,
+    EqualsOperator,
+    NotEqualsOperator,
+    PlusOperator,
+    MinusOperator,
+    StarOperator,
+    RightShiftOperator,
+    LeftShiftOperator,
+    GreaterThanOperator,
+    GreaterThanOrEqualToOperator,
+    LessThanOperator,
+    LessThanOrEqualToOperator,
+    ComplementOperator,
+    AndOperator,
+    OrOperator,
+    XorOperator,
+    MacroStart,
+    MacroPositionalArg(u8),
+    MacroInvokeCountArg,
+    MacroEnd,
+    IfStart,
+    IfEnd,
+    Mnemonic(Op),
+    ImmediatePrefix,
+    OffsetByXOperand,
+    OffsetByYOperand,
+    Comma,
+    ErrorDirective(&'a str),
+    EndDirective,
+    DbDirective,
+    DsDirective,
+    DwDirective,
+    IncludeDirective(&'a str),
 }
 
-pub fn parse(input: Span) -> IResult<Span, Vec<Token>> {
+pub fn parse(input: Span) -> IResult<Span, Vec<(Span, Token)>> {
     many0(alt((
         alt((
             comment_token,
@@ -80,30 +80,30 @@ pub fn parse(input: Span) -> IResult<Span, Vec<Token>> {
             if_end_token,
             mnemonic_token,
             immediate_prefix_token,
-            define_directive_token("db", |(pos, _)| Token::DbDirective(pos)),
-            define_directive_token("dw", |(pos, _)| Token::DwDirective(pos)),
-            define_directive_token("ds", |(pos, _)| Token::DsDirective(pos)),
-            offset_operand_token(",x", |(pos, _)| Token::OffsetByXOperand(pos)),
-            offset_operand_token(",y", |(pos, _)| Token::OffsetByYOperand(pos)),
+            define_directive_token("db", |(pos, _)| (pos, Token::DbDirective)),
+            define_directive_token("dw", |(pos, _)| (pos, Token::DwDirective)),
+            define_directive_token("ds", |(pos, _)| (pos, Token::DsDirective)),
+            offset_operand_token(",x", |(pos, _)| (pos, Token::OffsetByXOperand)),
+            offset_operand_token(",y", |(pos, _)| (pos, Token::OffsetByYOperand)),
             end_directive_token,
             identifier_token,
-            operator_token("=", |(pos, _)| Token::EqualsOperator(pos)),
+            operator_token("=", |(pos, _)| (pos, Token::EqualsOperator)),
         )),
         alt((
-            operator_token("!=", |(pos, _)| Token::NotEqualsOperator(pos)),
-            operator_token("~", |(pos, _)| Token::ComplementOperator(pos)),
-            operator_token("|", |(pos, _)| Token::OrOperator(pos)),
-            operator_token("^", |(pos, _)| Token::XorOperator(pos)),
-            operator_token("&", |(pos, _)| Token::AndOperator(pos)),
-            operator_token("+", |(pos, _)| Token::PlusOperator(pos)),
-            operator_token("-", |(pos, _)| Token::MinusOperator(pos)),
-            operator_token("*", |(pos, _)| Token::StarOperator(pos)),
-            operator_token("<<", |(pos, _)| Token::LeftShiftOperator(pos)),
-            operator_token(">>", |(pos, _)| Token::RightShiftOperator(pos)),
-            operator_token(">=", |(pos, _)| Token::GreaterThanOrEqualToOperator(pos)),
-            operator_token("<=", |(pos, _)| Token::LessThanOrEqualToOperator(pos)),
-            operator_token(">", |(pos, _)| Token::GreaterThanOperator(pos)),
-            operator_token("<", |(pos, _)| Token::LessThanOperator(pos)),
+            operator_token("!=", |(pos, _)| (pos, Token::NotEqualsOperator)),
+            operator_token("~", |(pos, _)| (pos, Token::ComplementOperator)),
+            operator_token("|", |(pos, _)| (pos, Token::OrOperator)),
+            operator_token("^", |(pos, _)| (pos, Token::XorOperator)),
+            operator_token("&", |(pos, _)| (pos, Token::AndOperator)),
+            operator_token("+", |(pos, _)| (pos, Token::PlusOperator)),
+            operator_token("-", |(pos, _)| (pos, Token::MinusOperator)),
+            operator_token("*", |(pos, _)| (pos, Token::StarOperator)),
+            operator_token("<<", |(pos, _)| (pos, Token::LeftShiftOperator)),
+            operator_token(">>", |(pos, _)| (pos, Token::RightShiftOperator)),
+            operator_token(">=", |(pos, _)| (pos, Token::GreaterThanOrEqualToOperator)),
+            operator_token("<=", |(pos, _)| (pos, Token::LessThanOrEqualToOperator)),
+            operator_token(">", |(pos, _)| (pos, Token::GreaterThanOperator)),
+            operator_token("<", |(pos, _)| (pos, Token::LessThanOperator)),
             sub_expr_start_token,
             sub_expr_end_token,
             dec_literal_token,
@@ -123,18 +123,18 @@ fn newline(input: Span) -> IResult<Span, char> {
     )(input)
 }
 
-fn newline_token(input: Span) -> IResult<Span, Token> {
-    map(newline, |_| Token::Newline)(input)
+fn newline_token(input: Span) -> IResult<Span, (Span, Token)> {
+    map(pair(position, newline), |(span, _)| (span, Token::Newline))(input)
 }
 
-fn end_directive_token(input: Span) -> IResult<Span, Token> {
+fn end_directive_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
         pair(position, preceded(space0, tag_no_case("end"))),
-        |(pos, _)| Token::EndDirective(pos),
+        |(pos, _)| (pos, Token::EndDirective),
     )(input)
 }
 
-fn error_directive_token(input: Span) -> IResult<Span, Token> {
+fn error_directive_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
         pair(
             position,
@@ -143,32 +143,32 @@ fn error_directive_token(input: Span) -> IResult<Span, Token> {
                 take_while1(|chr: char| chr.is_ascii() && !chr.is_ascii_control()),
             ),
         ),
-        |(pos, msg)| Token::ErrorDirective(pos, msg.fragment),
+        |(pos, msg): (Span, Span)| (pos, Token::ErrorDirective(msg.fragment)),
     )(input)
 }
 
-fn comma_token(input: Span) -> IResult<Span, Token> {
-    map(pair(position, tag(",")), |(pos, _)| Token::Comma(pos))(input)
+fn comma_token(input: Span) -> IResult<Span, (Span, Token)> {
+    map(pair(position, tag(",")), |(pos, _)| (pos, Token::Comma))(input)
 }
 
 fn offset_operand_token<'a, F>(
     chars: &'static str,
     mapper: F,
-) -> impl Fn(Span<'a>) -> IResult<Span<'a>, Token<'a>>
+) -> impl Fn(Span<'a>) -> IResult<Span<'a>, (Span<'a>, Token<'a>)>
 where
-    F: Fn((Span<'a>, Span<'a>)) -> Token<'a>,
+    F: Fn((Span<'a>, Span<'a>)) -> (Span<'a>, Token<'a>),
 {
     map(pair(position, tag_no_case(chars)), mapper)
 }
 
 // TODO: Add escaping https://github.com/Geal/nom/issues/1014
-fn character_literal_token(input: Span) -> IResult<Span, Token> {
+fn character_literal_token(input: Span) -> IResult<Span, (Span, Token)> {
     map_res(
         pair(position, delimited(char('\''), take(1_usize), char('\''))),
         |(pos, chr): (Span, Span)| {
             let chr: char = chr.fragment.chars().nth(0_usize).unwrap();
             if chr.is_ascii() && !chr.is_ascii_control() {
-                Ok(Token::CharacterLiteral(pos, chr))
+                Ok((pos, Token::CharacterLiteral(chr)))
             } else {
                 Err(())
             }
@@ -176,18 +176,18 @@ fn character_literal_token(input: Span) -> IResult<Span, Token> {
     )(input)
 }
 
-fn immediate_prefix_token(input: Span) -> IResult<Span, Token> {
+fn immediate_prefix_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(pair(position, char('#')), |(pos, _)| {
-        Token::ImmediatePrefix(pos)
+        (pos, Token::ImmediatePrefix)
     })(input)
 }
 
 fn operator_token<'a, F>(
     chars: &'static str,
     mapper: F,
-) -> impl Fn(Span<'a>) -> IResult<Span<'a>, Token<'a>>
+) -> impl Fn(Span<'a>) -> IResult<Span<'a>, (Span<'a>, Token<'a>)>
 where
-    F: Fn((Span<'a>, Span<'a>)) -> Token<'a>,
+    F: Fn((Span<'a>, Span<'a>)) -> (Span<'a>, Token<'a>),
 {
     map(
         pair(position, delimited(space0, tag(chars), space0)),
@@ -212,7 +212,7 @@ fn mnemonic_operand<'a>(
     map(terminated(tag_no_case(mnemonic), space1), move |_| op)
 }
 
-fn mnemonic_token(input: Span) -> IResult<Span, Token> {
+fn mnemonic_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
         pair(
             position,
@@ -284,14 +284,14 @@ fn mnemonic_token(input: Span) -> IResult<Span, Token> {
                 )),
             ),
         ),
-        |(pos, op)| Token::Mnemonic(pos, op),
+        |(pos, op)| (pos, Token::Mnemonic(op)),
     )(input)
 }
 
-fn if_start_token(input: Span) -> IResult<Span, Token> {
+fn if_start_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
         pair(position, delimited(space0, tag_no_case("if"), space1)),
-        |(pos, _)| Token::IfStart(pos),
+        |(pos, _)| (pos, Token::IfStart),
     )(input)
 }
 
@@ -299,34 +299,34 @@ fn comment_or_newline(input: Span) -> IResult<Span, ()> {
     peek(alt((map(newline, |_| ()), map(comment_token, |_| ()))))(input)
 }
 
-fn if_end_token(input: Span) -> IResult<Span, Token> {
+fn if_end_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
         pair(position, delimited(space0, tag_no_case("endif"), space0)),
-        |(pos, _)| Token::IfEnd(pos),
+        |(pos, _)| (pos, Token::IfEnd),
     )(input)
 }
 
-fn macro_start_token(input: Span) -> IResult<Span, Token> {
+fn macro_start_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
         pair(position, preceded(space1, tag_no_case("macro"))),
-        |(pos, _)| Token::MacroStart(pos),
+        |(pos, _)| (pos, Token::MacroStart),
     )(input)
 }
 
-fn macro_end_token(input: Span) -> IResult<Span, Token> {
+fn macro_end_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
         pair(position, delimited(space0, tag_no_case("endm"), space0)),
-        |(pos, _)| Token::MacroEnd(pos),
+        |(pos, _)| (pos, Token::MacroEnd),
     )(input)
 }
 
-fn macro_invocation_count_arg_token(input: Span) -> IResult<Span, Token> {
+fn macro_invocation_count_arg_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(pair(position, preceded(space0, tag("\\?"))), |(pos, _)| {
-        Token::MacroInvokeCountArg(pos)
+        (pos, Token::MacroInvokeCountArg)
     })(input)
 }
 
-fn macro_positional_arg_token(input: Span) -> IResult<Span, Token> {
+fn macro_positional_arg_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
         pair(
             position,
@@ -335,40 +335,42 @@ fn macro_positional_arg_token(input: Span) -> IResult<Span, Token> {
                 parse_u8_dec,
             ),
         ),
-        |(pos, arg)| Token::MacroPositionalArg(pos, arg),
+        |(pos, arg)| (pos, Token::MacroPositionalArg(arg)),
     )(input)
 }
 
-fn noopt_directive_token(input: Span) -> IResult<Span, Token> {
+fn noopt_directive_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
         pair(position, preceded(space0, tag_no_case("noopt"))),
-        |(pos, _)| Token::NoOptDirective(pos),
+        |(pos, _)| (pos, Token::NoOptDirective),
     )(input)
 }
 
-fn sub_expr_start_token(input: Span) -> IResult<Span, Token> {
+fn sub_expr_start_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(pair(position, char('(')), |(pos, _)| {
-        Token::SubExprStart(pos)
+        (pos, Token::SubExprStart)
     })(input)
 }
 
-fn sub_expr_end_token(input: Span) -> IResult<Span, Token> {
-    map(pair(position, char(')')), |(pos, _)| Token::SubExprEnd(pos))(input)
+fn sub_expr_end_token(input: Span) -> IResult<Span, (Span, Token)> {
+    map(pair(position, char(')')), |(pos, _)| {
+        (pos, Token::SubExprEnd)
+    })(input)
 }
 
-fn equ_directive_token(input: Span) -> IResult<Span, Token> {
+fn equ_directive_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
         pair(position, delimited(space0, tag_no_case("equ"), space1)),
-        |(pos, _)| Token::EquDirective(pos),
+        |(pos, _)| (pos, Token::EquDirective),
     )(input)
 }
 
 fn define_directive_token<'a, F>(
     chars: &'static str,
     mapper: F,
-) -> impl Fn(Span<'a>) -> IResult<Span<'a>, Token<'a>>
+) -> impl Fn(Span<'a>) -> IResult<Span<'a>, (Span<'a>, Token<'a>)>
 where
-    F: Fn((Span<'a>, Span<'a>)) -> Token<'a>,
+    F: Fn((Span<'a>, Span<'a>)) -> (Span<'a>, Token<'a>),
 {
     map(
         pair(position, delimited(space1, tag_no_case(chars), space1)),
@@ -376,17 +378,17 @@ where
     )
 }
 
-fn hex_literal_token(input: Span) -> IResult<Span, Token> {
+fn hex_literal_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
         pair(
             position,
             map_res(preceded(pair(space0, char('$')), hex_digit1), parse_i32_hex),
         ),
-        |(pos, val)| Token::HexLiteral(pos, val),
+        |(pos, val)| (pos, Token::HexLiteral(val)),
     )(input)
 }
 
-fn dec_literal_token(input: Span) -> IResult<Span, Token> {
+fn dec_literal_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
         pair(
             position,
@@ -395,21 +397,21 @@ fn dec_literal_token(input: Span) -> IResult<Span, Token> {
                 parse_i32_dec,
             ),
         ),
-        |(pos, val)| Token::DecLiteral(pos, val),
+        |(pos, val)| (pos, Token::DecLiteral(val)),
     )(input)
 }
 
-fn oct_literal_token(input: Span) -> IResult<Span, Token> {
+fn oct_literal_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
         pair(
             position,
             map_res(preceded(pair(space0, char('@')), oct_digit1), parse_i32_oct),
         ),
-        |(pos, val)| Token::OctLiteral(pos, val),
+        |(pos, val)| (pos, Token::OctLiteral(val)),
     )(input)
 }
 
-fn bin_literal_token(input: Span) -> IResult<Span, Token> {
+fn bin_literal_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
         pair(
             position,
@@ -421,12 +423,12 @@ fn bin_literal_token(input: Span) -> IResult<Span, Token> {
                 parse_i32_bin,
             ),
         ),
-        |(pos, val)| Token::BinLiteral(pos, val),
+        |(pos, val)| (pos, Token::BinLiteral(val)),
     )(input)
 }
 
 // TODO: Add escaping https://github.com/Geal/nom/issues/1014
-fn string_literal_token(input: Span) -> IResult<Span, Token> {
+fn string_literal_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
         pair(
             position,
@@ -436,11 +438,11 @@ fn string_literal_token(input: Span) -> IResult<Span, Token> {
                 char('"'),
             ),
         ),
-        |(pos, string)| Token::StringLiteral(pos, string.fragment),
+        |(pos, string): (Span, Span)| (pos, Token::StringLiteral(string.fragment)),
     )(input)
 }
 
-fn identifier_token(input: Span) -> IResult<Span, Token> {
+fn identifier_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
         pair(
             position,
@@ -452,7 +454,7 @@ fn identifier_token(input: Span) -> IResult<Span, Token> {
                 ),
             ),
         ),
-        |(pos, identifier)| Token::Identifier(pos, identifier.fragment),
+        |(pos, identifier)| (pos, Token::Identifier(identifier.fragment)),
     )(input)
 }
 
@@ -472,7 +474,7 @@ fn valid_identifier_start(input: Span) -> IResult<Span, Span> {
     })(input)
 }
 
-fn include_directive_token(input: Span) -> IResult<Span, Token> {
+fn include_directive_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
         pair(
             position,
@@ -487,11 +489,11 @@ fn include_directive_token(input: Span) -> IResult<Span, Token> {
                 ),
             ),
         ),
-        |(pos, path)| Token::IncludeDirective(pos, path.fragment),
+        |(pos, path): (Span, Span)| (pos, Token::IncludeDirective(path.fragment)),
     )(input)
 }
 
-fn comment_token(input: Span) -> IResult<Span, Token> {
+fn comment_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
         pair(
             position,
@@ -503,7 +505,7 @@ fn comment_token(input: Span) -> IResult<Span, Token> {
                 ),
             ),
         ),
-        |(pos, comment)| Token::Comment(pos, comment.fragment),
+        |(pos, comment): (Span, Span)| (pos, Token::Comment(comment.fragment)),
     )(input)
 }
 
