@@ -1,10 +1,15 @@
 use super::expr;
-use crate::{parse, Span};
 
 #[test]
 fn test_expr() {
-    //    let input = Span::new("a + b - c \n");
-    //    let (_, parsed) = parse(input).unwrap();
-    //    let expression = expr(&parsed);
-    //    println!("{:?}", expression)
+    let parsed = parse("a + b - c \n");
+    let (remaining, expression) = expr(&parsed).unwrap();
+    println!("{:?}", remaining);
+    println!("{:?}", expression);
+}
+
+fn parse(input: &'static str) -> Vec<crate::Token> {
+    let input = crate::Span::new(input);
+    let (_, parsed) = crate::parse(input).unwrap();
+    parsed.into_iter().map(|(_, token)| token).collect()
 }
