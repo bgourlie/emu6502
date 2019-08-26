@@ -1,11 +1,11 @@
 use super::*;
+use nom::*;
 
 #[test]
-fn test_parse_expr() {
-    let parsed = parse("(a + b) - c \n");
-    let (remaining, expression) = parse_expr(&parsed, None, 0).unwrap();
-    println!("{:?}", remaining);
-    println!("{:?}", expression);
+fn test() {
+    let tokens = parse("()(()()())\n ;asdfasdfasdf\n");
+    let tokens2 = expression_tokens(TokenSlice(&tokens)).unwrap();
+    println!("{:?}", tokens2);
 }
 
 fn parse(input: &'static str) -> Vec<crate::Token> {
