@@ -1,9 +1,9 @@
-use super::expr;
+use super::*;
 
 #[test]
-fn test_expr() {
-    let parsed = parse("a + b - c \n");
-    let (remaining, expression) = expr(&parsed).unwrap();
+fn test_parse_expr() {
+    let parsed = parse("(a + b) - c \n");
+    let (remaining, expression) = parse_expr(&parsed, None, 0).unwrap();
     println!("{:?}", remaining);
     println!("{:?}", expression);
 }

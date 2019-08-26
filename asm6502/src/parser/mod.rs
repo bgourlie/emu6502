@@ -4,8 +4,8 @@ mod tests;
 use crate::Token;
 use nom::{
     branch::alt,
-    combinator::{map, map_res},
-    sequence::{delimited, tuple},
+    combinator::{map, map_res, opt},
+    sequence::{delimited, pair, preceded, tuple},
     Err, IResult, Needed,
 };
 use std::rc::Rc;
@@ -47,17 +47,53 @@ enum Operator {
     ShiftLeft,
 }
 
-fn expr<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], Expr<'a>> {
-    alt((
-        literal,
-        map(identifier, |id| Expr::Symbol(id)),
-        map(tuple((expr, operator, expr)), |(left, op, right)| {
-            Expr::BinaryExpr(Rc::new(Box::new(left)), op, Rc::new(Box::new(right)))
-        }),
-        map(delimited(start_subexpr, expr, end_subexpr), |e| {
-            Expr::SubExpr(Rc::new(Box::new(e)))
-        }),
-    ))(input)
+fn parse_expr<'a>(
+    input: &'a [Token<'a>],
+    expr: Option<Expr<'a>>,
+    subexpr_nesting: u8,
+) -> IResult<&'a [Token<'a>], Expr<'a>> {
+    if let Some(expr) = expr {
+        if let Ok((input, _)) = preceded(opt(comment), newline)(input) {
+            if subexpr_nesting == 0 {
+                Ok((input, expr))
+            } else {
+                Err(Err::Incomplete(Needed::Size(subexpr_nesting as _)))
+            }
+        } else {
+            if let Ok((input, operator)) = operator(input) {
+                let (input, rhs) = parse_expr(input, None, subexpr_nesting)?;
+                Ok((
+                    input,
+                    Expr::BinaryExpr(Rc::new(Box::new(expr)), operator, Rc::new(Box::new(rhs))),
+                ))
+            } else {
+                new_subexpr(input, subexpr_nesting)
+            }
+        }
+    } else {
+        if let Ok((input, expr)) = literal_or_symbol(input) {
+            parse_expr(input, Some(expr), subexpr_nesting)
+        } else {
+            new_subexpr(input, subexpr_nesting)
+        }
+    }
+}
+
+fn new_subexpr<'a>(
+    input: &'a [Token<'a>],
+    current_nesting: u8,
+) -> IResult<&'a [Token<'a>], Expr<'a>> {
+    if let Ok((input, _)) = start_subexpr(input) {
+        let (input, subexpr) = parse_expr(input, None, current_nesting + 1)?;
+        Ok((input, Expr::SubExpr(Rc::new(Box::new(subexpr)))))
+    } else {
+        let (input, _) = end_subexpr(input)?;
+        parse_expr(input, None, current_nesting - 1)
+    }
+}
+
+fn literal_or_symbol<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], Expr<'a>> {
+    alt((literal, map(identifier, |id| Expr::Symbol(id))))(input)
 }
 
 fn start_subexpr<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], ()> {
@@ -80,6 +116,25 @@ fn end_subexpr<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], ()> {
     })(input)
 }
 
+fn comment<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], ()> {
+    map_res(next_token, |token| {
+        if let Token::Comment(_) = token {
+            Ok(())
+        } else {
+            Err(())
+        }
+    })(input)
+}
+
+fn newline<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], ()> {
+    map_res(next_token, |token| {
+        if let Token::Newline = token {
+            Ok(())
+        } else {
+            Err(())
+        }
+    })(input)
+}
 fn operator<'a>(input: &'a [Token<'a>]) -> IResult<&'a [Token<'a>], Operator> {
     map_res(next_token, |t| match t {
         Token::OrOperator => Ok(Operator::Or),
