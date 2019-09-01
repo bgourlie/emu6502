@@ -1,14 +1,34 @@
 use crate::Token;
 use nom::{
     error::{ErrorKind, ParseError},
-    Compare, CompareResult, Err, InputLength, InputTake, InputTakeAtPosition, Needed,
+    Compare, CompareResult, Err, FindToken, InputIter, InputLength, InputTake, InputTakeAtPosition,
+    Needed, Slice,
 };
 
-use std::cmp::PartialEq;
+use crate::parser::types::GenericToken::PlusOperator;
+use std::{
+    cmp::PartialEq,
+    iter::{Enumerate, Map},
+    ops::Index,
+};
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum GenericToken {
     Comment,
     Newline,
+    StarOperator,
+    PlusOperator,
+    MinusOperator,
+    AndOperator,
+    OrOperator,
+    XorOperator,
+    ComplementOperator,
+    EqualsOperator,
+    NotEqualsOperator,
+    GreaterThanOrEqualsOperator,
+    LessThanOrEqualsOperator,
+    SubExprStart,
+    SubExprEnd,
 }
 
 impl InputLength for GenericToken {
@@ -17,8 +37,48 @@ impl InputLength for GenericToken {
     }
 }
 
+impl GenericToken {
+    pub fn matches_token(self, token: Token) -> bool {
+        match token {
+            Token::Newline => self == GenericToken::Newline,
+            Token::Comment(_) => self == GenericToken::Comment,
+            Token::StarOperator => self == GenericToken::StarOperator,
+            Token::PlusOperator => self == GenericToken::PlusOperator,
+            Token::MinusOperator => self == GenericToken::MinusOperator,
+            Token::EqualsOperator => self == GenericToken::EqualsOperator,
+            Token::NotEqualsOperator => self == GenericToken::NotEqualsOperator,
+            Token::LessThanOrEqualToOperator => self == GenericToken::LessThanOrEqualsOperator,
+            Token::GreaterThanOrEqualToOperator => {
+                self == GenericToken::GreaterThanOrEqualsOperator
+            }
+            Token::AndOperator => self == GenericToken::AndOperator,
+            Token::OrOperator => self == GenericToken::OrOperator,
+            Token::ComplementOperator => self == GenericToken::ComplementOperator,
+            Token::SubExprStart => self == GenericToken::SubExprStart,
+            Token::SubExprEnd => self == GenericToken::SubExprEnd,
+            _ => unimplemented!(),
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct TokenSlice<'a>(pub &'a [Token<'a>]);
+
+impl<'a> Slice<std::ops::RangeFrom<usize>> for TokenSlice<'a> {
+    fn slice(&self, range: std::ops::RangeFrom<usize>) -> Self {
+        let TokenSlice(inner) = self;
+        TokenSlice(inner.slice(range))
+    }
+}
+
+impl<'a> Index<usize> for TokenSlice<'a> {
+    type Output = Token<'a>;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        let TokenSlice(inner) = self;
+        &inner[index]
+    }
+}
 
 impl<'a> Compare<GenericToken> for TokenSlice<'a> {
     fn compare(&self, other: GenericToken) -> CompareResult {
@@ -29,11 +89,7 @@ impl<'a> Compare<GenericToken> for TokenSlice<'a> {
         let TokenSlice(inner) = self;
         inner
             .get(0)
-            .map(|t| match t {
-                Token::Newline => other == GenericToken::Newline,
-                Token::Comment(_) => other == GenericToken::Comment,
-                _ => unimplemented!(),
-            })
+            .map(|t| other.matches_token(*t))
             .map(|found| {
                 if found {
                     CompareResult::Ok
