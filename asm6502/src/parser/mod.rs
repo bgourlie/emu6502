@@ -6,7 +6,7 @@ use crate::Token;
 use nom::{
     bytes::complete::{take, take_while1},
     combinator::map_res,
-    IResult,
+    IResult, InputLength,
 };
 use types::TokenSlice;
 
@@ -43,6 +43,15 @@ enum Expression<'a> {
     Unary(UnaryOperator, BoxedExpression<'a>),
     Binary(BoxedExpression<'a>, BinaryOperator, BoxedExpression<'a>),
     Grouping(BoxedExpression<'a>),
+}
+
+fn expression(input: TokenSlice) -> IResult<TokenSlice, Expression> {
+    let (remaining, input) = expression_tokens(input)?;
+    let (input, expr) = equality(input)?;
+    if input.input_len() > 0 {
+        panic!("Expression tokens remain: {:?}", input); // TODO: return Err
+    }
+    Ok((remaining, expr))
 }
 
 /// An an expression with comparison precedence.

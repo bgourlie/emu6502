@@ -1,22 +1,14 @@
 use super::*;
 
 #[test]
-fn test() {
-    let tokens = parse("()(()()())\n ;asdfasdfasdf\n");
-    let tokens2 = expression_tokens(TokenSlice(&tokens)).unwrap();
-    println!("{:?}", tokens2);
-}
-
-#[test]
-fn test_primary_literal_expr() {
+fn test_literal_expr() {
     let tokens = parse("123 ; hello\n ;asdfasdfasdf\n");
-    let (_, tokens) = expression_tokens(TokenSlice(&tokens)).unwrap();
-    let (_, primary) = primary(tokens).unwrap();
+    let (_, primary) = expression(TokenSlice(&tokens)).unwrap();
     assert_eq!(Expression::Literal(123), primary);
 }
 
 #[test]
-fn test_primary_symbol_expr() {
+fn test_symbol_expr() {
     let tokens = parse("something = 1; hello\n ;asdfasdfasdf\n");
     let (_, tokens) = expression_tokens(TokenSlice(&tokens)).unwrap();
     let (_, primary_expr) = primary(tokens).unwrap();
@@ -24,92 +16,92 @@ fn test_primary_symbol_expr() {
 }
 
 #[test]
-fn test_unary_expr() {
+fn test_expression_1() {
     let tokens = parse("something = 1; hello\n ;asdfasdfasdf\n");
-    let (_, tokens) = expression_tokens(TokenSlice(&tokens)).unwrap();
-    let (_, unary_expr) = unary(tokens).unwrap();
-    assert_eq!(Expression::Symbol("something"), unary_expr);
+    let (_, expr) = expression(TokenSlice(&tokens)).unwrap();
+    assert_eq!(
+        Expression::Binary(
+            Box::new(Expression::Symbol("something")),
+            BinaryOperator::Equals,
+            Box::new(Expression::Literal(1))
+        ),
+        expr
+    );
 }
 
 #[test]
-fn test_unary_expr_with_operator() {
+fn test_expression_2() {
     let tokens = parse("!something ; hello\n ;asdfasdfasdf\n");
-    let (_, tokens) = expression_tokens(TokenSlice(&tokens)).unwrap();
-    let (_, unary_expr) = unary(tokens).unwrap();
+    let (_, expr) = expression(TokenSlice(&tokens)).unwrap();
     assert_eq!(
         Expression::Unary(
             UnaryOperator::Negation,
             Box::new(Expression::Symbol("something"))
         ),
-        unary_expr
+        expr
     );
 }
 
 #[test]
-fn test_multiplication_expression() {
+fn test_expression_3() {
     let tokens = parse("10 * 5 ; hello\n ;asdfasdfasdf\n");
-    let (_, tokens) = expression_tokens(TokenSlice(&tokens)).unwrap();
-    let (_, unary_expr) = multiplication(tokens).unwrap();
+    let (_, expr) = expression(TokenSlice(&tokens)).unwrap();
     assert_eq!(
         Expression::Binary(
             Box::new(Expression::Literal(10)),
             BinaryOperator::Multiply,
             Box::new(Expression::Literal(5))
         ),
-        unary_expr
+        expr
     );
 }
 
 #[test]
-fn test_addition_expression() {
+fn test_expression_4() {
     let tokens = parse("10 + 5 ; hello\n ;asdfasdfasdf\n");
-    let (_, tokens) = expression_tokens(TokenSlice(&tokens)).unwrap();
-    let (_, unary_expr) = addition(tokens).unwrap();
+    let (_, expr) = expression(TokenSlice(&tokens)).unwrap();
     assert_eq!(
         Expression::Binary(
             Box::new(Expression::Literal(10)),
             BinaryOperator::Addition,
             Box::new(Expression::Literal(5))
         ),
-        unary_expr
+        expr
     );
 }
 
 #[test]
-fn test_comparison_expression() {
+fn test_expression_5() {
     let tokens = parse("10 > 5 ; hello\n ;asdfasdfasdf\n");
-    let (_, tokens) = expression_tokens(TokenSlice(&tokens)).unwrap();
-    let (_, unary_expr) = comparison(tokens).unwrap();
+    let (_, expr) = expression(TokenSlice(&tokens)).unwrap();
     assert_eq!(
         Expression::Binary(
             Box::new(Expression::Literal(10)),
             BinaryOperator::GreaterThan,
             Box::new(Expression::Literal(5))
         ),
-        unary_expr
+        expr
     );
 }
 
 #[test]
-fn test_equality_expression() {
+fn test_expression_6() {
     let tokens = parse("10 = 5 ; hello\n ;asdfasdfasdf\n");
-    let (_, tokens) = expression_tokens(TokenSlice(&tokens)).unwrap();
-    let (_, unary_expr) = equality(tokens).unwrap();
+    let (_, expr) = expression(TokenSlice(&tokens)).unwrap();
     assert_eq!(
         Expression::Binary(
             Box::new(Expression::Literal(10)),
             BinaryOperator::Equals,
             Box::new(Expression::Literal(5))
         ),
-        unary_expr
+        expr
     );
 }
 
 #[test]
-fn test_multiplication_expression_2() {
+fn test_expression_7() {
     let tokens = parse("10 * !something ; hello\n ;asdfasdfasdf\n");
-    let (_, tokens) = expression_tokens(TokenSlice(&tokens)).unwrap();
-    let (_, unary_expr) = multiplication(tokens).unwrap();
+    let (_, expr) = expression(TokenSlice(&tokens)).unwrap();
     assert_eq!(
         Expression::Binary(
             Box::new(Expression::Literal(10)),
@@ -119,15 +111,14 @@ fn test_multiplication_expression_2() {
                 Box::new(Expression::Symbol("something"))
             ))
         ),
-        unary_expr
+        expr
     );
 }
 
 #[test]
-fn test_expression() {
+fn test_expression_8() {
     let tokens = parse("!(10 * !something) ; hello\n ;asdfasdfasdf\n");
-    let (_, tokens) = expression_tokens(TokenSlice(&tokens)).unwrap();
-    let expr = comparison(tokens);
+    let expr = expression(TokenSlice(&tokens));
     println!("{:?}", expr);
     let (_, unary_expr) = expr.unwrap();
     assert_eq!(
@@ -147,25 +138,24 @@ fn test_expression() {
 }
 
 #[test]
-fn test_expression2() {
-    let tokens = parse("2 * 3 + 1 = 7; hello\n ;asdfasdfasdf\n");
-    let (_, tokens) = expression_tokens(TokenSlice(&tokens)).unwrap();
-    let expr = comparison(tokens);
-    println!("{:?}", expr);
-    let (_, unary_expr) = expr.unwrap();
+fn test_expression_9() {
+    let tokens = parse("2 * 3 + 1 = 7 ; hello\n ;asdfasdfasdf\n");
+    let (_, expr) = expression(TokenSlice(&tokens)).unwrap();
     assert_eq!(
-        Expression::Unary(
-            UnaryOperator::Negation,
-            Box::new(Expression::Grouping(Box::new(Expression::Binary(
-                Box::new(Expression::Literal(10)),
-                BinaryOperator::Multiply,
-                Box::new(Expression::Unary(
-                    UnaryOperator::Negation,
-                    Box::new(Expression::Symbol("something"))
-                ))
-            ),)))
+        Expression::Binary(
+            Box::new(Expression::Binary(
+                Box::new(Expression::Binary(
+                    Box::new(Expression::Literal(2)),
+                    BinaryOperator::Multiply,
+                    Box::new(Expression::Literal(3))
+                )),
+                BinaryOperator::Addition,
+                Box::new(Expression::Literal(1))
+            )),
+            BinaryOperator::Equals,
+            Box::new(Expression::Literal(7))
         ),
-        unary_expr
+        expr
     );
 }
 
