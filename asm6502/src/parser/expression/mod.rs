@@ -12,12 +12,12 @@ use nom::{
 type BoxedExpression<'a> = Box<Expression<'a>>;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-enum UnaryOperator {
+pub enum UnaryOperator {
     Negation,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-enum BinaryOperator {
+pub enum BinaryOperator {
     Multiply,
     Addition,
     Subtraction,
@@ -36,7 +36,7 @@ enum BinaryOperator {
 }
 
 #[derive(Debug, PartialEq)]
-enum Expression<'a> {
+pub enum Expression<'a> {
     Literal(i32),
     Symbol(&'a str),
     Unary(UnaryOperator, BoxedExpression<'a>),
@@ -44,7 +44,7 @@ enum Expression<'a> {
     Grouping(BoxedExpression<'a>),
 }
 
-fn expression(input: TokenSlice) -> IResult<TokenSlice, Expression> {
+pub fn expression(input: TokenSlice) -> IResult<TokenSlice, Expression> {
     let (remaining, input) = expression_tokens(input)?;
     let (input, expr) = precedence5(input)?;
     if input.input_len() == 0 {
