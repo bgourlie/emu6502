@@ -5,13 +5,12 @@ mod types;
 use crate::Token;
 use nom::{
     bytes::complete::{take, take_while1},
-    combinator::{map, map_res},
+    combinator::map_res,
     IResult,
 };
-use std::rc::Rc;
 use types::TokenSlice;
 
-type BoxedExpression<'a> = Rc<Box<Expression<'a>>>;
+type BoxedExpression<'a> = Box<Expression<'a>>;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum UnaryOperator {
@@ -53,7 +52,7 @@ fn equality(input: TokenSlice) -> IResult<TokenSlice, Expression> {
         let (input, right) = equality(input)?;
         Ok((
             input,
-            Expression::Binary(Rc::new(Box::new(left)), operator, Rc::new(Box::new(right))),
+            Expression::Binary(Box::new(left), operator, Box::new(right)),
         ))
     } else {
         Ok((input, left))
@@ -67,7 +66,7 @@ fn comparison(input: TokenSlice) -> IResult<TokenSlice, Expression> {
         let (input, right) = comparison(input)?;
         Ok((
             input,
-            Expression::Binary(Rc::new(Box::new(left)), operator, Rc::new(Box::new(right))),
+            Expression::Binary(Box::new(left), operator, Box::new(right)),
         ))
     } else {
         Ok((input, left))
@@ -81,7 +80,7 @@ fn addition(input: TokenSlice) -> IResult<TokenSlice, Expression> {
         let (input, right) = addition(input)?;
         Ok((
             input,
-            Expression::Binary(Rc::new(Box::new(left)), operator, Rc::new(Box::new(right))),
+            Expression::Binary(Box::new(left), operator, Box::new(right)),
         ))
     } else {
         Ok((input, left))
@@ -95,7 +94,7 @@ fn multiplication(input: TokenSlice) -> IResult<TokenSlice, Expression> {
         let (input, right) = multiplication(input)?;
         Ok((
             input,
-            Expression::Binary(Rc::new(Box::new(left)), operator, Rc::new(Box::new(right))),
+            Expression::Binary(Box::new(left), operator, Box::new(right)),
         ))
     } else {
         Ok((input, left))
@@ -106,7 +105,7 @@ fn multiplication(input: TokenSlice) -> IResult<TokenSlice, Expression> {
 fn unary(input: TokenSlice) -> IResult<TokenSlice, Expression> {
     if let Ok((input, operator)) = unary_operator(input) {
         let (input, expr) = unary(input)?;
-        Ok((input, Expression::Unary(operator, Rc::new(Box::new(expr)))))
+        Ok((input, Expression::Unary(operator, Box::new(expr))))
     } else {
         primary(input)
     }
@@ -129,7 +128,7 @@ fn primary(input: TokenSlice) -> IResult<TokenSlice, Expression> {
         let (input, _) = subexpr_start(input)?;
         let (input, expr) = equality(input)?;
         let (input, _) = subexpr_end(input)?;
-        Ok((input, Expression::Grouping(Rc::new(Box::new(expr)))))
+        Ok((input, Expression::Grouping(Box::new(expr))))
     }
 }
 

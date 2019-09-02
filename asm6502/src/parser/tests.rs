@@ -39,7 +39,7 @@ fn test_unary_expr_with_operator() {
     assert_eq!(
         Expression::Unary(
             UnaryOperator::Negation,
-            Rc::new(Box::new(Expression::Symbol("something")))
+            Box::new(Expression::Symbol("something"))
         ),
         unary_expr
     );
@@ -52,9 +52,9 @@ fn test_multiplication_expression() {
     let (_, unary_expr) = multiplication(tokens).unwrap();
     assert_eq!(
         Expression::Binary(
-            Rc::new(Box::new(Expression::Literal(10))),
+            Box::new(Expression::Literal(10)),
             BinaryOperator::Multiply,
-            Rc::new(Box::new(Expression::Literal(5)))
+            Box::new(Expression::Literal(5))
         ),
         unary_expr
     );
@@ -67,9 +67,9 @@ fn test_addition_expression() {
     let (_, unary_expr) = addition(tokens).unwrap();
     assert_eq!(
         Expression::Binary(
-            Rc::new(Box::new(Expression::Literal(10))),
+            Box::new(Expression::Literal(10)),
             BinaryOperator::Addition,
-            Rc::new(Box::new(Expression::Literal(5)))
+            Box::new(Expression::Literal(5))
         ),
         unary_expr
     );
@@ -82,9 +82,9 @@ fn test_comparison_expression() {
     let (_, unary_expr) = comparison(tokens).unwrap();
     assert_eq!(
         Expression::Binary(
-            Rc::new(Box::new(Expression::Literal(10))),
+            Box::new(Expression::Literal(10)),
             BinaryOperator::GreaterThan,
-            Rc::new(Box::new(Expression::Literal(5)))
+            Box::new(Expression::Literal(5))
         ),
         unary_expr
     );
@@ -97,9 +97,9 @@ fn test_equality_expression() {
     let (_, unary_expr) = equality(tokens).unwrap();
     assert_eq!(
         Expression::Binary(
-            Rc::new(Box::new(Expression::Literal(10))),
+            Box::new(Expression::Literal(10)),
             BinaryOperator::Equals,
-            Rc::new(Box::new(Expression::Literal(5)))
+            Box::new(Expression::Literal(5))
         ),
         unary_expr
     );
@@ -112,12 +112,12 @@ fn test_multiplication_expression_2() {
     let (_, unary_expr) = multiplication(tokens).unwrap();
     assert_eq!(
         Expression::Binary(
-            Rc::new(Box::new(Expression::Literal(10))),
+            Box::new(Expression::Literal(10)),
             BinaryOperator::Multiply,
-            Rc::new(Box::new(Expression::Unary(
+            Box::new(Expression::Unary(
                 UnaryOperator::Negation,
-                Rc::new(Box::new(Expression::Symbol("something")))
-            )))
+                Box::new(Expression::Symbol("something"))
+            ))
         ),
         unary_expr
     );
@@ -133,16 +133,14 @@ fn test_expression() {
     assert_eq!(
         Expression::Unary(
             UnaryOperator::Negation,
-            Rc::new(Box::new(Expression::Grouping(Rc::new(Box::new(
-                Expression::Binary(
-                    Rc::new(Box::new(Expression::Literal(10))),
-                    BinaryOperator::Multiply,
-                    Rc::new(Box::new(Expression::Unary(
-                        UnaryOperator::Negation,
-                        Rc::new(Box::new(Expression::Symbol("something")))
-                    )))
-                ),
-            )))))
+            Box::new(Expression::Grouping(Box::new(Expression::Binary(
+                Box::new(Expression::Literal(10)),
+                BinaryOperator::Multiply,
+                Box::new(Expression::Unary(
+                    UnaryOperator::Negation,
+                    Box::new(Expression::Symbol("something"))
+                ))
+            ),)))
         ),
         unary_expr
     );
@@ -150,7 +148,7 @@ fn test_expression() {
 
 #[test]
 fn test_expression2() {
-    let tokens = parse("1 + 2 * 3 = 7; hello\n ;asdfasdfasdf\n");
+    let tokens = parse("2 * 3 + 1 = 7; hello\n ;asdfasdfasdf\n");
     let (_, tokens) = expression_tokens(TokenSlice(&tokens)).unwrap();
     let expr = comparison(tokens);
     println!("{:?}", expr);
@@ -158,16 +156,14 @@ fn test_expression2() {
     assert_eq!(
         Expression::Unary(
             UnaryOperator::Negation,
-            Rc::new(Box::new(Expression::Grouping(Rc::new(Box::new(
-                Expression::Binary(
-                    Rc::new(Box::new(Expression::Literal(10))),
-                    BinaryOperator::Multiply,
-                    Rc::new(Box::new(Expression::Unary(
-                        UnaryOperator::Negation,
-                        Rc::new(Box::new(Expression::Symbol("something")))
-                    )))
-                ),
-            )))))
+            Box::new(Expression::Grouping(Box::new(Expression::Binary(
+                Box::new(Expression::Literal(10)),
+                BinaryOperator::Multiply,
+                Box::new(Expression::Unary(
+                    UnaryOperator::Negation,
+                    Box::new(Expression::Symbol("something"))
+                ))
+            ),)))
         ),
         unary_expr
     );
