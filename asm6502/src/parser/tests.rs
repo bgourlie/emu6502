@@ -150,7 +150,7 @@ fn test_expression() {
 
 #[test]
 fn test_expression2() {
-    let tokens = parse("1 + !(10 * !something) * 1 = 20 ; hello\n ;asdfasdfasdf\n");
+    let tokens = parse("1 + 2 * 3 = 7; hello\n ;asdfasdfasdf\n");
     let (_, tokens) = expression_tokens(TokenSlice(&tokens)).unwrap();
     let expr = comparison(tokens);
     println!("{:?}", expr);

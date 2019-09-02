@@ -50,6 +50,20 @@ enum Expression<'a> {
 fn equality(input: TokenSlice) -> IResult<TokenSlice, Expression> {
     let (input, left) = comparison(input)?;
     if let Ok((input, operator)) = equality_operator(input) {
+        let (input, right) = equality(input)?;
+        Ok((
+            input,
+            Expression::Binary(Rc::new(Box::new(left)), operator, Rc::new(Box::new(right))),
+        ))
+    } else {
+        Ok((input, left))
+    }
+}
+
+/// An an expression with comparison precedence.
+fn comparison(input: TokenSlice) -> IResult<TokenSlice, Expression> {
+    let (input, left) = addition(input)?;
+    if let Ok((input, operator)) = comparison_operator(input) {
         let (input, right) = comparison(input)?;
         Ok((
             input,
@@ -60,18 +74,10 @@ fn equality(input: TokenSlice) -> IResult<TokenSlice, Expression> {
     }
 }
 
-fn equality_operator(input: TokenSlice) -> IResult<TokenSlice, BinaryOperator> {
-    map_res(take(1 as usize), |t: TokenSlice| match t[0] {
-        Token::EqualsOperator => Ok(BinaryOperator::Equals),
-        Token::NotEqualsOperator => Ok(BinaryOperator::NotEquals),
-        _ => Err(()),
-    })(input)
-}
-
-/// An an expression with comparison precedence.
-fn comparison(input: TokenSlice) -> IResult<TokenSlice, Expression> {
-    let (input, left) = addition(input)?;
-    if let Ok((input, operator)) = comparison_operator(input) {
+/// An an expression with addition precedence (addition or subtraction).
+fn addition(input: TokenSlice) -> IResult<TokenSlice, Expression> {
+    let (input, left) = multiplication(input)?;
+    if let Ok((input, operator)) = addition_operator(input) {
         let (input, right) = addition(input)?;
         Ok((
             input,
@@ -82,20 +88,10 @@ fn comparison(input: TokenSlice) -> IResult<TokenSlice, Expression> {
     }
 }
 
-fn comparison_operator(input: TokenSlice) -> IResult<TokenSlice, BinaryOperator> {
-    map_res(take(1 as usize), |t: TokenSlice| match t[0] {
-        Token::GreaterThanOperator => Ok(BinaryOperator::GreaterThan),
-        Token::LessThanOperator => Ok(BinaryOperator::LessThan),
-        Token::GreaterThanOrEqualToOperator => Ok(BinaryOperator::GreaterThanOrEquals),
-        Token::LessThanOrEqualToOperator => Ok(BinaryOperator::LessThanOrEquals),
-        _ => Err(()),
-    })(input)
-}
-
-/// An an expression with addition precedence (addition or subtraction).
-fn addition(input: TokenSlice) -> IResult<TokenSlice, Expression> {
-    let (input, left) = multiplication(input)?;
-    if let Ok((input, operator)) = addition_operator(input) {
+/// An an expression with multiplication precedence (product or division).
+fn multiplication(input: TokenSlice) -> IResult<TokenSlice, Expression> {
+    let (input, left) = unary(input)?;
+    if let Ok((input, operator)) = multiplication_operator(input) {
         let (input, right) = multiplication(input)?;
         Ok((
             input,
@@ -106,77 +102,14 @@ fn addition(input: TokenSlice) -> IResult<TokenSlice, Expression> {
     }
 }
 
-fn addition_operator(input: TokenSlice) -> IResult<TokenSlice, BinaryOperator> {
-    map_res(take(1 as usize), |t: TokenSlice| match t[0] {
-        Token::PlusOperator => Ok(BinaryOperator::Addition),
-        Token::MinusOperator => Ok(BinaryOperator::Subtraction),
-        _ => Err(()),
-    })(input)
-}
-
-/// An an expression with multiplication precedence (product or division).
-fn multiplication(input: TokenSlice) -> IResult<TokenSlice, Expression> {
-    let (input, left) = unary(input)?;
-    if let Ok((input, operator)) = multiplication_operator(input) {
-        let (input, right) = unary(input)?;
-        Ok((
-            input,
-            Expression::Binary(Rc::new(Box::new(left)), operator, Rc::new(Box::new(right))),
-        ))
-    } else {
-        Ok((input, left))
-    }
-}
-
-fn multiplication_operator(input: TokenSlice) -> IResult<TokenSlice, BinaryOperator> {
-    map_res(take(1 as usize), |t: TokenSlice| {
-        if let Token::StarOperator = t[0] {
-            Ok(BinaryOperator::Multiply)
-        } else {
-            Err(())
-        }
-    })(input)
-}
-
 /// An expression preceded with a unary operator, or just a primary expression (symbol or literal)
 fn unary(input: TokenSlice) -> IResult<TokenSlice, Expression> {
     if let Ok((input, operator)) = unary_operator(input) {
-        map(primary, move |expr| {
-            Expression::Unary(operator, Rc::new(Box::new(expr)))
-        })(input)
+        let (input, expr) = unary(input)?;
+        Ok((input, Expression::Unary(operator, Rc::new(Box::new(expr)))))
     } else {
         primary(input)
     }
-}
-
-fn unary_operator(input: TokenSlice) -> IResult<TokenSlice, UnaryOperator> {
-    map_res(take(1 as usize), |t: TokenSlice| {
-        if let Token::BangOperator = t[0] {
-            Ok(UnaryOperator::Negation)
-        } else {
-            Err(())
-        }
-    })(input)
-}
-
-fn subexpr_start(input: TokenSlice) -> IResult<TokenSlice, ()> {
-    map_res(take(1 as usize), |t: TokenSlice| {
-        if let Token::SubExprStart = t[0] {
-            Ok(())
-        } else {
-            Err(())
-        }
-    })(input)
-}
-
-fn subexpr_end(input: TokenSlice) -> IResult<TokenSlice, ()> {
-    map_res(take(1 as usize), |t: TokenSlice| {
-        if let Token::SubExprEnd = t[0] {
-            Ok(())
-        } else {
-            Err(())
-        }
-    })(input)
 }
 
 fn primary(input: TokenSlice) -> IResult<TokenSlice, Expression> {
@@ -230,5 +163,71 @@ fn expression_tokens(input: TokenSlice) -> IResult<TokenSlice, TokenSlice> {
         } else {
             false
         }
+    })(input)
+}
+
+fn subexpr_start(input: TokenSlice) -> IResult<TokenSlice, ()> {
+    map_res(take(1 as usize), |t: TokenSlice| {
+        if let Token::SubExprStart = t[0] {
+            Ok(())
+        } else {
+            Err(())
+        }
+    })(input)
+}
+
+fn subexpr_end(input: TokenSlice) -> IResult<TokenSlice, ()> {
+    map_res(take(1 as usize), |t: TokenSlice| {
+        if let Token::SubExprEnd = t[0] {
+            Ok(())
+        } else {
+            Err(())
+        }
+    })(input)
+}
+
+fn unary_operator(input: TokenSlice) -> IResult<TokenSlice, UnaryOperator> {
+    map_res(take(1 as usize), |t: TokenSlice| {
+        if let Token::BangOperator = t[0] {
+            Ok(UnaryOperator::Negation)
+        } else {
+            Err(())
+        }
+    })(input)
+}
+
+fn multiplication_operator(input: TokenSlice) -> IResult<TokenSlice, BinaryOperator> {
+    map_res(take(1 as usize), |t: TokenSlice| {
+        if let Token::StarOperator = t[0] {
+            Ok(BinaryOperator::Multiply)
+        } else {
+            Err(())
+        }
+    })(input)
+}
+
+fn addition_operator(input: TokenSlice) -> IResult<TokenSlice, BinaryOperator> {
+    map_res(take(1 as usize), |t: TokenSlice| match t[0] {
+        Token::PlusOperator => Ok(BinaryOperator::Addition),
+        Token::MinusOperator => Ok(BinaryOperator::Subtraction),
+        _ => Err(()),
+    })(input)
+}
+
+fn comparison_operator(input: TokenSlice) -> IResult<TokenSlice, BinaryOperator> {
+    map_res(take(1 as usize), |t: TokenSlice| match t[0] {
+        Token::GreaterThanOperator => Ok(BinaryOperator::GreaterThan),
+        Token::LessThanOperator => Ok(BinaryOperator::LessThan),
+        Token::GreaterThanOrEqualToOperator => Ok(BinaryOperator::GreaterThanOrEquals),
+        Token::LessThanOrEqualToOperator => Ok(BinaryOperator::LessThanOrEquals),
+        _ => Err(()),
+    })(input)
+}
+
+fn equality_operator(input: TokenSlice) -> IResult<TokenSlice, BinaryOperator> {
+    map_res(take(1 as usize), |t: TokenSlice| match t[0] {
+        Token::EqualsOperator => Ok(BinaryOperator::Equals),
+        Token::NotEqualsOperator => Ok(BinaryOperator::NotEquals),
+        _ => Err(()),
     })(input)
 }
