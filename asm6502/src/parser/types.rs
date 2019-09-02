@@ -1,15 +1,15 @@
 use crate::Token;
 use nom::{
     error::{ErrorKind, ParseError},
-    Compare, CompareResult, Err, FindToken, InputIter, InputLength, InputTake, InputTakeAtPosition,
-    Needed, Slice,
+    Compare, CompareResult, Err, InputIter, InputLength, InputTake, InputTakeAtPosition, Needed,
+    Slice,
 };
 
-use crate::parser::types::GenericToken::PlusOperator;
 use std::{
     cmp::PartialEq,
     iter::{Enumerate, Map},
     ops::Index,
+    slice::Iter,
 };
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -63,6 +63,38 @@ impl GenericToken {
 
 #[derive(Copy, Clone, Debug)]
 pub struct TokenSlice<'a>(pub &'a [Token<'a>]);
+
+impl<'a> InputIter for TokenSlice<'a> {
+    type Item = Token<'a>;
+    type Iter = Enumerate<Self::IterElem>;
+    type IterElem = Map<Iter<'a, Self::Item>, fn(&Token<'a>) -> Token<'a>>;
+
+    #[inline]
+    fn iter_indices(&self) -> Self::Iter {
+        self.iter_elements().enumerate()
+    }
+    #[inline]
+    fn iter_elements(&self) -> Self::IterElem {
+        let TokenSlice(inner) = self;
+        inner.iter().map(|t| *t)
+    }
+    #[inline]
+    fn position<P>(&self, predicate: P) -> Option<usize>
+    where
+        P: Fn(Self::Item) -> bool,
+    {
+        let TokenSlice(inner) = self;
+        inner.iter().position(|b| predicate(*b))
+    }
+    #[inline]
+    fn slice_index(&self, count: usize) -> Option<usize> {
+        if self.input_len() >= count {
+            Some(count)
+        } else {
+            None
+        }
+    }
+}
 
 impl<'a> Slice<std::ops::RangeFrom<usize>> for TokenSlice<'a> {
     fn slice(&self, range: std::ops::RangeFrom<usize>) -> Self {

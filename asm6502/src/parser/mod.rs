@@ -4,17 +4,16 @@ mod types;
 
 use crate::Token;
 use nom::{
-    bytes::complete::{tag, take_while1},
-    character::complete::one_of,
-    combinator::opt,
-    sequence::{pair, terminated},
-    IResult, InputLength,
+    bytes::complete::{take, take_while1},
+    combinator::map_res,
+    IResult,
 };
 use std::rc::Rc;
-use types::{GenericToken, TokenSlice};
+use types::TokenSlice;
 
 type BoxedExpression<'a> = Rc<Box<Expression<'a>>>;
 
+#[derive(Debug)]
 enum Operator {
     Multiply,
     Addition,
@@ -31,6 +30,7 @@ enum Operator {
     RightShift,
 }
 
+#[derive(Debug)]
 enum Expression<'a> {
     Literal(i32),
     Symbol(&'a str),
@@ -39,7 +39,15 @@ enum Expression<'a> {
 }
 
 fn primary(input: TokenSlice) -> IResult<TokenSlice, Expression> {
-    unimplemented!()
+    map_res(take(1 as usize), |t: TokenSlice| match t[0] {
+        Token::Identifier(name) => Ok(Expression::Symbol(name)),
+        Token::CharacterLiteral(chr) => Ok(Expression::Literal(chr as i32)),
+        Token::DecLiteral(val)
+        | Token::HexLiteral(val)
+        | Token::BinLiteral(val)
+        | Token::OctLiteral(val) => Ok(Expression::Literal(val)),
+        _ => Err(()),
+    })(input)
 }
 
 fn expression_tokens(input: TokenSlice) -> IResult<TokenSlice, TokenSlice> {
