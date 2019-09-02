@@ -266,9 +266,9 @@ fn test_identifier_token() {
         identifier_token(Span::new("some_thing123 abc")),
         Ok((
             Span {
-                offset: 14,
+                offset: 13,
                 line: 1,
-                fragment: "abc",
+                fragment: " abc",
                 extra: ()
             },
             (
