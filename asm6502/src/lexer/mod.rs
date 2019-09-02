@@ -30,6 +30,7 @@ pub enum Token<'a> {
     EquDirective,
     SubExprStart,
     SubExprEnd,
+    BangOperator,
     EqualsOperator,
     NotEqualsOperator,
     PlusOperator,
@@ -91,6 +92,7 @@ pub fn parse(input: Span) -> IResult<Span, Vec<(Span, Token)>> {
         )),
         alt((
             operator_token("!=", |(pos, _)| (pos, Token::NotEqualsOperator)),
+            operator_token("!", |(pos, _)| (pos, Token::BangOperator)),
             operator_token("~", |(pos, _)| (pos, Token::ComplementOperator)),
             operator_token("|", |(pos, _)| (pos, Token::OrOperator)),
             operator_token("^", |(pos, _)| (pos, Token::XorOperator)),
@@ -110,9 +112,13 @@ pub fn parse(input: Span) -> IResult<Span, Vec<(Span, Token)>> {
             hex_literal_token,
             oct_literal_token,
             bin_literal_token,
-            string_literal_token,
         )),
-        alt((character_literal_token, comma_token, newline_token)),
+        alt((
+            string_literal_token,
+            character_literal_token,
+            comma_token,
+            newline_token,
+        )),
     )))(input)
 }
 
