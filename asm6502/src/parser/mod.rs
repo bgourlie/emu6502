@@ -6,7 +6,7 @@ use crate::Token;
 use nom::{
     bytes::complete::{take, take_while1},
     combinator::map_res,
-    IResult, InputLength,
+    IResult, InputLength, Needed,
 };
 use types::TokenSlice;
 
@@ -47,18 +47,20 @@ enum Expression<'a> {
 
 fn expression(input: TokenSlice) -> IResult<TokenSlice, Expression> {
     let (remaining, input) = expression_tokens(input)?;
-    let (input, expr) = equality(input)?;
-    if input.input_len() > 0 {
-        panic!("Expression tokens remain: {:?}", input); // TODO: return Err
+    let (input, expr) = precedence5(input)?;
+    if input.input_len() == 0 {
+        Ok((remaining, expr))
+    } else {
+        // TODO: This is not the correct error type. Eventually do proper error reporting.
+        Err(nom::Err::Incomplete(Needed::Size(input.input_len())))
     }
-    Ok((remaining, expr))
 }
 
-/// An an expression with comparison precedence.
-fn equality(input: TokenSlice) -> IResult<TokenSlice, Expression> {
-    let (input, left) = comparison(input)?;
+/// Parses equality expressions
+fn precedence5(input: TokenSlice) -> IResult<TokenSlice, Expression> {
+    let (input, left) = precedence4(input)?;
     if let Ok((input, operator)) = equality_operator(input) {
-        let (input, right) = equality(input)?;
+        let (input, right) = precedence5(input)?;
         Ok((
             input,
             Expression::Binary(Box::new(left), operator, Box::new(right)),
@@ -68,11 +70,11 @@ fn equality(input: TokenSlice) -> IResult<TokenSlice, Expression> {
     }
 }
 
-/// An an expression with comparison precedence.
-fn comparison(input: TokenSlice) -> IResult<TokenSlice, Expression> {
-    let (input, left) = addition(input)?;
+/// Parses comparison expressions
+fn precedence4(input: TokenSlice) -> IResult<TokenSlice, Expression> {
+    let (input, left) = precedence3(input)?;
     if let Ok((input, operator)) = comparison_operator(input) {
-        let (input, right) = comparison(input)?;
+        let (input, right) = precedence4(input)?;
         Ok((
             input,
             Expression::Binary(Box::new(left), operator, Box::new(right)),
@@ -82,11 +84,11 @@ fn comparison(input: TokenSlice) -> IResult<TokenSlice, Expression> {
     }
 }
 
-/// An an expression with addition precedence (addition or subtraction).
-fn addition(input: TokenSlice) -> IResult<TokenSlice, Expression> {
-    let (input, left) = multiplication(input)?;
+/// Parses addition and subtraction expressions
+fn precedence3(input: TokenSlice) -> IResult<TokenSlice, Expression> {
+    let (input, left) = precedence2(input)?;
     if let Ok((input, operator)) = addition_operator(input) {
-        let (input, right) = addition(input)?;
+        let (input, right) = precedence3(input)?;
         Ok((
             input,
             Expression::Binary(Box::new(left), operator, Box::new(right)),
@@ -96,11 +98,11 @@ fn addition(input: TokenSlice) -> IResult<TokenSlice, Expression> {
     }
 }
 
-/// An an expression with multiplication precedence (product or division).
-fn multiplication(input: TokenSlice) -> IResult<TokenSlice, Expression> {
-    let (input, left) = unary(input)?;
+/// Parses multiplication expressions (and division, if we end up supporting it)
+fn precedence2(input: TokenSlice) -> IResult<TokenSlice, Expression> {
+    let (input, left) = precedence1(input)?;
     if let Ok((input, operator)) = multiplication_operator(input) {
-        let (input, right) = multiplication(input)?;
+        let (input, right) = precedence2(input)?;
         Ok((
             input,
             Expression::Binary(Box::new(left), operator, Box::new(right)),
@@ -110,17 +112,18 @@ fn multiplication(input: TokenSlice) -> IResult<TokenSlice, Expression> {
     }
 }
 
-/// An expression preceded with a unary operator, or just a primary expression (symbol or literal)
-fn unary(input: TokenSlice) -> IResult<TokenSlice, Expression> {
+/// Parses unary expressions
+fn precedence1(input: TokenSlice) -> IResult<TokenSlice, Expression> {
     if let Ok((input, operator)) = unary_operator(input) {
-        let (input, expr) = unary(input)?;
+        let (input, expr) = precedence1(input)?;
         Ok((input, Expression::Unary(operator, Box::new(expr))))
     } else {
-        primary(input)
+        precedence0(input)
     }
 }
 
-fn primary(input: TokenSlice) -> IResult<TokenSlice, Expression> {
+/// Parses expressions with the lowest precedence (literals, symbols, and subexpressions)
+fn precedence0(input: TokenSlice) -> IResult<TokenSlice, Expression> {
     if let Ok((input, expr)) =
         map_res::<_, _, _, (), _, _, _>(take(1 as usize), |t: TokenSlice| match t[0] {
             Token::Identifier(name) => Ok(Expression::Symbol(name)),
@@ -135,7 +138,7 @@ fn primary(input: TokenSlice) -> IResult<TokenSlice, Expression> {
         Ok((input, expr))
     } else {
         let (input, _) = subexpr_start(input)?;
-        let (input, expr) = equality(input)?;
+        let (input, expr) = precedence5(input)?;
         let (input, _) = subexpr_end(input)?;
         Ok((input, Expression::Grouping(Box::new(expr))))
     }
