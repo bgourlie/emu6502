@@ -6,7 +6,6 @@ use crate::Token;
 use nom::{
     bytes::complete::{take, take_while1},
     combinator::{map, map_res},
-    error::ParseError,
     IResult,
 };
 use std::rc::Rc;
@@ -26,7 +25,9 @@ enum BinaryOperator {
     Subtraction,
     Equals,
     NotEquals,
+    GreaterThan,
     GreaterThanOrEquals,
+    LessThan,
     LessThanOrEquals,
     Complement,
     And,
@@ -45,15 +46,86 @@ enum Expression<'a> {
     Grouping(BoxedExpression<'a>),
 }
 
+/// An an expression with comparison precedence.
+fn equality(input: TokenSlice) -> IResult<TokenSlice, Expression> {
+    let (input, left) = comparison(input)?;
+    if let Ok((input, operator)) = equality_operator(input) {
+        let (input, right) = comparison(input)?;
+        Ok((
+            input,
+            Expression::Binary(Rc::new(Box::new(left)), operator, Rc::new(Box::new(right))),
+        ))
+    } else {
+        Ok((input, left))
+    }
+}
+
+fn equality_operator(input: TokenSlice) -> IResult<TokenSlice, BinaryOperator> {
+    map_res(take(1 as usize), |t: TokenSlice| match t[0] {
+        Token::EqualsOperator => Ok(BinaryOperator::Equals),
+        Token::NotEqualsOperator => Ok(BinaryOperator::NotEquals),
+        _ => Err(()),
+    })(input)
+}
+
+/// An an expression with comparison precedence.
+fn comparison(input: TokenSlice) -> IResult<TokenSlice, Expression> {
+    let (input, left) = addition(input)?;
+    if let Ok((input, operator)) = comparison_operator(input) {
+        let (input, right) = addition(input)?;
+        Ok((
+            input,
+            Expression::Binary(Rc::new(Box::new(left)), operator, Rc::new(Box::new(right))),
+        ))
+    } else {
+        Ok((input, left))
+    }
+}
+
+fn comparison_operator(input: TokenSlice) -> IResult<TokenSlice, BinaryOperator> {
+    map_res(take(1 as usize), |t: TokenSlice| match t[0] {
+        Token::GreaterThanOperator => Ok(BinaryOperator::GreaterThan),
+        Token::LessThanOperator => Ok(BinaryOperator::LessThan),
+        Token::GreaterThanOrEqualToOperator => Ok(BinaryOperator::GreaterThanOrEquals),
+        Token::LessThanOrEqualToOperator => Ok(BinaryOperator::LessThanOrEquals),
+        _ => Err(()),
+    })(input)
+}
+
+/// An an expression with addition precedence (addition or subtraction).
+fn addition(input: TokenSlice) -> IResult<TokenSlice, Expression> {
+    let (input, left) = multiplication(input)?;
+    if let Ok((input, operator)) = addition_operator(input) {
+        let (input, right) = multiplication(input)?;
+        Ok((
+            input,
+            Expression::Binary(Rc::new(Box::new(left)), operator, Rc::new(Box::new(right))),
+        ))
+    } else {
+        Ok((input, left))
+    }
+}
+
+fn addition_operator(input: TokenSlice) -> IResult<TokenSlice, BinaryOperator> {
+    map_res(take(1 as usize), |t: TokenSlice| match t[0] {
+        Token::PlusOperator => Ok(BinaryOperator::Addition),
+        Token::MinusOperator => Ok(BinaryOperator::Subtraction),
+        _ => Err(()),
+    })(input)
+}
+
 /// An an expression with multiplication precedence (product or division).
 fn multiplication(input: TokenSlice) -> IResult<TokenSlice, Expression> {
     let (input, left) = unary(input)?;
-    let (input, operator) = multiplication_operator(input)?;
-    let (input, right) = unary(input)?;
-    Ok((
-        input,
-        Expression::Binary(Rc::new(Box::new(left)), operator, Rc::new(Box::new(right))),
-    ))
+    if let Ok((input, operator)) = multiplication_operator(input) {
+        let (input, right) = unary(input)?;
+        Ok((
+            input,
+            Expression::Binary(Rc::new(Box::new(left)), operator, Rc::new(Box::new(right))),
+        ))
+    } else {
+        Ok((input, left))
+    }
 }
 
 fn multiplication_operator(input: TokenSlice) -> IResult<TokenSlice, BinaryOperator> {
@@ -122,7 +194,7 @@ fn primary(input: TokenSlice) -> IResult<TokenSlice, Expression> {
         Ok((input, expr))
     } else {
         let (input, _) = subexpr_start(input)?;
-        let (input, expr) = primary(input)?;
+        let (input, expr) = equality(input)?;
         let (input, _) = subexpr_end(input)?;
         Ok((input, Expression::Grouping(Rc::new(Box::new(expr)))))
     }
