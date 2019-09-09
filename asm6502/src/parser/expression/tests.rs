@@ -1,4 +1,5 @@
 use super::*;
+use crate::parser::parse;
 
 #[test]
 fn test_literal_expr() {
@@ -157,10 +158,4 @@ fn test_expression_9() {
         ),
         expr
     );
-}
-
-fn parse(input: &'static str) -> Vec<crate::Token> {
-    let input = crate::Span::new(input);
-    let (_, parsed) = crate::parse(input).unwrap();
-    parsed.into_iter().map(|(_, token)| token).collect()
 }

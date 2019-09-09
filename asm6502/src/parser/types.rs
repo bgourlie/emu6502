@@ -29,6 +29,7 @@ pub enum GenericToken {
     LessThanOrEqualsOperator,
     SubExprStart,
     SubExprEnd,
+    MacroStart,
 }
 
 impl InputLength for GenericToken {
@@ -56,6 +57,7 @@ impl GenericToken {
             Token::ComplementOperator => self == GenericToken::ComplementOperator,
             Token::SubExprStart => self == GenericToken::SubExprStart,
             Token::SubExprEnd => self == GenericToken::SubExprEnd,
+            Token::MacroStart => self == GenericToken::MacroStart,
             _ => unimplemented!(),
         }
     }
