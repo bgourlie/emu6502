@@ -1,19 +1,13 @@
 mod expression;
 mod types;
 
-use crate::{
-    parser::{expression::Expression, types::GenericToken},
-    Token,
-};
-use expression::expression;
+use crate::{parser::expression::Expression, Token};
 use fnv::FnvHashSet;
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, map_res, opt},
-    sequence::pair,
+    bytes::complete::take,
+    combinator::{map_res, opt},
     IResult,
 };
-use shared6502::{Addressing, Op};
 use types::TokenSlice;
 
 struct Parser<'a> {

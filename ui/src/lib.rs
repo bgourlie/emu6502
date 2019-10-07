@@ -149,7 +149,7 @@ fn update<M: Mapper + Debugger + 'static>(
 }
 
 fn view<M: Mapper + Debugger>(model: &Model<M>) -> impl View<Msg> {
-    let (top_view, main_view) = match model.state {
+    let (mut top_view, mut main_view) = match model.state {
         State::RomSelection => {
             let top_view = div![label![
                 id!["romSelectButton"],
@@ -183,8 +183,8 @@ fn view<M: Mapper + Debugger>(model: &Model<M>) -> impl View<Msg> {
     };
 
     let console_rows: Vec<Node<Msg>> = model.console_buffer.iter().map(|s| div![s]).collect();
-    let top_view = top_view.add_attr("id".to_owned(), "topRow".to_owned());
-    let main_view = main_view
+    top_view.add_attr("id".to_owned(), "topRow".to_owned());
+    main_view
         .add_attr("id".to_owned(), "mainRow".to_owned())
         .add_child(div![id!["console"], console_rows]);
 
@@ -221,7 +221,7 @@ fn disassembly(disassembly: &Disassembly, offset: u16) -> Node<Msg> {
                 .find_target_label(*addr, *i)
                 .unwrap_or_else(|| i.operand().to_string().into());
 
-            let row = div![
+            let mut row = div![
                 div![
                     class!["gutter"],
                     div![class!["label"], offset_label],
@@ -234,11 +234,11 @@ fn disassembly(disassembly: &Disassembly, offset: u16) -> Node<Msg> {
                 ]
             ];
 
-            if *addr != offset {
-                row
-            } else {
-                row.add_class("current")
+            if *addr == offset {
+                row.add_class("current");
             }
+
+            row
         })
         .collect();
 

@@ -7,7 +7,7 @@ use nom::{
 
 use std::{
     cmp::PartialEq,
-    iter::{Enumerate, Map},
+    iter::{Copied, Enumerate},
     ops::Index,
     slice::Iter,
 };
@@ -69,7 +69,7 @@ pub struct TokenSlice<'a>(pub &'a [Token<'a>]);
 impl<'a> InputIter for TokenSlice<'a> {
     type Item = Token<'a>;
     type Iter = Enumerate<Self::IterElem>;
-    type IterElem = Map<Iter<'a, Self::Item>, fn(&Token<'a>) -> Token<'a>>;
+    type IterElem = Copied<Iter<'a, Token<'a>>>;
 
     #[inline]
     fn iter_indices(&self) -> Self::Iter {
@@ -78,7 +78,7 @@ impl<'a> InputIter for TokenSlice<'a> {
     #[inline]
     fn iter_elements(&self) -> Self::IterElem {
         let TokenSlice(inner) = self;
-        inner.iter().map(|t| *t)
+        inner.iter().copied()
     }
     #[inline]
     fn position<P>(&self, predicate: P) -> Option<usize>
