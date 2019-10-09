@@ -6,7 +6,6 @@ use nom::{
 };
 
 use std::{
-    cmp::PartialEq,
     iter::{Copied, Enumerate},
     ops::Index,
     slice::Iter,

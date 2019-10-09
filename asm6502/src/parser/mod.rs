@@ -15,7 +15,7 @@ struct Parser<'a> {
 }
 
 fn identifier(input: TokenSlice) -> IResult<TokenSlice, Option<&str>> {
-    opt(map_res(take(1 as usize), |token: TokenSlice| {
+    opt(map_res(take(1_usize), |token: TokenSlice| {
         if let Token::Identifier(identifier) = token[0] {
             Ok(identifier)
         } else {
