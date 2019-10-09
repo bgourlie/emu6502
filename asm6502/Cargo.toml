@@ -10,4 +10,3 @@ edition = "2018"
 shared6502 = {path = "../shared6502" }
 nom = "5.0"
 nom_locate = "0.4.0"
-fnv = "1.0.6"

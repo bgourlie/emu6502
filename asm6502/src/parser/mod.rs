@@ -2,33 +2,55 @@ mod expression;
 mod types;
 
 use crate::{parser::expression::Expression, Token};
-use fnv::FnvHashSet;
 use nom::{
     bytes::complete::take,
-    combinator::{map_res, opt},
+    combinator::{map, map_res},
+    sequence::terminated,
     IResult,
 };
 use types::TokenSlice;
 
-struct Parser<'a> {
-    macro_names: FnvHashSet<&'a str>,
-}
-
-fn identifier(input: TokenSlice) -> IResult<TokenSlice, Option<&str>> {
-    opt(map_res(take(1_usize), |token: TokenSlice| {
+fn identifier(input: TokenSlice) -> IResult<TokenSlice, &str> {
+    map_res(take(1_usize), |token: TokenSlice| {
         if let Token::Identifier(identifier) = token[0] {
             Ok(identifier)
         } else {
             Err(())
         }
-    }))(input)
+    })(input)
 }
 
-struct Line<'a> {
-    label: Option<&'a str>,
-    action: Option<&'static str>,
-    arguments: &'a [Token<'a>],
-    comment: Option<&'a str>,
+fn macro_start(input: TokenSlice) -> IResult<TokenSlice, Line> {
+    map(
+        terminated(
+            identifier,
+            map_res(take(1_usize), |token: TokenSlice| {
+                if Token::MacroStart == token[0] {
+                    Ok(())
+                } else {
+                    Err(())
+                }
+            }),
+        ),
+        |ident| Line::MacroStart(ident),
+    )(input)
+}
+
+fn macro_end(input: TokenSlice) -> IResult<TokenSlice, Line> {
+    map_res(take(1_usize), |token: TokenSlice| {
+        if Token::MacroEnd == token[0] {
+            Ok(Line::MacroEnd)
+        } else {
+            Err(())
+        }
+    })(input)
+}
+
+enum Line<'a> {
+    MacroStart(&'a str),
+    MacroEnd,
+    Instruction(Operand<'a>),
+    Directive,
 }
 
 #[derive(Debug)]
