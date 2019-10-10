@@ -8,6 +8,7 @@ use nom::{
     sequence::terminated,
     IResult,
 };
+use shared6502::Op;
 use types::TokenSlice;
 
 fn identifier(input: TokenSlice) -> IResult<TokenSlice, &str> {
@@ -46,16 +47,36 @@ fn macro_end(input: TokenSlice) -> IResult<TokenSlice, Line> {
     })(input)
 }
 
+fn comment(input: TokenSlice) -> IResult<TokenSlice, &str> {
+    map_res(take(1_usize), |token: TokenSlice| {
+        if let Token::Comment(com) = token[0] {
+            Ok(com)
+        } else {
+            Err(())
+        }
+    })(input)
+}
+
+fn op(input: TokenSlice) -> IResult<TokenSlice, Op> {
+    map_res(take(1_usize), |token: TokenSlice| {
+        if let Token::Mnemonic(op) = token[0] {
+            Ok(op)
+        } else {
+            Err(())
+        }
+    })(input)
+}
+
 enum Line<'a> {
     MacroStart(&'a str),
     MacroEnd,
-    Instruction(Operand<'a>),
+    Instruction(Op, Operand<'a>),
     Directive,
 }
 
 #[derive(Debug)]
 enum Operand<'a> {
-    Absolute,
+    Absolute(Box<Expression<'a>>),
     AbsoluteX(Box<Expression<'a>>),
     AbsoluteY(Box<Expression<'a>>),
     Accumulator,
