@@ -4,12 +4,33 @@ mod types;
 use crate::{parser::expression::Expression, Token};
 use nom::{
     bytes::complete::take,
-    combinator::{map, map_res},
-    sequence::terminated,
+    combinator::{map, map_res, opt},
+    sequence::{preceded, terminated},
     IResult,
 };
 use shared6502::Op;
 use types::TokenSlice;
+
+#[derive(Debug)]
+enum Line<'a> {
+    MacroStart(&'a str),
+    MacroEnd,
+    Instruction(Op, Operand<'a>),
+    Directive,
+}
+
+#[derive(Debug)]
+enum Operand<'a> {
+    AbsoluteOrRelative(Box<Expression<'a>>),
+    AbsoluteX(Box<Expression<'a>>),
+    AbsoluteY(Box<Expression<'a>>),
+    Accumulator,
+    IndexedIndirect(Box<Expression<'a>>),
+    IndirectIndexed(Box<Expression<'a>>),
+    Implied,
+    Immediate(Box<Expression<'a>>),
+    Indirect(Box<Expression<'a>>),
+}
 
 fn identifier(input: TokenSlice) -> IResult<TokenSlice, &str> {
     map_res(take(1_usize), |token: TokenSlice| {
@@ -67,25 +88,17 @@ fn op(input: TokenSlice) -> IResult<TokenSlice, Op> {
     })(input)
 }
 
-enum Line<'a> {
-    MacroStart(&'a str),
-    MacroEnd,
-    Instruction(Op, Operand<'a>),
-    Directive,
-}
-
-#[derive(Debug)]
-enum Operand<'a> {
-    Absolute(Box<Expression<'a>>),
-    AbsoluteX(Box<Expression<'a>>),
-    AbsoluteY(Box<Expression<'a>>),
-    Accumulator,
-    IndexedIndirect(Box<Expression<'a>>),
-    IndirectIndexed(Box<Expression<'a>>),
-    Implied,
-    Immediate(Box<Expression<'a>>),
-    Indirect(Box<Expression<'a>>),
-    Relative(Box<Expression<'a>>),
+fn operand_implied(input: TokenSlice) -> IResult<TokenSlice, Operand> {
+    preceded(
+        opt(comment),
+        map_res(take(1_usize), |token: TokenSlice| {
+            if let Token::Newline = token[0] {
+                Ok(Operand::Implied)
+            } else {
+                Err(())
+            }
+        }),
+    )(input)
 }
 
 #[cfg(test)]
