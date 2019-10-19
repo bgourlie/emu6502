@@ -10,43 +10,9 @@ use crate::parser::{
         less_than_or_equals_operator, minus_operator, not_equals, oct_literal, open_paren,
         plus_operator, star_operator,
     },
+    BinaryOperator, Expression, UnaryOperator,
 };
 use nom::{branch::alt, combinator::map, IResult};
-
-type BoxedExpression<'a> = Box<Expression<'a>>;
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum UnaryOperator {
-    Negation,
-}
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum BinaryOperator {
-    Multiply,
-    Addition,
-    Subtraction,
-    Equals,
-    NotEquals,
-    GreaterThan,
-    GreaterThanOrEquals,
-    LessThan,
-    LessThanOrEquals,
-    Complement,
-    And,
-    Or,
-    Xor,
-    LeftShift,
-    RightShift,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Expression<'a> {
-    Literal(i32),
-    Symbol(&'a str),
-    Unary(UnaryOperator, BoxedExpression<'a>),
-    Binary(BoxedExpression<'a>, BinaryOperator, BoxedExpression<'a>),
-    Grouping(BoxedExpression<'a>),
-}
 
 /// Top-level expression parser
 pub fn expression<'a, T: Into<TokenSlice<'a>>>(

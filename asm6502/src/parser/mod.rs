@@ -1,14 +1,9 @@
 mod expression;
+mod instruction;
 mod token_parsers;
 mod types;
 
-use crate::parser::{
-    expression::{expression, Expression},
-    token_parsers::{
-        comment, identifier, immediate_prefix, macro_start, newline, offset_x_suffix,
-        offset_y_suffix,
-    },
-};
+use crate::parser::token_parsers::{comment, identifier, macro_start, newline};
 use nom::{
     combinator::{map, opt},
     sequence::{preceded, terminated},
@@ -17,16 +12,41 @@ use nom::{
 use shared6502::Op;
 use types::TokenSlice;
 
-#[derive(Debug)]
-enum Line<'a> {
-    MacroStart(&'a str),
-    MacroEnd,
-    Instruction(Op, Operand<'a>),
-    Directive,
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum UnaryOperator {
+    Negation,
 }
 
-#[derive(Debug)]
-enum Operand<'a> {
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum BinaryOperator {
+    Multiply,
+    Addition,
+    Subtraction,
+    Equals,
+    NotEquals,
+    GreaterThan,
+    GreaterThanOrEquals,
+    LessThan,
+    LessThanOrEquals,
+    Complement,
+    And,
+    Or,
+    Xor,
+    LeftShift,
+    RightShift,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Expression<'a> {
+    Literal(i32),
+    Symbol(&'a str),
+    Unary(UnaryOperator, Box<Expression<'a>>),
+    Binary(Box<Expression<'a>>, BinaryOperator, Box<Expression<'a>>),
+    Grouping(Box<Expression<'a>>),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Operand<'a> {
     AbsoluteOrRelative(Box<Expression<'a>>),
     AbsoluteX(Box<Expression<'a>>),
     AbsoluteY(Box<Expression<'a>>),
@@ -36,6 +56,14 @@ enum Operand<'a> {
     Implied,
     Immediate(Box<Expression<'a>>),
     Indirect(Box<Expression<'a>>),
+}
+
+#[derive(Debug)]
+enum Line<'a> {
+    MacroStart(&'a str),
+    MacroEnd,
+    Instruction(Op, Operand<'a>),
+    Directive,
 }
 
 pub fn maybe_comment_then_newline<'a, T: Into<TokenSlice<'a>>>(
@@ -48,54 +76,6 @@ fn macro_decl<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, 
     map(terminated(identifier, macro_start), |ident| {
         Line::MacroStart(ident)
     })(input.into())
-}
-
-fn operand_implied<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Operand<'a>> {
-    map(maybe_comment_then_newline, |_| Operand::Implied)(input.into())
-}
-
-fn operand_immediate<'a, T: Into<TokenSlice<'a>>>(
-    input: T,
-) -> IResult<TokenSlice<'a>, Operand<'a>> {
-    map(
-        terminated(
-            preceded(immediate_prefix, expression),
-            maybe_comment_then_newline,
-        ),
-        |expr| Operand::Immediate(Box::new(expr)),
-    )(input.into())
-}
-
-fn operand_absolute_or_relative<'a, T: Into<TokenSlice<'a>>>(
-    input: T,
-) -> IResult<TokenSlice<'a>, Operand<'a>> {
-    map(terminated(expression, maybe_comment_then_newline), |expr| {
-        Operand::AbsoluteOrRelative(Box::new(expr))
-    })(input.into())
-}
-
-fn operand_absolute_x<'a, T: Into<TokenSlice<'a>>>(
-    input: T,
-) -> IResult<TokenSlice<'a>, Operand<'a>> {
-    map(
-        terminated(
-            terminated(expression, offset_x_suffix),
-            maybe_comment_then_newline,
-        ),
-        |expr| Operand::AbsoluteX(Box::new(expr)),
-    )(input.into())
-}
-
-fn operand_absolute_y<'a, T: Into<TokenSlice<'a>>>(
-    input: T,
-) -> IResult<TokenSlice<'a>, Operand<'a>> {
-    map(
-        terminated(
-            terminated(expression, offset_y_suffix),
-            maybe_comment_then_newline,
-        ),
-        |expr| Operand::AbsoluteY(Box::new(expr)),
-    )(input.into())
 }
 
 #[cfg(test)]

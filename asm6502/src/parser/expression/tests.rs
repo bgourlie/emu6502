@@ -1,5 +1,5 @@
-use super::*;
-use crate::parser::parse;
+use super::expression;
+use crate::parser::{parse, types::TokenSlice, BinaryOperator, Expression, UnaryOperator};
 
 #[test]
 fn test_literal_expr() {
@@ -11,7 +11,7 @@ fn test_literal_expr() {
 #[test]
 fn test_symbol_expr() {
     let tokens = parse("something = 1; hello\n ;asdfasdfasdf\n");
-    let (_, primary_expr) = precedence0(TokenSlice(&tokens)).unwrap();
+    let (_, primary_expr) = expression(TokenSlice(&tokens)).unwrap();
     assert_eq!(Expression::Symbol("something"), primary_expr);
 }
 
