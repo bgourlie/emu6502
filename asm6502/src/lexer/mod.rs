@@ -29,7 +29,7 @@ pub enum Token<'a> {
     NoOptDirective,
     EquDirective,
     OpenParen,
-    EndParen,
+    CloseParen,
     BangOperator,
     EqualsOperator,
     NotEqualsOperator,
@@ -107,7 +107,7 @@ pub fn parse(input: Span) -> IResult<Span, Vec<(Span, Token)>> {
             operator_token(">", |(pos, _)| (pos, Token::GreaterThanOperator)),
             operator_token("<", |(pos, _)| (pos, Token::LessThanOperator)),
             open_paren_token,
-            end_paren_token,
+            close_paren_token,
             dec_literal_token,
             hex_literal_token,
             oct_literal_token,
@@ -358,8 +358,10 @@ fn open_paren_token(input: Span) -> IResult<Span, (Span, Token)> {
     })(input)
 }
 
-fn end_paren_token(input: Span) -> IResult<Span, (Span, Token)> {
-    map(pair(position, char(')')), |(pos, _)| (pos, Token::EndParen))(input)
+fn close_paren_token(input: Span) -> IResult<Span, (Span, Token)> {
+    map(pair(position, char(')')), |(pos, _)| {
+        (pos, Token::CloseParen)
+    })(input)
 }
 
 fn equ_directive_token(input: Span) -> IResult<Span, (Span, Token)> {
