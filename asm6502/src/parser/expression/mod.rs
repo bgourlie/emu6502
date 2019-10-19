@@ -145,8 +145,8 @@ fn precedence0(input: TokenSlice) -> IResult<TokenSlice, Expression> {
 
 fn expression_tokens(input: TokenSlice) -> IResult<TokenSlice, TokenSlice> {
     take_while1(|t| {
-        if let Token::SubExprStart
-        | Token::SubExprEnd
+        if let Token::OpenParen
+        | Token::EndParen
         | Token::XorOperator
         | Token::StarOperator
         | Token::EqualsOperator
@@ -178,7 +178,7 @@ fn expression_tokens(input: TokenSlice) -> IResult<TokenSlice, TokenSlice> {
 
 fn subexpr_start(input: TokenSlice) -> IResult<TokenSlice, ()> {
     map_res(take(1 as usize), |t: TokenSlice| {
-        if let Token::SubExprStart = t[0] {
+        if let Token::OpenParen = t[0] {
             Ok(())
         } else {
             Err(())
@@ -188,7 +188,7 @@ fn subexpr_start(input: TokenSlice) -> IResult<TokenSlice, ()> {
 
 fn subexpr_end(input: TokenSlice) -> IResult<TokenSlice, ()> {
     map_res(take(1 as usize), |t: TokenSlice| {
-        if let Token::SubExprEnd = t[0] {
+        if let Token::EndParen = t[0] {
             Ok(())
         } else {
             Err(())

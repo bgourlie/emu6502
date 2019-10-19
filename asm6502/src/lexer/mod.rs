@@ -28,8 +28,8 @@ pub enum Token<'a> {
     OctLiteral(i32),
     NoOptDirective,
     EquDirective,
-    SubExprStart,
-    SubExprEnd,
+    OpenParen,
+    EndParen,
     BangOperator,
     EqualsOperator,
     NotEqualsOperator,
@@ -106,8 +106,8 @@ pub fn parse(input: Span) -> IResult<Span, Vec<(Span, Token)>> {
             operator_token("<=", |(pos, _)| (pos, Token::LessThanOrEqualToOperator)),
             operator_token(">", |(pos, _)| (pos, Token::GreaterThanOperator)),
             operator_token("<", |(pos, _)| (pos, Token::LessThanOperator)),
-            sub_expr_start_token,
-            sub_expr_end_token,
+            open_paren_token,
+            end_paren_token,
             dec_literal_token,
             hex_literal_token,
             oct_literal_token,
@@ -352,16 +352,14 @@ fn noopt_directive_token(input: Span) -> IResult<Span, (Span, Token)> {
     )(input)
 }
 
-fn sub_expr_start_token(input: Span) -> IResult<Span, (Span, Token)> {
+fn open_paren_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(pair(position, char('(')), |(pos, _)| {
-        (pos, Token::SubExprStart)
+        (pos, Token::OpenParen)
     })(input)
 }
 
-fn sub_expr_end_token(input: Span) -> IResult<Span, (Span, Token)> {
-    map(pair(position, char(')')), |(pos, _)| {
-        (pos, Token::SubExprEnd)
-    })(input)
+fn end_paren_token(input: Span) -> IResult<Span, (Span, Token)> {
+    map(pair(position, char(')')), |(pos, _)| (pos, Token::EndParen))(input)
 }
 
 fn equ_directive_token(input: Span) -> IResult<Span, (Span, Token)> {
