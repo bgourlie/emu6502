@@ -104,6 +104,36 @@ fn immediate_prefix(input: TokenSlice) -> IResult<TokenSlice, ()> {
     })(input)
 }
 
+//fn open_paren(input: TokenSlice) -> IResult<TokenSlice, ()> {
+//    map_res(take(1_usize), |token: TokenSlice| {
+//        if let Token::P = token[0] {
+//            Ok(())
+//        } else {
+//            Err(())
+//        }
+//    })(input)
+//}
+
+fn offset_x_suffix(input: TokenSlice) -> IResult<TokenSlice, ()> {
+    map_res(take(1_usize), |token: TokenSlice| {
+        if let Token::OffsetByXOperand = token[0] {
+            Ok(())
+        } else {
+            Err(())
+        }
+    })(input)
+}
+
+fn offset_y_suffix(input: TokenSlice) -> IResult<TokenSlice, ()> {
+    map_res(take(1_usize), |token: TokenSlice| {
+        if let Token::OffsetByYOperand = token[0] {
+            Ok(())
+        } else {
+            Err(())
+        }
+    })(input)
+}
+
 fn op(input: TokenSlice) -> IResult<TokenSlice, Op> {
     map_res(take(1_usize), |token: TokenSlice| {
         if let Token::Mnemonic(op) = token[0] {
@@ -129,6 +159,20 @@ fn operand_absolute_or_relative(input: TokenSlice) -> IResult<TokenSlice, Operan
     map(terminated(expression, newline), |expr| {
         Operand::AbsoluteOrRelative(Box::new(expr))
     })(input)
+}
+
+fn operand_absolute_x(input: TokenSlice) -> IResult<TokenSlice, Operand> {
+    map(
+        terminated(terminated(expression, offset_x_suffix), newline),
+        |expr| Operand::AbsoluteX(Box::new(expr)),
+    )(input)
+}
+
+fn operand_absolute_y(input: TokenSlice) -> IResult<TokenSlice, Operand> {
+    map(
+        terminated(terminated(expression, offset_y_suffix), newline),
+        |expr| Operand::AbsoluteY(Box::new(expr)),
+    )(input)
 }
 
 #[cfg(test)]

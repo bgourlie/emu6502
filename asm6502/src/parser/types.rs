@@ -1,8 +1,7 @@
 use crate::Token;
 use nom::{
     error::{ErrorKind, ParseError},
-    Compare, CompareResult, Err, InputIter, InputLength, InputTake, InputTakeAtPosition, Needed,
-    Slice,
+    Err, InputIter, InputLength, InputTake, InputTakeAtPosition, Needed, Slice,
 };
 
 use std::{
@@ -10,57 +9,6 @@ use std::{
     ops::Index,
     slice::Iter,
 };
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum GenericToken {
-    Comment,
-    Newline,
-    StarOperator,
-    PlusOperator,
-    MinusOperator,
-    AndOperator,
-    OrOperator,
-    XorOperator,
-    ComplementOperator,
-    EqualsOperator,
-    NotEqualsOperator,
-    GreaterThanOrEqualsOperator,
-    LessThanOrEqualsOperator,
-    SubExprStart,
-    SubExprEnd,
-    MacroStart,
-}
-
-impl InputLength for GenericToken {
-    fn input_len(&self) -> usize {
-        1
-    }
-}
-
-impl GenericToken {
-    pub fn matches_token(self, token: Token) -> bool {
-        match token {
-            Token::Newline => self == GenericToken::Newline,
-            Token::Comment(_) => self == GenericToken::Comment,
-            Token::StarOperator => self == GenericToken::StarOperator,
-            Token::PlusOperator => self == GenericToken::PlusOperator,
-            Token::MinusOperator => self == GenericToken::MinusOperator,
-            Token::EqualsOperator => self == GenericToken::EqualsOperator,
-            Token::NotEqualsOperator => self == GenericToken::NotEqualsOperator,
-            Token::LessThanOrEqualToOperator => self == GenericToken::LessThanOrEqualsOperator,
-            Token::GreaterThanOrEqualToOperator => {
-                self == GenericToken::GreaterThanOrEqualsOperator
-            }
-            Token::AndOperator => self == GenericToken::AndOperator,
-            Token::OrOperator => self == GenericToken::OrOperator,
-            Token::ComplementOperator => self == GenericToken::ComplementOperator,
-            Token::SubExprStart => self == GenericToken::SubExprStart,
-            Token::SubExprEnd => self == GenericToken::SubExprEnd,
-            Token::MacroStart => self == GenericToken::MacroStart,
-            _ => unimplemented!(),
-        }
-    }
-}
 
 #[derive(Copy, Clone, Debug)]
 pub struct TokenSlice<'a>(pub &'a [Token<'a>]);
@@ -110,27 +58,6 @@ impl<'a> Index<usize> for TokenSlice<'a> {
     fn index(&self, index: usize) -> &Self::Output {
         let TokenSlice(inner) = self;
         &inner[index]
-    }
-}
-
-impl<'a> Compare<GenericToken> for TokenSlice<'a> {
-    fn compare(&self, other: GenericToken) -> CompareResult {
-        self.compare_no_case(other)
-    }
-
-    fn compare_no_case(&self, other: GenericToken) -> CompareResult {
-        let TokenSlice(inner) = self;
-        inner
-            .get(0)
-            .map(|t| other.matches_token(*t))
-            .map(|found| {
-                if found {
-                    CompareResult::Ok
-                } else {
-                    CompareResult::Error
-                }
-            })
-            .unwrap_or_else(|| CompareResult::Error)
     }
 }
 
