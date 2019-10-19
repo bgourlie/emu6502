@@ -247,3 +247,23 @@ pub fn not_equals<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'
         }
     })(input.into())
 }
+
+pub fn macro_start<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+    map_res(take(1_usize), |token: TokenSlice| {
+        if let Token::MacroStart = token[0] {
+            Ok(())
+        } else {
+            Err(())
+        }
+    })(input.into())
+}
+
+pub fn macro_end<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+    map_res(take(1_usize), |token: TokenSlice| {
+        if Token::MacroEnd == token[0] {
+            Ok(())
+        } else {
+            Err(())
+        }
+    })(input.into())
+}

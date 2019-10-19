@@ -2,18 +2,15 @@ mod expression;
 mod token_parsers;
 mod types;
 
-use crate::{
-    parser::{
-        expression::{expression, Expression},
-        token_parsers::{
-            comment, identifier, immediate_prefix, newline, offset_x_suffix, offset_y_suffix,
-        },
+use crate::parser::{
+    expression::{expression, Expression},
+    token_parsers::{
+        comment, identifier, immediate_prefix, macro_start, newline, offset_x_suffix,
+        offset_y_suffix,
     },
-    Token,
 };
 use nom::{
-    bytes::complete::take,
-    combinator::{map, map_res, opt},
+    combinator::{map, opt},
     sequence::{preceded, terminated},
     IResult,
 };
@@ -47,29 +44,9 @@ pub fn maybe_comment_then_newline<'a, T: Into<TokenSlice<'a>>>(
     preceded(opt(comment), newline)(input.into())
 }
 
-fn macro_start<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
-    map(
-        terminated(
-            identifier,
-            map_res(take(1_usize), |token: TokenSlice| {
-                if Token::MacroStart == token[0] {
-                    Ok(())
-                } else {
-                    Err(())
-                }
-            }),
-        ),
-        |ident| Line::MacroStart(ident),
-    )(input.into())
-}
-
-fn macro_end<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if Token::MacroEnd == token[0] {
-            Ok(Line::MacroEnd)
-        } else {
-            Err(())
-        }
+fn macro_decl<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+    map(terminated(identifier, macro_start), |ident| {
+        Line::MacroStart(ident)
     })(input.into())
 }
 
