@@ -11,8 +11,7 @@ fn test_literal_expr() {
 #[test]
 fn test_symbol_expr() {
     let tokens = parse("something = 1; hello\n ;asdfasdfasdf\n");
-    let (_, tokens) = expression_tokens(TokenSlice(&tokens)).unwrap();
-    let (_, primary_expr) = precedence0(tokens).unwrap();
+    let (_, primary_expr) = precedence0(TokenSlice(&tokens)).unwrap();
     assert_eq!(Expression::Symbol("something"), primary_expr);
 }
 

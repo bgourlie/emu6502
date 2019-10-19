@@ -2,21 +2,16 @@
 mod tests;
 
 use super::types::TokenSlice;
-use crate::{
-    parser::{
-        identifier,
-        token_parsers::{
-            bang_operator, bin_literal, character_literal, close_paren, dec_literal, equals,
-            greater_than_operator, greater_than_or_equals_operator, hex_literal,
-            less_than_operator, less_than_or_equals_operator, minus_operator, not_equals,
-            oct_literal, open_paren, plus_operator, star_operator,
-        },
+use crate::parser::{
+    identifier,
+    token_parsers::{
+        bang_operator, bin_literal, character_literal, close_paren, dec_literal, equals,
+        greater_than_operator, greater_than_or_equals_operator, hex_literal, less_than_operator,
+        less_than_or_equals_operator, minus_operator, not_equals, oct_literal, open_paren,
+        plus_operator, star_operator,
     },
-    Token,
 };
-use nom::{
-    branch::alt, bytes::complete::take_while1, combinator::map, IResult, InputLength, Needed,
-};
+use nom::{branch::alt, combinator::map, IResult};
 
 type BoxedExpression<'a> = Box<Expression<'a>>;
 
@@ -53,22 +48,11 @@ pub enum Expression<'a> {
     Grouping(BoxedExpression<'a>),
 }
 
+/// Top-level expression parser
 pub fn expression(input: TokenSlice) -> IResult<TokenSlice, Expression> {
-    let (remaining, input) = expression_tokens(input)?;
-    let (input, expr) = precedence5(input)?;
-    if input.input_len() == 0 {
-        Ok((remaining, expr))
-    } else {
-        // TODO: This is not the correct error type. Eventually do proper error reporting.
-        Err(nom::Err::Incomplete(Needed::Size(input.input_len())))
-    }
-}
-
-/// Parses equality expressions
-fn precedence5(input: TokenSlice) -> IResult<TokenSlice, Expression> {
     let (input, left) = precedence4(input)?;
     if let Ok((input, operator)) = equality_operator(input) {
-        let (input, right) = precedence5(input)?;
+        let (input, right) = expression(input)?;
         Ok((
             input,
             Expression::Binary(Box::new(left), operator, Box::new(right)),
@@ -136,7 +120,7 @@ fn precedence0(input: TokenSlice) -> IResult<TokenSlice, Expression> {
         Ok((input, expr))
     } else {
         let (input, _) = open_paren(input)?;
-        let (input, expr) = precedence5(input)?;
+        let (input, expr) = expression(input)?;
         let (input, _) = close_paren(input)?;
         Ok((input, Expression::Grouping(Box::new(expr))))
     }
@@ -151,39 +135,6 @@ fn symbol_or_literal(input: TokenSlice) -> IResult<TokenSlice, Expression> {
             |val| Expression::Literal(val),
         ),
     ))(input)
-}
-
-fn expression_tokens(input: TokenSlice) -> IResult<TokenSlice, TokenSlice> {
-    take_while1(|t| {
-        if let Token::OpenParen
-        | Token::CloseParen
-        | Token::XorOperator
-        | Token::StarOperator
-        | Token::EqualsOperator
-        | Token::BangOperator
-        | Token::BinLiteral(_)
-        | Token::OctLiteral(_)
-        | Token::CharacterLiteral(_)
-        | Token::DecLiteral(_)
-        | Token::Identifier(_)
-        | Token::ComplementOperator
-        | Token::GreaterThanOperator
-        | Token::GreaterThanOrEqualToOperator
-        | Token::LessThanOperator
-        | Token::LessThanOrEqualToOperator
-        | Token::MinusOperator
-        | Token::PlusOperator
-        | Token::LeftShiftOperator
-        | Token::RightShiftOperator
-        | Token::NotEqualsOperator
-        | Token::OrOperator
-        | Token::AndOperator = t
-        {
-            true
-        } else {
-            false
-        }
-    })(input)
 }
 
 fn unary_operator(input: TokenSlice) -> IResult<TokenSlice, UnaryOperator> {
