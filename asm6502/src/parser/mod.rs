@@ -41,11 +41,13 @@ enum Operand<'a> {
     Indirect(Box<Expression<'a>>),
 }
 
-pub fn optional_comment_and_newline(input: TokenSlice) -> IResult<TokenSlice, ()> {
-    preceded(opt(comment), newline)(input)
+pub fn maybe_comment_then_newline<'a, T: Into<TokenSlice<'a>>>(
+    input: T,
+) -> IResult<TokenSlice<'a>, ()> {
+    preceded(opt(comment), newline)(input.into())
 }
 
-fn macro_start(input: TokenSlice) -> IResult<TokenSlice, Line> {
+fn macro_start<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
     map(
         terminated(
             identifier,
@@ -58,58 +60,65 @@ fn macro_start(input: TokenSlice) -> IResult<TokenSlice, Line> {
             }),
         ),
         |ident| Line::MacroStart(ident),
-    )(input)
+    )(input.into())
 }
 
-fn macro_end(input: TokenSlice) -> IResult<TokenSlice, Line> {
+fn macro_end<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
     map_res(take(1_usize), |token: TokenSlice| {
         if Token::MacroEnd == token[0] {
             Ok(Line::MacroEnd)
         } else {
             Err(())
         }
-    })(input)
+    })(input.into())
 }
 
-fn operand_implied(input: TokenSlice) -> IResult<TokenSlice, Operand> {
-    map(optional_comment_and_newline, |_| Operand::Implied)(input)
+fn operand_implied<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Operand<'a>> {
+    map(maybe_comment_then_newline, |_| Operand::Implied)(input.into())
 }
 
-fn operand_immediate(input: TokenSlice) -> IResult<TokenSlice, Operand> {
+fn operand_immediate<'a, T: Into<TokenSlice<'a>>>(
+    input: T,
+) -> IResult<TokenSlice<'a>, Operand<'a>> {
     map(
         terminated(
             preceded(immediate_prefix, expression),
-            optional_comment_and_newline,
+            maybe_comment_then_newline,
         ),
         |expr| Operand::Immediate(Box::new(expr)),
-    )(input)
+    )(input.into())
 }
 
-fn operand_absolute_or_relative(input: TokenSlice) -> IResult<TokenSlice, Operand> {
-    map(
-        terminated(expression, optional_comment_and_newline),
-        |expr| Operand::AbsoluteOrRelative(Box::new(expr)),
-    )(input)
+fn operand_absolute_or_relative<'a, T: Into<TokenSlice<'a>>>(
+    input: T,
+) -> IResult<TokenSlice<'a>, Operand<'a>> {
+    map(terminated(expression, maybe_comment_then_newline), |expr| {
+        Operand::AbsoluteOrRelative(Box::new(expr))
+    })(input.into())
 }
 
-fn operand_absolute_x(input: TokenSlice) -> IResult<TokenSlice, Operand> {
+fn operand_absolute_x<'a, T: Into<TokenSlice<'a>>>(
+    input: T,
+) -> IResult<TokenSlice<'a>, Operand<'a>> {
     map(
         terminated(
             terminated(expression, offset_x_suffix),
-            optional_comment_and_newline,
+            maybe_comment_then_newline,
         ),
         |expr| Operand::AbsoluteX(Box::new(expr)),
-    )(input)
+    )(input.into())
 }
 
-fn operand_absolute_y(input: TokenSlice) -> IResult<TokenSlice, Operand> {
+fn operand_absolute_y<'a, T: Into<TokenSlice<'a>>>(
+    input: T,
+) -> IResult<TokenSlice<'a>, Operand<'a>> {
     map(
         terminated(
             terminated(expression, offset_y_suffix),
-            optional_comment_and_newline,
+            maybe_comment_then_newline,
         ),
         |expr| Operand::AbsoluteY(Box::new(expr)),
-    )(input)
+    )(input.into())
 }
 
 #[cfg(test)]

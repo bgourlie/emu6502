@@ -13,6 +13,24 @@ use std::{
 #[derive(Copy, Clone, Debug)]
 pub struct TokenSlice<'a>(pub &'a [Token<'a>]);
 
+impl<'a> From<&'a Vec<Token<'a>>> for TokenSlice<'a> {
+    fn from(tokens: &'a Vec<Token<'a>>) -> Self {
+        TokenSlice(tokens)
+    }
+}
+
+impl<'a> From<&'a [Token<'a>]> for TokenSlice<'a> {
+    fn from(tokens: &'a [Token<'a>]) -> Self {
+        TokenSlice(tokens)
+    }
+}
+
+//impl<'a> From<&'a [Token<'a>]> for TokenSlice<'a> {
+//    fn from(tokens: &'a [Token<'a>]) -> Self {
+//        TokenSlice(tokens)
+//    }
+//}
+
 impl<'a> InputIter for TokenSlice<'a> {
     type Item = Token<'a>;
     type Iter = Enumerate<Self::IterElem>;

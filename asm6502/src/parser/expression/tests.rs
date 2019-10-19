@@ -4,7 +4,7 @@ use crate::parser::parse;
 #[test]
 fn test_literal_expr() {
     let tokens = parse("123 ; hello\n ;asdfasdfasdf\n");
-    let (_, primary) = expression(TokenSlice(&tokens)).unwrap();
+    let (_, primary) = expression(&tokens).unwrap();
     assert_eq!(Expression::Literal(123), primary);
 }
 

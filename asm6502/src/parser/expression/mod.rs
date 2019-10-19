@@ -49,8 +49,10 @@ pub enum Expression<'a> {
 }
 
 /// Top-level expression parser
-pub fn expression(input: TokenSlice) -> IResult<TokenSlice, Expression> {
-    let (input, left) = precedence4(input)?;
+pub fn expression<'a, T: Into<TokenSlice<'a>>>(
+    input: T,
+) -> IResult<TokenSlice<'a>, Expression<'a>> {
+    let (input, left) = precedence4(input.into())?;
     if let Ok((input, operator)) = equality_operator(input) {
         let (input, right) = expression(input)?;
         Ok((
@@ -63,8 +65,8 @@ pub fn expression(input: TokenSlice) -> IResult<TokenSlice, Expression> {
 }
 
 /// Parses comparison expressions
-fn precedence4(input: TokenSlice) -> IResult<TokenSlice, Expression> {
-    let (input, left) = precedence3(input)?;
+fn precedence4<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Expression<'a>> {
+    let (input, left) = precedence3(input.into())?;
     if let Ok((input, operator)) = comparison_operator(input) {
         let (input, right) = precedence4(input)?;
         Ok((
@@ -77,8 +79,8 @@ fn precedence4(input: TokenSlice) -> IResult<TokenSlice, Expression> {
 }
 
 /// Parses addition and subtraction expressions
-fn precedence3(input: TokenSlice) -> IResult<TokenSlice, Expression> {
-    let (input, left) = precedence2(input)?;
+fn precedence3<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Expression<'a>> {
+    let (input, left) = precedence2(input.into())?;
     if let Ok((input, operator)) = addition_operator(input) {
         let (input, right) = precedence3(input)?;
         Ok((
@@ -91,7 +93,7 @@ fn precedence3(input: TokenSlice) -> IResult<TokenSlice, Expression> {
 }
 
 /// Parses multiplication expressions (and division, if we end up supporting it)
-fn precedence2(input: TokenSlice) -> IResult<TokenSlice, Expression> {
+fn precedence2<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Expression<'a>> {
     let (input, left) = precedence1(input)?;
     if let Ok((input, operator)) = multiplication_operator(input) {
         let (input, right) = precedence2(input)?;
@@ -105,7 +107,8 @@ fn precedence2(input: TokenSlice) -> IResult<TokenSlice, Expression> {
 }
 
 /// Parses unary expressions
-fn precedence1(input: TokenSlice) -> IResult<TokenSlice, Expression> {
+fn precedence1<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Expression<'a>> {
+    let input = input.into();
     if let Ok((input, operator)) = unary_operator(input) {
         let (input, expr) = precedence1(input)?;
         Ok((input, Expression::Unary(operator, Box::new(expr))))
@@ -115,7 +118,8 @@ fn precedence1(input: TokenSlice) -> IResult<TokenSlice, Expression> {
 }
 
 /// Parses expressions with the lowest precedence (literals, symbols, and subexpressions)
-fn precedence0(input: TokenSlice) -> IResult<TokenSlice, Expression> {
+fn precedence0<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Expression<'a>> {
+    let input = input.into();
     if let Ok((input, expr)) = symbol_or_literal(input) {
         Ok((input, expr))
     } else {
@@ -126,33 +130,41 @@ fn precedence0(input: TokenSlice) -> IResult<TokenSlice, Expression> {
     }
 }
 
-fn symbol_or_literal(input: TokenSlice) -> IResult<TokenSlice, Expression> {
+fn symbol_or_literal<'a, T: Into<TokenSlice<'a>>>(
+    input: T,
+) -> IResult<TokenSlice<'a>, Expression<'a>> {
     alt((
         map(identifier, |ident| Expression::Symbol(ident)),
         map(character_literal, |chr| Expression::Literal(chr as i32)),
         map(
             alt((dec_literal, hex_literal, bin_literal, oct_literal)),
-            |val| Expression::Literal(val),
+            Expression::Literal,
         ),
-    ))(input)
+    ))(input.into())
 }
 
-fn unary_operator(input: TokenSlice) -> IResult<TokenSlice, UnaryOperator> {
-    map(bang_operator, |_| UnaryOperator::Negation)(input)
+fn unary_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, UnaryOperator> {
+    map(bang_operator, |_| UnaryOperator::Negation)(input.into())
 }
 
-fn multiplication_operator(input: TokenSlice) -> IResult<TokenSlice, BinaryOperator> {
-    map(star_operator, |_| BinaryOperator::Multiply)(input)
+fn multiplication_operator<'a, T: Into<TokenSlice<'a>>>(
+    input: T,
+) -> IResult<TokenSlice<'a>, BinaryOperator> {
+    map(star_operator, |_| BinaryOperator::Multiply)(input.into())
 }
 
-fn addition_operator(input: TokenSlice) -> IResult<TokenSlice, BinaryOperator> {
+fn addition_operator<'a, T: Into<TokenSlice<'a>>>(
+    input: T,
+) -> IResult<TokenSlice<'a>, BinaryOperator> {
     alt((
         map(plus_operator, |_| BinaryOperator::Addition),
         map(minus_operator, |_| BinaryOperator::Subtraction),
-    ))(input)
+    ))(input.into())
 }
 
-fn comparison_operator(input: TokenSlice) -> IResult<TokenSlice, BinaryOperator> {
+fn comparison_operator<'a, T: Into<TokenSlice<'a>>>(
+    input: T,
+) -> IResult<TokenSlice<'a>, BinaryOperator> {
     alt((
         map(greater_than_operator, |_| BinaryOperator::GreaterThan),
         map(less_than_operator, |_| BinaryOperator::LessThan),
@@ -162,12 +174,14 @@ fn comparison_operator(input: TokenSlice) -> IResult<TokenSlice, BinaryOperator>
         map(less_than_or_equals_operator, |_| {
             BinaryOperator::LessThanOrEquals
         }),
-    ))(input)
+    ))(input.into())
 }
 
-fn equality_operator(input: TokenSlice) -> IResult<TokenSlice, BinaryOperator> {
+fn equality_operator<'a, T: Into<TokenSlice<'a>>>(
+    input: T,
+) -> IResult<TokenSlice<'a>, BinaryOperator> {
     alt((
         map(equals, |_| BinaryOperator::Equals),
         map(not_equals, |_| BinaryOperator::NotEquals),
-    ))(input)
+    ))(input.into())
 }
