@@ -1,7 +1,10 @@
 mod expression;
 mod types;
 
-use crate::{parser::expression::Expression, Token};
+use crate::{
+    parser::expression::{expression, Expression},
+    Token,
+};
 use nom::{
     bytes::complete::take,
     combinator::{map, map_res, opt},
@@ -78,6 +81,29 @@ fn comment(input: TokenSlice) -> IResult<TokenSlice, &str> {
     })(input)
 }
 
+fn newline(input: TokenSlice) -> IResult<TokenSlice, ()> {
+    preceded(
+        opt(comment),
+        map_res(take(1_usize), |token: TokenSlice| {
+            if let Token::Newline = token[0] {
+                Ok(())
+            } else {
+                Err(())
+            }
+        }),
+    )(input)
+}
+
+fn immediate_prefix(input: TokenSlice) -> IResult<TokenSlice, ()> {
+    map_res(take(1_usize), |token: TokenSlice| {
+        if let Token::ImmediatePrefix = token[0] {
+            Ok(())
+        } else {
+            Err(())
+        }
+    })(input)
+}
+
 fn op(input: TokenSlice) -> IResult<TokenSlice, Op> {
     map_res(take(1_usize), |token: TokenSlice| {
         if let Token::Mnemonic(op) = token[0] {
@@ -89,16 +115,20 @@ fn op(input: TokenSlice) -> IResult<TokenSlice, Op> {
 }
 
 fn operand_implied(input: TokenSlice) -> IResult<TokenSlice, Operand> {
-    preceded(
-        opt(comment),
-        map_res(take(1_usize), |token: TokenSlice| {
-            if let Token::Newline = token[0] {
-                Ok(Operand::Implied)
-            } else {
-                Err(())
-            }
-        }),
+    map(newline, |_| Operand::Implied)(input)
+}
+
+fn operand_immediate(input: TokenSlice) -> IResult<TokenSlice, Operand> {
+    map(
+        terminated(preceded(immediate_prefix, expression), newline),
+        |expr| Operand::Immediate(Box::new(expr)),
     )(input)
+}
+
+fn operand_absolute_or_relative(input: TokenSlice) -> IResult<TokenSlice, Operand> {
+    map(terminated(expression, newline), |expr| {
+        Operand::AbsoluteOrRelative(Box::new(expr))
+    })(input)
 }
 
 #[cfg(test)]
