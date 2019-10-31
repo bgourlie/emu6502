@@ -9,16 +9,9 @@ fn test_literal_expr() {
 }
 
 #[test]
-fn test_symbol_expr() {
-    let tokens = parse("something = 1; hello\n ;asdfasdfasdf\n");
-    let (_, primary_expr) = expression(TokenSlice(&tokens)).unwrap();
-    assert_eq!(Expression::Symbol("something"), primary_expr);
-}
-
-#[test]
 fn test_expression_1() {
     let tokens = parse("something = 1; hello\n ;asdfasdfasdf\n");
-    let (_, expr) = expression(TokenSlice(&tokens)).unwrap();
+    let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
             Box::new(Expression::Symbol("something")),
@@ -32,7 +25,7 @@ fn test_expression_1() {
 #[test]
 fn test_expression_2() {
     let tokens = parse("!something ; hello\n ;asdfasdfasdf\n");
-    let (_, expr) = expression(TokenSlice(&tokens)).unwrap();
+    let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Unary(
             UnaryOperator::Negation,
@@ -45,7 +38,7 @@ fn test_expression_2() {
 #[test]
 fn test_expression_3() {
     let tokens = parse("10 * 5 ; hello\n ;asdfasdfasdf\n");
-    let (_, expr) = expression(TokenSlice(&tokens)).unwrap();
+    let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
             Box::new(Expression::Literal(10)),
@@ -59,7 +52,7 @@ fn test_expression_3() {
 #[test]
 fn test_expression_4() {
     let tokens = parse("10 + 5 ; hello\n ;asdfasdfasdf\n");
-    let (_, expr) = expression(TokenSlice(&tokens)).unwrap();
+    let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
             Box::new(Expression::Literal(10)),
@@ -73,7 +66,7 @@ fn test_expression_4() {
 #[test]
 fn test_expression_5() {
     let tokens = parse("10 > 5 ; hello\n ;asdfasdfasdf\n");
-    let (_, expr) = expression(TokenSlice(&tokens)).unwrap();
+    let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
             Box::new(Expression::Literal(10)),
@@ -87,7 +80,7 @@ fn test_expression_5() {
 #[test]
 fn test_expression_6() {
     let tokens = parse("10 = 5 ; hello\n ;asdfasdfasdf\n");
-    let (_, expr) = expression(TokenSlice(&tokens)).unwrap();
+    let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
             Box::new(Expression::Literal(10)),
@@ -101,7 +94,7 @@ fn test_expression_6() {
 #[test]
 fn test_expression_7() {
     let tokens = parse("10 * !something ; hello\n ;asdfasdfasdf\n");
-    let (_, expr) = expression(TokenSlice(&tokens)).unwrap();
+    let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
             Box::new(Expression::Literal(10)),
@@ -118,9 +111,7 @@ fn test_expression_7() {
 #[test]
 fn test_expression_8() {
     let tokens = parse("!(10 * !something) ; hello\n ;asdfasdfasdf\n");
-    let expr = expression(TokenSlice(&tokens));
-    println!("{:?}", expr);
-    let (_, unary_expr) = expr.unwrap();
+    let (_, unary_expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Unary(
             UnaryOperator::Negation,
@@ -140,7 +131,7 @@ fn test_expression_8() {
 #[test]
 fn test_expression_9() {
     let tokens = parse("2 * 3 + 1 = 7 ; hello\n ;asdfasdfasdf\n");
-    let (_, expr) = expression(TokenSlice(&tokens)).unwrap();
+    let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
             Box::new(Expression::Binary(
