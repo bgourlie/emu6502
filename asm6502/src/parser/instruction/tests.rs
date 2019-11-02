@@ -34,7 +34,7 @@ fn test_indirect() {
 
 #[test]
 fn test_indexed_indirect() {
-    let tokens = parse("LDA ($ff, x)\n");
+    let tokens = parse("LDA ($ff,x)\n");
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(

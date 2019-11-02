@@ -84,8 +84,8 @@ pub fn parse(input: Span) -> IResult<Span, Vec<(Span, Token)>> {
             define_directive_token("db", |(pos, _)| (pos, Token::DbDirective)),
             define_directive_token("dw", |(pos, _)| (pos, Token::DwDirective)),
             define_directive_token("ds", |(pos, _)| (pos, Token::DsDirective)),
-            offset_operand_token(",x", |(pos, _)| (pos, Token::OffsetByXOperand)),
-            offset_operand_token(",y", |(pos, _)| (pos, Token::OffsetByYOperand)),
+            offset_operand_token("x", |(pos, _)| (pos, Token::OffsetByXOperand)),
+            offset_operand_token("y", |(pos, _)| (pos, Token::OffsetByYOperand)),
             end_directive_token,
             identifier_token,
             operator_token("=", |(pos, _)| (pos, Token::EqualsOperator)),
@@ -158,13 +158,22 @@ fn comma_token(input: Span) -> IResult<Span, (Span, Token)> {
 }
 
 fn offset_operand_token<'a, F>(
-    chars: &'static str,
+    register: &'static str,
     mapper: F,
 ) -> impl Fn(Span<'a>) -> IResult<Span<'a>, (Span<'a>, Token<'a>)>
 where
     F: Fn((Span<'a>, Span<'a>)) -> (Span<'a>, Token<'a>),
 {
-    map(pair(position, tag_no_case(chars)), mapper)
+    map(
+        pair(
+            position,
+            preceded(
+                space0,
+                preceded(char(','), preceded(space0, tag_no_case(register))),
+            ),
+        ),
+        mapper,
+    )
 }
 
 // TODO: Add escaping https://github.com/Geal/nom/issues/1014
