@@ -75,3 +75,14 @@ fn test_absolute_y() {
         operand
     );
 }
+
+#[test]
+fn test_absolute_or_relative() {
+    let tokens = parse("LDA $ff\n");
+    let (_, (opcode, operand)) = instruction(&tokens).unwrap();
+    assert_eq!(Op::Lda, opcode);
+    assert_eq!(
+        Operand::AbsoluteOrRelative(Box::new(Expression::Literal(0xff))),
+        operand
+    );
+}
