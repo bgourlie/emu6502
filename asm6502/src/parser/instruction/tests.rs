@@ -42,3 +42,36 @@ fn test_indexed_indirect() {
         operand
     );
 }
+
+#[test]
+fn test_indirect_indexed() {
+    let tokens = parse("LDA ($ff),y\n");
+    let (_, (opcode, operand)) = instruction(&tokens).unwrap();
+    assert_eq!(Op::Lda, opcode);
+    assert_eq!(
+        Operand::IndirectIndexed(Box::new(Expression::Literal(0xff))),
+        operand
+    );
+}
+
+#[test]
+fn test_absolute_x() {
+    let tokens = parse("LDA $ffff,x\n");
+    let (_, (opcode, operand)) = instruction(&tokens).unwrap();
+    assert_eq!(Op::Lda, opcode);
+    assert_eq!(
+        Operand::AbsoluteX(Box::new(Expression::Literal(0xffff))),
+        operand
+    );
+}
+
+#[test]
+fn test_absolute_y() {
+    let tokens = parse("LDA $ffff,y\n");
+    let (_, (opcode, operand)) = instruction(&tokens).unwrap();
+    assert_eq!(Op::Lda, opcode);
+    assert_eq!(
+        Operand::AbsoluteY(Box::new(Expression::Literal(0xffff))),
+        operand
+    );
+}
