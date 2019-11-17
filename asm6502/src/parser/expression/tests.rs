@@ -1,5 +1,5 @@
 use super::expression;
-use crate::parser::{parse, types::TokenSlice, BinaryOperator, Expression, UnaryOperator};
+use crate::parser::{parse, BinaryOperator, Expression, UnaryOperator};
 
 #[test]
 fn test_literal_expr() {

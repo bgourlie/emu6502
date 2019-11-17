@@ -58,7 +58,7 @@ pub enum Operand<'a> {
     Indirect(Box<Expression<'a>>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Line<'a> {
     MacroStart(&'a str),
     MacroEnd,
@@ -76,6 +76,13 @@ fn macro_decl<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, 
     map(terminated(identifier, macro_start), |ident| {
         Line::MacroStart(ident)
     })(input.into())
+}
+
+#[test]
+fn test_macro_decl() {
+    let tokens = parse("foo macro\n");
+    let (_, line) = macro_decl(&tokens).unwrap();
+    assert_eq!(Line::MacroStart("foo"), line);
 }
 
 #[cfg(test)]
