@@ -3,12 +3,11 @@ mod tests;
 
 use super::types::TokenSlice;
 use crate::parser::{
-    identifier,
     token_parsers::{
-        bang_operator, bin_literal, character_literal, close_paren, dec_literal, equals,
-        greater_than_operator, greater_than_or_equals_operator, hex_literal, less_than_operator,
-        less_than_or_equals_operator, minus_operator, not_equals, oct_literal, open_paren,
-        plus_operator, star_operator,
+        and_operator, bang_operator, bin_literal, character_literal, close_paren, dec_literal,
+        equals, greater_than_operator, greater_than_or_equals_operator, hex_literal, identifier,
+        less_than_operator, less_than_or_equals_operator, minus_operator, not_equals, oct_literal,
+        open_paren, or_operator, plus_operator, star_operator, xor_operator,
     },
     types::{BinaryOperator, Expression, UnaryOperator},
 };
@@ -18,7 +17,7 @@ use nom::{branch::alt, combinator::map, IResult};
 pub fn expression<'a, T: Into<TokenSlice<'a>>>(
     input: T,
 ) -> IResult<TokenSlice<'a>, Expression<'a>> {
-    let (input, left) = precedence4(input.into())?;
+    let (input, left) = precedence5(input.into())?;
     if let Ok((input, operator)) = equality_operator(input) {
         let (input, right) = expression(input)?;
         Ok((
@@ -31,9 +30,23 @@ pub fn expression<'a, T: Into<TokenSlice<'a>>>(
 }
 
 /// Parses comparison expressions
+fn precedence5<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Expression<'a>> {
+    let (input, left) = precedence4(input.into())?;
+    if let Ok((input, operator)) = comparison_operator(input) {
+        let (input, right) = precedence5(input)?;
+        Ok((
+            input,
+            Expression::Binary(Box::new(left), operator, Box::new(right)),
+        ))
+    } else {
+        Ok((input, left))
+    }
+}
+
+/// Parses bitwise expressions
 fn precedence4<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Expression<'a>> {
     let (input, left) = precedence3(input.into())?;
-    if let Ok((input, operator)) = comparison_operator(input) {
+    if let Ok((input, operator)) = bitwise_operator(input) {
         let (input, right) = precedence4(input)?;
         Ok((
             input,
@@ -117,6 +130,16 @@ fn multiplication_operator<'a, T: Into<TokenSlice<'a>>>(
     input: T,
 ) -> IResult<TokenSlice<'a>, BinaryOperator> {
     map(star_operator, |_| BinaryOperator::Multiply)(input.into())
+}
+
+fn bitwise_operator<'a, T: Into<TokenSlice<'a>>>(
+    input: T,
+) -> IResult<TokenSlice<'a>, BinaryOperator> {
+    alt((
+        map(and_operator, |_| BinaryOperator::And),
+        map(or_operator, |_| BinaryOperator::Or),
+        map(xor_operator, |_| BinaryOperator::Xor),
+    ))(input.into())
 }
 
 fn addition_operator<'a, T: Into<TokenSlice<'a>>>(

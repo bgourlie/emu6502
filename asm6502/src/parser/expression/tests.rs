@@ -1,5 +1,8 @@
 use super::expression;
-use crate::parser::{tparse, BinaryOperator, Expression, UnaryOperator};
+use crate::parser::{
+    tparse,
+    types::{BinaryOperator, Expression, UnaryOperator},
+};
 
 #[test]
 fn test_literal_expr() {
@@ -145,6 +148,24 @@ fn test_expression_9() {
             )),
             BinaryOperator::Equals,
             Box::new(Expression::Literal(7))
+        ),
+        expr
+    );
+}
+
+#[test]
+fn test_expression_10() {
+    let tokens = tparse("(data_segment & $ff) != 0\n");
+    let (_, expr) = expression(&tokens).unwrap();
+    assert_eq!(
+        Expression::Binary(
+            Box::new(Expression::Grouping(Box::new(Expression::Binary(
+                Box::new(Expression::Symbol("data_segment")),
+                BinaryOperator::And,
+                Box::new(Expression::Literal(255))
+            )))),
+            BinaryOperator::NotEquals,
+            Box::new(Expression::Literal(0))
         ),
         expr
     );

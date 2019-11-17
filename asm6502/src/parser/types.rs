@@ -66,6 +66,8 @@ pub enum Line<'a> {
 
 #[derive(Debug, PartialEq)]
 pub enum Directive<'a> {
+    If(Expression<'a>),
+    EndIf,
     Equ(&'a str, Expression<'a>),
     MacroStart(&'a str),
     MacroEnd,
@@ -85,12 +87,6 @@ impl<'a> From<&'a [Token<'a>]> for TokenSlice<'a> {
         TokenSlice(tokens)
     }
 }
-
-//impl<'a> From<&'a [Token<'a>]> for TokenSlice<'a> {
-//    fn from(tokens: &'a [Token<'a>]) -> Self {
-//        TokenSlice(tokens)
-//    }
-//}
 
 impl<'a> InputIter for TokenSlice<'a> {
     type Item = Token<'a>;

@@ -24,6 +24,26 @@ pub fn identifier<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'
     })(input.into())
 }
 
+pub fn r#if<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+    map_res(take(1_usize), |token: TokenSlice| {
+        if let Token::IfStart = token[0] {
+            Ok(())
+        } else {
+            Err(())
+        }
+    })(input.into())
+}
+
+pub fn end_if<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+    map_res(take(1_usize), |token: TokenSlice| {
+        if let Token::IfEnd = token[0] {
+            Ok(())
+        } else {
+            Err(())
+        }
+    })(input.into())
+}
+
 pub fn character_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, char> {
     map_res(take(1_usize), |token: TokenSlice| {
         if let Token::CharacterLiteral(chr) = token[0] {
@@ -87,6 +107,36 @@ pub fn newline<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>,
 pub fn bang_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
     map_res(take(1_usize), |token: TokenSlice| {
         if let Token::BangOperator = token[0] {
+            Ok(())
+        } else {
+            Err(())
+        }
+    })(input.into())
+}
+
+pub fn and_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+    map_res(take(1_usize), |token: TokenSlice| {
+        if let Token::AndOperator = token[0] {
+            Ok(())
+        } else {
+            Err(())
+        }
+    })(input.into())
+}
+
+pub fn or_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+    map_res(take(1_usize), |token: TokenSlice| {
+        if let Token::OrOperator = token[0] {
+            Ok(())
+        } else {
+            Err(())
+        }
+    })(input.into())
+}
+
+pub fn xor_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+    map_res(take(1_usize), |token: TokenSlice| {
+        if let Token::XorOperator = token[0] {
             Ok(())
         } else {
             Err(())

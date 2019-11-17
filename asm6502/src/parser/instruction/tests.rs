@@ -1,5 +1,8 @@
 use super::instruction;
-use crate::parser::{tparse, BinaryOperator, Expression, Operand};
+use crate::parser::{
+    tparse,
+    types::{BinaryOperator, Expression, Operand},
+};
 use shared6502::Op;
 
 #[test]
