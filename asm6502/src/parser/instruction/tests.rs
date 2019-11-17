@@ -1,5 +1,5 @@
 use super::instruction;
-use crate::parser::{parse, Expression, Operand};
+use crate::parser::{parse, BinaryOperator, Expression, Operand};
 use shared6502::Op;
 
 #[test]
@@ -72,6 +72,23 @@ fn test_absolute_y() {
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
         Operand::AbsoluteY(Box::new(Expression::Literal(0xffff))),
+        operand
+    );
+}
+
+#[test]
+fn test_indirect_indexed_with_complex_expr() {
+    let tokens = parse("LDA ((addr - 1)),y\n");
+    let (_, (opcode, operand)) = instruction(&tokens).unwrap();
+    assert_eq!(Op::Lda, opcode);
+    assert_eq!(
+        Operand::IndirectIndexed(Box::new(Expression::Grouping(Box::new(
+            Expression::Binary(
+                Box::new(Expression::Symbol("addr")),
+                BinaryOperator::Subtraction,
+                Box::new(Expression::Literal(1))
+            )
+        )))),
         operand
     );
 }
