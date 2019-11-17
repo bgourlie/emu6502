@@ -10,7 +10,7 @@ use std::{
     slice::Iter,
 };
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TokenSlice<'a>(pub &'a [Token<'a>]);
 
 impl<'a> From<&'a Vec<Token<'a>>> for TokenSlice<'a> {

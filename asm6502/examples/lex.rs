@@ -6,7 +6,7 @@ fn main() -> Result<(), std::io::Error> {
     let mut buffer = String::new();
     file.read_to_string(&mut buffer)?;
     let input = Span::new(&buffer);
-    let (_, tokens) = asm6502::parse(input).unwrap();
+    let (_, tokens) = asm6502::lex(input).unwrap();
     for token in tokens {
         println!("{:?}", token);
     }

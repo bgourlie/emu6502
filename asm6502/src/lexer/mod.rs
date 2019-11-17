@@ -65,7 +65,7 @@ pub enum Token<'a> {
     IncludeDirective(&'a str),
 }
 
-pub fn parse(input: Span) -> IResult<Span, Vec<(Span, Token)>> {
+pub fn lex(input: Span) -> IResult<Span, Vec<(Span, Token)>> {
     many0(alt((
         alt((
             comment_token,

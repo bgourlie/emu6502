@@ -18,7 +18,7 @@ use nom::{
 };
 use shared6502::Op;
 
-fn instruction<'a, T: Into<TokenSlice<'a>>>(
+pub fn instruction<'a, T: Into<TokenSlice<'a>>>(
     input: T,
 ) -> IResult<TokenSlice<'a>, (Op, Operand<'a>)> {
     pair(op, operand)(input.into())

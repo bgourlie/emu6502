@@ -2,4 +2,5 @@
 mod lexer;
 mod parser;
 
-pub use lexer::{parse, Span, Token};
+pub use lexer::{lex, Span, Token};
+pub use parser::parse;
