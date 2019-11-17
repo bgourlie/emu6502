@@ -249,7 +249,10 @@ fn disassembly(disassembly: &Disassembly, offset: u16) -> Node<Msg> {
 pub fn bootstrap() {
     wasm_logger::init(wasm_logger::Config::new(log::Level::Info).message_on_new_line());
 
-    seed::App::build(|_, _| Model::<BasicMapper>::default(), update, view)
-        .finish()
-        .run();
+    seed::App::build(
+        |_, _| Init::new(Model::<BasicMapper>::default()),
+        update,
+        view,
+    )
+    .build_and_start();
 }

@@ -8,10 +8,12 @@ fn main() -> Result<(), std::io::Error> {
     let input = Span::new(&buffer);
     let (_, tokens) = asm6502::lex(input).unwrap();
     let tokens: Vec<Token> = tokens.into_iter().map(|(_, token)| token).collect();
-    println!("got here!");
-    let (_, lines) = asm6502::parse(&tokens).unwrap();
-    for line in lines {
-        println!("{:?}", line);
+    println!("{} tokens", tokens.len());
+    let (remaining, lines) = asm6502::parse(&tokens).unwrap();
+    for (line_num, line) in lines.iter().enumerate() {
+        println!("{}: {:?}", line_num + 1, line);
     }
+
+    println!("{:?}", remaining);
     Ok(())
 }

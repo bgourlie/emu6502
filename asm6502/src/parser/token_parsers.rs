@@ -114,6 +114,16 @@ pub fn plus_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlic
     })(input.into())
 }
 
+pub fn equals_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+    map_res(take(1_usize), |token: TokenSlice| {
+        if let Token::EqualsOperator = token[0] {
+            Ok(())
+        } else {
+            Err(())
+        }
+    })(input.into())
+}
+
 pub fn minus_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
     map_res(take(1_usize), |token: TokenSlice| {
         if let Token::MinusOperator = token[0] {
