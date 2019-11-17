@@ -4,11 +4,72 @@ use nom::{
     Err, InputIter, InputLength, InputTake, InputTakeAtPosition, Needed, Slice,
 };
 
+use shared6502::Op;
 use std::{
     iter::{Copied, Enumerate},
     ops::Index,
     slice::Iter,
 };
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum UnaryOperator {
+    Negation,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum BinaryOperator {
+    Multiply,
+    Addition,
+    Subtraction,
+    Equals,
+    NotEquals,
+    GreaterThan,
+    GreaterThanOrEquals,
+    LessThan,
+    LessThanOrEquals,
+    Complement,
+    And,
+    Or,
+    Xor,
+    LeftShift,
+    RightShift,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Expression<'a> {
+    Literal(i32),
+    Symbol(&'a str),
+    Unary(UnaryOperator, Box<Expression<'a>>),
+    Binary(Box<Expression<'a>>, BinaryOperator, Box<Expression<'a>>),
+    Grouping(Box<Expression<'a>>),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Operand<'a> {
+    AbsoluteOrRelative(Box<Expression<'a>>),
+    AbsoluteX(Box<Expression<'a>>),
+    AbsoluteY(Box<Expression<'a>>),
+    Accumulator,
+    IndexedIndirect(Box<Expression<'a>>),
+    IndirectIndexed(Box<Expression<'a>>),
+    Implied,
+    Immediate(Box<Expression<'a>>),
+    Indirect(Box<Expression<'a>>),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Line<'a> {
+    Empty,
+    Instruction(Op, Operand<'a>),
+    Directive(Directive<'a>),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Directive<'a> {
+    Equ(&'a str, Expression<'a>),
+    MacroStart(&'a str),
+    MacroEnd,
+}
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TokenSlice<'a>(pub &'a [Token<'a>]);

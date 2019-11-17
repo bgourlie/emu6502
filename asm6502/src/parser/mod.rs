@@ -3,7 +3,10 @@ mod instruction;
 mod token_parsers;
 mod types;
 
-use crate::parser::token_parsers::{comment, equals_operator, identifier, macro_start, newline};
+use crate::parser::{
+    token_parsers::{comment, equals_operator, identifier, macro_start, newline},
+    types::{Directive, Line},
+};
 use instruction::instruction;
 use nom::{
     branch::alt,
@@ -12,68 +15,7 @@ use nom::{
     sequence::{preceded, terminated, tuple},
     IResult,
 };
-use shared6502::Op;
 use types::TokenSlice;
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum UnaryOperator {
-    Negation,
-}
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum BinaryOperator {
-    Multiply,
-    Addition,
-    Subtraction,
-    Equals,
-    NotEquals,
-    GreaterThan,
-    GreaterThanOrEquals,
-    LessThan,
-    LessThanOrEquals,
-    Complement,
-    And,
-    Or,
-    Xor,
-    LeftShift,
-    RightShift,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Expression<'a> {
-    Literal(i32),
-    Symbol(&'a str),
-    Unary(UnaryOperator, Box<Expression<'a>>),
-    Binary(Box<Expression<'a>>, BinaryOperator, Box<Expression<'a>>),
-    Grouping(Box<Expression<'a>>),
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Operand<'a> {
-    AbsoluteOrRelative(Box<Expression<'a>>),
-    AbsoluteX(Box<Expression<'a>>),
-    AbsoluteY(Box<Expression<'a>>),
-    Accumulator,
-    IndexedIndirect(Box<Expression<'a>>),
-    IndirectIndexed(Box<Expression<'a>>),
-    Implied,
-    Immediate(Box<Expression<'a>>),
-    Indirect(Box<Expression<'a>>),
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Line<'a> {
-    Empty,
-    Instruction(Op, Operand<'a>),
-    Directive(Directive<'a>),
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Directive<'a> {
-    Equ(&'a str, Expression<'a>),
-    MacroStart(&'a str),
-    MacroEnd,
-}
 
 pub fn maybe_comment_then_newline<'a, T: Into<TokenSlice<'a>>>(
     input: T,

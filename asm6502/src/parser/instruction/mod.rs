@@ -7,8 +7,7 @@ use crate::parser::{
     token_parsers::{
         close_paren, immediate_prefix, offset_x_suffix, offset_y_suffix, op, open_paren,
     },
-    types::TokenSlice,
-    Operand,
+    types::{Operand, TokenSlice},
 };
 use nom::{
     branch::alt,

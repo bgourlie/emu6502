@@ -10,7 +10,7 @@ use crate::parser::{
         less_than_or_equals_operator, minus_operator, not_equals, oct_literal, open_paren,
         plus_operator, star_operator,
     },
-    BinaryOperator, Expression, UnaryOperator,
+    types::{BinaryOperator, Expression, UnaryOperator},
 };
 use nom::{branch::alt, combinator::map, IResult};
 
