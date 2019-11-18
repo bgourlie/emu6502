@@ -363,3 +363,17 @@ fn test_string_literal_token() {
         ))
     );
 }
+
+#[test]
+fn test_negative_precedence_issue() {
+    let tokens: Vec<Token> = lex(Span::new("ram_top = -1"))
+        .unwrap()
+        .1
+        .into_iter()
+        .map(|(_, token)| token)
+        .collect();
+    assert_eq!(3, tokens.len());
+    assert_eq!(Token::Identifier("ram_top"), tokens[0]);
+    assert_eq!(Token::EqualsOperator, tokens[1]);
+    assert_eq!(Token::DecLiteral(-1), tokens[2]);
+}

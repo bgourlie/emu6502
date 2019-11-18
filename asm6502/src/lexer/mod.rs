@@ -48,7 +48,7 @@ pub enum Token<'a> {
     XorOperator,
     MacroStart,
     MacroPositionalArg(u8),
-    MacroInvokeCountArg,
+    MacroExpansionCount,
     MacroEnd,
     IfStart,
     IfEnd,
@@ -91,6 +91,10 @@ pub fn lex(input: Span) -> IResult<Span, Vec<(Span, Token)>> {
             operator_token("=", |(pos, _)| (pos, Token::EqualsOperator)),
         )),
         alt((
+            dec_literal_token,
+            hex_literal_token,
+            oct_literal_token,
+            bin_literal_token,
             operator_token("!=", |(pos, _)| (pos, Token::NotEqualsOperator)),
             operator_token("!", |(pos, _)| (pos, Token::BangOperator)),
             operator_token("~", |(pos, _)| (pos, Token::ComplementOperator)),
@@ -108,10 +112,6 @@ pub fn lex(input: Span) -> IResult<Span, Vec<(Span, Token)>> {
             operator_token("<", |(pos, _)| (pos, Token::LessThanOperator)),
             open_paren_token,
             close_paren_token,
-            dec_literal_token,
-            hex_literal_token,
-            oct_literal_token,
-            bin_literal_token,
         )),
         alt((
             string_literal_token,
@@ -337,7 +337,7 @@ fn macro_end_token(input: Span) -> IResult<Span, (Span, Token)> {
 
 fn macro_invocation_count_arg_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(pair(position, preceded(space0, tag("\\?"))), |(pos, _)| {
-        (pos, Token::MacroInvokeCountArg)
+        (pos, Token::MacroExpansionCount)
     })(input)
 }
 

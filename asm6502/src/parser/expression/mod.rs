@@ -119,6 +119,7 @@ fn symbol_or_literal<'a, T: Into<TokenSlice<'a>>>(
             alt((dec_literal, hex_literal, bin_literal, oct_literal)),
             Expression::Literal,
         ),
+        map(star_operator, |_| Expression::CurrentAddress),
     ))(input.into())
 }
 

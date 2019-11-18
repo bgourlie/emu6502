@@ -37,6 +37,7 @@ pub enum BinaryOperator {
 
 #[derive(Debug, PartialEq)]
 pub enum Expression<'a> {
+    CurrentAddress,
     Literal(i32),
     Symbol(&'a str),
     Unary(UnaryOperator, Box<Expression<'a>>),
@@ -69,8 +70,10 @@ pub enum Directive<'a> {
     If(Expression<'a>),
     EndIf,
     Equ(&'a str, Expression<'a>),
+    Error(&'a str),
     MacroStart(&'a str),
     MacroEnd,
+    NoOpt,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]

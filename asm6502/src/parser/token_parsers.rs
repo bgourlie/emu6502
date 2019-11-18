@@ -328,6 +328,26 @@ pub fn macro_end<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a
     })
 }
 
+pub fn error_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, &'a str> {
+    match_token(input, |token| {
+        if let Token::ErrorDirective(msg) = token {
+            Some(msg)
+        } else {
+            None
+        }
+    })
+}
+
+pub fn noopt_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+    match_token(input, |token| {
+        if let Token::NoOptDirective = token {
+            Some(())
+        } else {
+            None
+        }
+    })
+}
+
 fn match_token<'a, I: Into<TokenSlice<'a>>, F, T: Copy>(
     input: I,
     mapper: F,

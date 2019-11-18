@@ -52,6 +52,18 @@ fn end_if_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice
     map(end_if, |_| Line::Directive(Directive::EndIf))(input.into())
 }
 
+fn error_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+    map(token_parsers::error_directive, |msg| {
+        Line::Directive(Directive::Error(msg))
+    })(input.into())
+}
+
+fn noopt_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+    map(token_parsers::noopt_directive, |_| {
+        Line::Directive(Directive::NoOpt)
+    })(input.into())
+}
+
 pub fn parse<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Vec<Line<'a>>> {
     many0(alt((
         map(maybe_comment_then_newline, |_| Line::Empty),
@@ -62,6 +74,8 @@ pub fn parse<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, V
                 equ_directive,
                 if_directive,
                 end_if_directive,
+                error_directive,
+                noopt_directive,
                 map(instruction, |(op, operand)| Line::Instruction(op, operand)),
             )),
             maybe_comment_then_newline,
