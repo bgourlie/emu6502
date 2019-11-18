@@ -458,18 +458,31 @@ fn string_literal_token(input: Span) -> IResult<Span, (Span, Token)> {
 }
 
 fn identifier_token(input: Span) -> IResult<Span, (Span, Token)> {
-    map(
+    map_res(
         pair(
             position,
             preceded(
                 space0,
                 preceded(
                     valid_identifier_start,
-                    take_while1(|chr: char| chr.is_ascii_alphanumeric() || chr == '_'),
+                    take_while1(|chr: char| {
+                        chr.is_ascii_alphanumeric() || chr == '_' || chr == '\\' || chr == '?'
+                    }),
                 ),
             ),
         ),
-        |(pos, identifier)| (pos, Token::Identifier(identifier.fragment)),
+        |(pos, identifier): (_, Span)| {
+            // '/' and '?' are only valid when used together ("/?"), and we validate that here
+            let slash_count = identifier.fragment.matches('\\').count();
+            let question_count = identifier.fragment.matches('?').count();
+            let macro_expansion_count = identifier.fragment.matches("\\?").count();
+
+            if slash_count == question_count && question_count == macro_expansion_count {
+                Ok((pos, Token::Identifier(identifier.fragment)))
+            } else {
+                Err(())
+            }
+        },
     )(input)
 }
 

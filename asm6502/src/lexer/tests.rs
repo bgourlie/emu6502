@@ -263,10 +263,10 @@ fn test_bin_literal_token() {
 #[test]
 fn test_identifier_token() {
     assert_eq!(
-        identifier_token(Span::new("some_thing123 abc")),
+        identifier_token(Span::new("some_thing123\\? abc")),
         Ok((
             Span {
-                offset: 13,
+                offset: 15,
                 line: 1,
                 fragment: " abc",
                 extra: ()
@@ -278,7 +278,7 @@ fn test_identifier_token() {
                     fragment: "",
                     extra: ()
                 },
-                Token::Identifier("some_thing123")
+                Token::Identifier("some_thing123\\?")
             )
         ))
     );
