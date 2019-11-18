@@ -5,325 +5,337 @@ use nom::{bytes::complete::take, combinator::map_res, IResult};
 use shared6502::Op;
 
 pub fn comment<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, &'a str> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::Comment(com) = token[0] {
-            Ok(com)
+    match_token(input, |token| {
+        if let Token::Comment(com) = token {
+            Some(com)
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn identifier<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, &'a str> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::Identifier(ident) = token[0] {
-            Ok(ident)
+    match_token(input, |token| {
+        if let Token::Identifier(ident) = token {
+            Some(ident)
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn r#if<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::IfStart = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::IfStart = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn end_if<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::IfEnd = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::IfEnd = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn character_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, char> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::CharacterLiteral(chr) = token[0] {
-            Ok(chr)
+    match_token(input, |token| {
+        if let Token::CharacterLiteral(chr) = token {
+            Some(chr)
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn dec_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, i32> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::DecLiteral(val) = token[0] {
-            Ok(val)
+    match_token(input, |token| {
+        if let Token::DecLiteral(val) = token {
+            Some(val)
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn hex_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, i32> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::HexLiteral(val) = token[0] {
-            Ok(val)
+    match_token(input, |token| {
+        if let Token::HexLiteral(val) = token {
+            Some(val)
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn bin_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, i32> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::BinLiteral(val) = token[0] {
-            Ok(val)
+    match_token(input, |token| {
+        if let Token::BinLiteral(val) = token {
+            Some(val)
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn oct_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, i32> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::OctLiteral(val) = token[0] {
-            Ok(val)
+    match_token(input, |token| {
+        if let Token::OctLiteral(val) = token {
+            Some(val)
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn newline<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::Newline = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::Newline = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn bang_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::BangOperator = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::BangOperator = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn and_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::AndOperator = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::AndOperator = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn or_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::OrOperator = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::OrOperator = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn xor_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::XorOperator = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::XorOperator = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn star_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::StarOperator = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::StarOperator = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn plus_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::PlusOperator = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::PlusOperator = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn equals_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::EqualsOperator = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::EqualsOperator = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn minus_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::MinusOperator = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::MinusOperator = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn greater_than_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::GreaterThanOperator = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::GreaterThanOperator = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn greater_than_or_equals_operator<'a, T: Into<TokenSlice<'a>>>(
     input: T,
 ) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::GreaterThanOrEqualToOperator = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::GreaterThanOrEqualToOperator = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn less_than_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::LessThanOperator = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::LessThanOperator = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn less_than_or_equals_operator<'a, T: Into<TokenSlice<'a>>>(
     input: T,
 ) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::LessThanOrEqualToOperator = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::LessThanOrEqualToOperator = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn immediate_prefix<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::ImmediatePrefix = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::ImmediatePrefix = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn open_paren<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::OpenParen = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::OpenParen = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn close_paren<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::CloseParen = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::CloseParen = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn offset_x_suffix<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::OffsetByXOperand = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::OffsetByXOperand = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn offset_y_suffix<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::OffsetByYOperand = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::OffsetByYOperand = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn op<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Op> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::Mnemonic(op) = token[0] {
-            Ok(op)
+    match_token(input, |token| {
+        if let Token::Mnemonic(op) = token {
+            Some(op)
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn equals<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::EqualsOperator = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::EqualsOperator = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn not_equals<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::NotEqualsOperator = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::NotEqualsOperator = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn macro_start<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if let Token::MacroStart = token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::MacroStart = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
-    })(input.into())
+    })
 }
 
 pub fn macro_end<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    map_res(take(1_usize), |token: TokenSlice| {
-        if Token::MacroEnd == token[0] {
-            Ok(())
+    match_token(input, |token| {
+        if let Token::MacroEnd = token {
+            Some(())
         } else {
-            Err(())
+            None
         }
+    })
+}
+
+fn match_token<'a, I: Into<TokenSlice<'a>>, F, T: Copy>(
+    input: I,
+    mapper: F,
+) -> IResult<TokenSlice<'a>, T>
+where
+    F: Fn(Token<'a>) -> Option<T>,
+{
+    map_res(take(1_usize), |token: TokenSlice| {
+        mapper(token[0]).ok_or_else(|| Result::<T, ()>::Err(()))
     })(input.into())
 }
