@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 mod expression;
 mod instruction;
 mod token_parsers;
@@ -11,8 +14,8 @@ use instruction::instruction;
 use nom::{
     branch::alt,
     combinator::{map, opt},
-    multi::many0,
-    sequence::{preceded, terminated, tuple},
+    multi::{many0, separated_nonempty_list},
+    sequence::{pair, preceded, terminated, tuple},
     IResult,
 };
 use types::TokenSlice;
@@ -58,6 +61,19 @@ fn noopt_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<
     map(token_parsers::noopt_directive, |_| Line::NoOpt)(input.into())
 }
 
+fn macro_invocation<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+    map(
+        pair(
+            token_parsers::identifier,
+            opt(separated_nonempty_list(
+                token_parsers::comma,
+                expression::expression,
+            )),
+        ),
+        |(ident, maybe_list)| Line::MacroInvocation(ident, maybe_list),
+    )(input.into())
+}
+
 pub fn parse<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Vec<Line<'a>>> {
     many0(alt((
         map(maybe_comment_then_newline, |_| Line::Empty),
@@ -82,18 +98,4 @@ fn tparse(input: &'static str) -> Vec<crate::Token> {
     let input = crate::Span::new(input);
     let (_, parsed) = crate::lex(input).unwrap();
     parsed.into_iter().map(|(_, token)| token).collect()
-}
-
-#[test]
-fn test_macro_decl() {
-    let tokens = tparse("foo macro\n");
-    let (_, line) = macro_decl(&tokens).unwrap();
-    assert_eq!(Line::MacroStart("foo"), line);
-}
-
-#[test]
-fn test_macro_end() {
-    let tokens = tparse("endm ; This is a comment\n");
-    let (_, line) = macro_end(&tokens).unwrap();
-    assert_eq!(Line::MacroEnd, line);
 }

@@ -24,6 +24,16 @@ pub fn identifier<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'
     })
 }
 
+pub fn comma<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+    match_token(input, |token| {
+        if let Token::Comma = token {
+            Some(())
+        } else {
+            None
+        }
+    })
+}
+
 pub fn r#if<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
     match_token(input, |token| {
         if let Token::IfStart = token {

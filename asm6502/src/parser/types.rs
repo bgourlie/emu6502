@@ -68,7 +68,7 @@ pub enum Line<'a> {
     Error(&'a str),
     MacroStart(&'a str),
     MacroEnd,
-    MacroInvocation(Vec<Expression<'a>>),
+    MacroInvocation(&'a str, Option<Vec<Expression<'a>>>),
     NoOpt,
 }
 
