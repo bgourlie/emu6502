@@ -6,7 +6,7 @@ mod instruction;
 mod token;
 mod types;
 
-use crate::parser::{token, types::Line};
+use crate::parser::types::Line;
 use instruction::instruction;
 use nom::{
     branch::alt,
@@ -56,7 +56,7 @@ fn equ_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a
 }
 
 fn if_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
-    map(preceded(r#if, expression::expression), |expr| {
+    map(preceded(token::r#if, expression::expression), |expr| {
         Line::If(expr)
     })(input.into())
 }
