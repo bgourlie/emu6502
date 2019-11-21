@@ -184,6 +184,16 @@ pub fn equals_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSl
     })
 }
 
+pub fn not_equals_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+    match_token(input, |token| {
+        if let Token::NotEqualsOperator = token {
+            Some(())
+        } else {
+            None
+        }
+    })
+}
+
 pub fn minus_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
     match_token(input, |token| {
         if let Token::MinusOperator = token {
@@ -298,19 +308,9 @@ pub fn op<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Op> 
     })
 }
 
-pub fn equals<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn equ_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
     match_token(input, |token| {
-        if let Token::EqualsOperator = token {
-            Some(())
-        } else {
-            None
-        }
-    })
-}
-
-pub fn not_equals<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
-    match_token(input, |token| {
-        if let Token::NotEqualsOperator = token {
+        if let Token::EquDirective = token {
             Some(())
         } else {
             None

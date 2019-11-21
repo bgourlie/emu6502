@@ -64,6 +64,7 @@ pub enum Line<'a> {
     Instruction(Op, Operand<'a>),
     If(Expression<'a>),
     EndIf,
+    Equals(&'a str, Expression<'a>),
     Equ(&'a str, Expression<'a>),
     Error(&'a str),
     MacroStart(&'a str),

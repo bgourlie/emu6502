@@ -3,10 +3,7 @@ mod tests;
 
 use crate::parser::{
     expression::expression,
-    maybe_comment_then_newline,
-    token_parsers::{
-        close_paren, immediate_prefix, offset_x_suffix, offset_y_suffix, op, open_paren,
-    },
+    maybe_comment_then_newline, token,
     types::{Operand, TokenSlice},
 };
 use nom::{
@@ -20,7 +17,7 @@ use shared6502::Op;
 pub fn instruction<'a, T: Into<TokenSlice<'a>>>(
     input: T,
 ) -> IResult<TokenSlice<'a>, (Op, Operand<'a>)> {
-    pair(op, operand)(input.into())
+    pair(token::op, operand)(input.into())
 }
 
 fn operand<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Operand<'a>> {
@@ -41,7 +38,7 @@ fn operand<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Ope
 fn operand_immediate<'a, T: Into<TokenSlice<'a>>>(
     input: T,
 ) -> IResult<TokenSlice<'a>, Operand<'a>> {
-    map(preceded(immediate_prefix, expression), |expr| {
+    map(preceded(token::immediate_prefix, expression), |expr| {
         Operand::Immediate(Box::new(expr))
     })(input.into())
 }
@@ -57,7 +54,7 @@ fn operand_absolute_or_relative<'a, T: Into<TokenSlice<'a>>>(
 fn operand_absolute_x<'a, T: Into<TokenSlice<'a>>>(
     input: T,
 ) -> IResult<TokenSlice<'a>, Operand<'a>> {
-    map(terminated(expression, offset_x_suffix), |expr| {
+    map(terminated(expression, token::offset_x_suffix), |expr| {
         Operand::AbsoluteX(Box::new(expr))
     })(input.into())
 }
@@ -65,7 +62,7 @@ fn operand_absolute_x<'a, T: Into<TokenSlice<'a>>>(
 fn operand_absolute_y<'a, T: Into<TokenSlice<'a>>>(
     input: T,
 ) -> IResult<TokenSlice<'a>, Operand<'a>> {
-    map(terminated(expression, offset_y_suffix), |expr| {
+    map(terminated(expression, token::offset_y_suffix), |expr| {
         Operand::AbsoluteY(Box::new(expr))
     })(input.into())
 }
@@ -75,18 +72,19 @@ fn operand_indexed_indirect<'a, T: Into<TokenSlice<'a>>>(
 ) -> IResult<TokenSlice<'a>, Operand<'a>> {
     map(
         delimited(
-            open_paren,
-            terminated(expression, offset_x_suffix),
-            close_paren,
+            token::open_paren,
+            terminated(expression, token::offset_x_suffix),
+            token::close_paren,
         ),
         |expr| Operand::IndexedIndirect(Box::new(expr)),
     )(input.into())
 }
 
 fn operand_indirect<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Operand<'a>> {
-    map(delimited(open_paren, expression, close_paren), |expr| {
-        Operand::Indirect(Box::new(expr))
-    })(input.into())
+    map(
+        delimited(token::open_paren, expression, token::close_paren),
+        |expr| Operand::Indirect(Box::new(expr)),
+    )(input.into())
 }
 
 fn operand_indirect_indexed<'a, T: Into<TokenSlice<'a>>>(
@@ -94,8 +92,8 @@ fn operand_indirect_indexed<'a, T: Into<TokenSlice<'a>>>(
 ) -> IResult<TokenSlice<'a>, Operand<'a>> {
     map(
         terminated(
-            delimited(open_paren, expression, close_paren),
-            offset_y_suffix,
+            delimited(token::open_paren, expression, token::close_paren),
+            token::offset_y_suffix,
         ),
         |expr| Operand::IndirectIndexed(Box::new(expr)),
     )(input.into())

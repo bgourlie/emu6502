@@ -1,13 +1,13 @@
 use super::instruction;
 use crate::parser::{
-    tparse,
+    tlex,
     types::{BinaryOperator, Expression, Operand},
 };
 use shared6502::Op;
 
 #[test]
 fn test_implied() {
-    let tokens = tparse("BRK\n");
+    let tokens = tlex("BRK\n");
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Brk, opcode);
     assert_eq!(Operand::Implied, operand);
@@ -15,7 +15,7 @@ fn test_implied() {
 
 #[test]
 fn test_immediate() {
-    let tokens = tparse("LDA #20\n");
+    let tokens = tlex("LDA #20\n");
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
@@ -26,7 +26,7 @@ fn test_immediate() {
 
 #[test]
 fn test_indirect() {
-    let tokens = tparse("JMP ($ff)\n");
+    let tokens = tlex("JMP ($ff)\n");
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Jmp, opcode);
     assert_eq!(
@@ -37,7 +37,7 @@ fn test_indirect() {
 
 #[test]
 fn test_indexed_indirect() {
-    let tokens = tparse("LDA ($ff,x)\n");
+    let tokens = tlex("LDA ($ff,x)\n");
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
@@ -48,7 +48,7 @@ fn test_indexed_indirect() {
 
 #[test]
 fn test_indirect_indexed() {
-    let tokens = tparse("LDA ($ff),y\n");
+    let tokens = tlex("LDA ($ff),y\n");
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
@@ -59,7 +59,7 @@ fn test_indirect_indexed() {
 
 #[test]
 fn test_absolute_x() {
-    let tokens = tparse("LDA $ffff,x\n");
+    let tokens = tlex("LDA $ffff,x\n");
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
@@ -70,7 +70,7 @@ fn test_absolute_x() {
 
 #[test]
 fn test_absolute_y() {
-    let tokens = tparse("LDA $ffff,y\n");
+    let tokens = tlex("LDA $ffff,y\n");
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
@@ -81,7 +81,7 @@ fn test_absolute_y() {
 
 #[test]
 fn test_indirect_indexed_with_complex_expr() {
-    let tokens = tparse("LDA ((addr - 1)),y\n");
+    let tokens = tlex("LDA ((addr - 1)),y\n");
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
@@ -98,7 +98,7 @@ fn test_indirect_indexed_with_complex_expr() {
 
 #[test]
 fn test_absolute_or_relative() {
-    let tokens = tparse("LDA $ff\n");
+    let tokens = tlex("LDA $ff\n");
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(

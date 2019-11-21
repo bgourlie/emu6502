@@ -1,19 +1,19 @@
 use super::expression;
 use crate::parser::{
-    tparse,
+    tlex,
     types::{BinaryOperator, Expression, UnaryOperator},
 };
 
 #[test]
 fn test_literal_expr() {
-    let tokens = tparse("123 ; hello\n ;asdfasdfasdf\n");
+    let tokens = tlex("123 ; hello\n ;asdfasdfasdf\n");
     let (_, primary) = expression(&tokens).unwrap();
     assert_eq!(Expression::Literal(123), primary);
 }
 
 #[test]
 fn test_expression_1() {
-    let tokens = tparse("something = 1; hello\n ;asdfasdfasdf\n");
+    let tokens = tlex("something = 1; hello\n ;asdfasdfasdf\n");
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
@@ -27,7 +27,7 @@ fn test_expression_1() {
 
 #[test]
 fn test_expression_2() {
-    let tokens = tparse("!something ; hello\n ;asdfasdfasdf\n");
+    let tokens = tlex("!something ; hello\n ;asdfasdfasdf\n");
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Unary(
@@ -40,7 +40,7 @@ fn test_expression_2() {
 
 #[test]
 fn test_expression_3() {
-    let tokens = tparse("10 * 5 ; hello\n ;asdfasdfasdf\n");
+    let tokens = tlex("10 * 5 ; hello\n ;asdfasdfasdf\n");
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
@@ -54,7 +54,7 @@ fn test_expression_3() {
 
 #[test]
 fn test_expression_4() {
-    let tokens = tparse("10 + 5 ; hello\n ;asdfasdfasdf\n");
+    let tokens = tlex("10 + 5 ; hello\n ;asdfasdfasdf\n");
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
@@ -68,7 +68,7 @@ fn test_expression_4() {
 
 #[test]
 fn test_expression_5() {
-    let tokens = tparse("10 > 5 ; hello\n ;asdfasdfasdf\n");
+    let tokens = tlex("10 > 5 ; hello\n ;asdfasdfasdf\n");
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
@@ -82,7 +82,7 @@ fn test_expression_5() {
 
 #[test]
 fn test_expression_6() {
-    let tokens = tparse("10 = 5 ; hello\n ;asdfasdfasdf\n");
+    let tokens = tlex("10 = 5 ; hello\n ;asdfasdfasdf\n");
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
@@ -96,7 +96,7 @@ fn test_expression_6() {
 
 #[test]
 fn test_expression_7() {
-    let tokens = tparse("10 * !something ; hello\n ;asdfasdfasdf\n");
+    let tokens = tlex("10 * !something ; hello\n ;asdfasdfasdf\n");
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
@@ -113,7 +113,7 @@ fn test_expression_7() {
 
 #[test]
 fn test_expression_8() {
-    let tokens = tparse("!(10 * !something) ; hello\n ;asdfasdfasdf\n");
+    let tokens = tlex("!(10 * !something) ; hello\n ;asdfasdfasdf\n");
     let (_, unary_expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Unary(
@@ -133,7 +133,7 @@ fn test_expression_8() {
 
 #[test]
 fn test_expression_9() {
-    let tokens = tparse("2 * 3 + 1 = 7 ; hello\n ;asdfasdfasdf\n");
+    let tokens = tlex("2 * 3 + 1 = 7 ; hello\n ;asdfasdfasdf\n");
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
@@ -155,7 +155,7 @@ fn test_expression_9() {
 
 #[test]
 fn test_expression_10() {
-    let tokens = tparse("(data_segment & $ff) != 0\n");
+    let tokens = tlex("(data_segment & $ff) != 0\n");
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(

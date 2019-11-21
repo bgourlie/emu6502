@@ -3,12 +3,7 @@ mod tests;
 
 use super::types::TokenSlice;
 use crate::parser::{
-    token_parsers::{
-        and_operator, bang_operator, bin_literal, character_literal, close_paren, dec_literal,
-        equals, greater_than_operator, greater_than_or_equals_operator, hex_literal, identifier,
-        less_than_operator, less_than_or_equals_operator, minus_operator, not_equals, oct_literal,
-        open_paren, or_operator, plus_operator, star_operator, xor_operator,
-    },
+    token,
     types::{BinaryOperator, Expression, UnaryOperator},
 };
 use nom::{branch::alt, combinator::map, IResult};
@@ -102,9 +97,9 @@ fn precedence0<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>,
     if let Ok((input, expr)) = symbol_or_literal(input) {
         Ok((input, expr))
     } else {
-        let (input, _) = open_paren(input)?;
+        let (input, _) = token::open_paren(input)?;
         let (input, expr) = expression(input)?;
-        let (input, _) = close_paren(input)?;
+        let (input, _) = token::close_paren(input)?;
         Ok((input, Expression::Grouping(Box::new(expr))))
     }
 }
@@ -113,33 +108,40 @@ fn symbol_or_literal<'a, T: Into<TokenSlice<'a>>>(
     input: T,
 ) -> IResult<TokenSlice<'a>, Expression<'a>> {
     alt((
-        map(identifier, |ident| Expression::Symbol(ident)),
-        map(character_literal, |chr| Expression::Literal(chr as i32)),
+        map(token::identifier, |ident| Expression::Symbol(ident)),
+        map(token::character_literal, |chr| {
+            Expression::Literal(chr as i32)
+        }),
         map(
-            alt((dec_literal, hex_literal, bin_literal, oct_literal)),
+            alt((
+                token::dec_literal,
+                token::hex_literal,
+                token::bin_literal,
+                token::oct_literal,
+            )),
             Expression::Literal,
         ),
-        map(star_operator, |_| Expression::CurrentAddress),
+        map(token::star_operator, |_| Expression::CurrentAddress),
     ))(input.into())
 }
 
 fn unary_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, UnaryOperator> {
-    map(bang_operator, |_| UnaryOperator::Negation)(input.into())
+    map(token::bang_operator, |_| UnaryOperator::Negation)(input.into())
 }
 
 fn multiplication_operator<'a, T: Into<TokenSlice<'a>>>(
     input: T,
 ) -> IResult<TokenSlice<'a>, BinaryOperator> {
-    map(star_operator, |_| BinaryOperator::Multiply)(input.into())
+    map(token::star_operator, |_| BinaryOperator::Multiply)(input.into())
 }
 
 fn bitwise_operator<'a, T: Into<TokenSlice<'a>>>(
     input: T,
 ) -> IResult<TokenSlice<'a>, BinaryOperator> {
     alt((
-        map(and_operator, |_| BinaryOperator::And),
-        map(or_operator, |_| BinaryOperator::Or),
-        map(xor_operator, |_| BinaryOperator::Xor),
+        map(token::and_operator, |_| BinaryOperator::And),
+        map(token::or_operator, |_| BinaryOperator::Or),
+        map(token::xor_operator, |_| BinaryOperator::Xor),
     ))(input.into())
 }
 
@@ -147,8 +149,8 @@ fn addition_operator<'a, T: Into<TokenSlice<'a>>>(
     input: T,
 ) -> IResult<TokenSlice<'a>, BinaryOperator> {
     alt((
-        map(plus_operator, |_| BinaryOperator::Addition),
-        map(minus_operator, |_| BinaryOperator::Subtraction),
+        map(token::plus_operator, |_| BinaryOperator::Addition),
+        map(token::minus_operator, |_| BinaryOperator::Subtraction),
     ))(input.into())
 }
 
@@ -156,12 +158,14 @@ fn comparison_operator<'a, T: Into<TokenSlice<'a>>>(
     input: T,
 ) -> IResult<TokenSlice<'a>, BinaryOperator> {
     alt((
-        map(greater_than_operator, |_| BinaryOperator::GreaterThan),
-        map(less_than_operator, |_| BinaryOperator::LessThan),
-        map(greater_than_or_equals_operator, |_| {
+        map(token::greater_than_operator, |_| {
+            BinaryOperator::GreaterThan
+        }),
+        map(token::less_than_operator, |_| BinaryOperator::LessThan),
+        map(token::greater_than_or_equals_operator, |_| {
             BinaryOperator::GreaterThanOrEquals
         }),
-        map(less_than_or_equals_operator, |_| {
+        map(token::less_than_or_equals_operator, |_| {
             BinaryOperator::LessThanOrEquals
         }),
     ))(input.into())
@@ -171,7 +175,7 @@ fn equality_operator<'a, T: Into<TokenSlice<'a>>>(
     input: T,
 ) -> IResult<TokenSlice<'a>, BinaryOperator> {
     alt((
-        map(equals, |_| BinaryOperator::Equals),
-        map(not_equals, |_| BinaryOperator::NotEquals),
+        map(token::equals_operator, |_| BinaryOperator::Equals),
+        map(token::not_equals_operator, |_| BinaryOperator::NotEquals),
     ))(input.into())
 }
