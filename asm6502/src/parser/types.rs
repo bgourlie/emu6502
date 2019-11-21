@@ -62,17 +62,13 @@ pub enum Operand<'a> {
 pub enum Line<'a> {
     Empty,
     Instruction(Op, Operand<'a>),
-    Directive(Directive<'a>),
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Directive<'a> {
     If(Expression<'a>),
     EndIf,
     Equ(&'a str, Expression<'a>),
     Error(&'a str),
     MacroStart(&'a str),
     MacroEnd,
+    MacroInvocation(Vec<Expression<'a>>),
     NoOpt,
 }
 

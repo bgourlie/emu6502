@@ -5,7 +5,7 @@ mod types;
 
 use crate::parser::{
     token_parsers::{comment, end_if, equals_operator, identifier, macro_start, newline, r#if},
-    types::{Directive, Line},
+    types::Line,
 };
 use instruction::instruction;
 use nom::{
@@ -25,43 +25,37 @@ pub fn maybe_comment_then_newline<'a, T: Into<TokenSlice<'a>>>(
 
 fn macro_decl<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
     map(terminated(identifier, macro_start), |ident| {
-        Line::Directive(Directive::MacroStart(ident))
+        Line::MacroStart(ident)
     })(input.into())
 }
 
 fn macro_end<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
-    map(token_parsers::macro_end, |_| {
-        Line::Directive(Directive::MacroEnd)
-    })(input.into())
+    map(token_parsers::macro_end, |_| Line::MacroEnd)(input.into())
 }
 
 fn equ_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
     map(
         tuple((identifier, equals_operator, expression::expression)),
-        |(ident, _, expr)| Line::Directive(Directive::Equ(ident, expr)),
+        |(ident, _, expr)| Line::Equ(ident, expr),
     )(input.into())
 }
 
 fn if_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
     map(preceded(r#if, expression::expression), |expr| {
-        Line::Directive(Directive::If(expr))
+        Line::If(expr)
     })(input.into())
 }
 
 fn end_if_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
-    map(end_if, |_| Line::Directive(Directive::EndIf))(input.into())
+    map(end_if, |_| Line::EndIf)(input.into())
 }
 
 fn error_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
-    map(token_parsers::error_directive, |msg| {
-        Line::Directive(Directive::Error(msg))
-    })(input.into())
+    map(token_parsers::error_directive, |msg| Line::Error(msg))(input.into())
 }
 
 fn noopt_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
-    map(token_parsers::noopt_directive, |_| {
-        Line::Directive(Directive::NoOpt)
-    })(input.into())
+    map(token_parsers::noopt_directive, |_| Line::NoOpt)(input.into())
 }
 
 pub fn parse<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Vec<Line<'a>>> {
@@ -94,12 +88,12 @@ fn tparse(input: &'static str) -> Vec<crate::Token> {
 fn test_macro_decl() {
     let tokens = tparse("foo macro\n");
     let (_, line) = macro_decl(&tokens).unwrap();
-    assert_eq!(Line::Directive(Directive::MacroStart("foo")), line);
+    assert_eq!(Line::MacroStart("foo"), line);
 }
 
 #[test]
 fn test_macro_end() {
     let tokens = tparse("endm ; This is a comment\n");
     let (_, line) = macro_end(&tokens).unwrap();
-    assert_eq!(Line::Directive(Directive::MacroEnd), line);
+    assert_eq!(Line::MacroEnd, line);
 }
