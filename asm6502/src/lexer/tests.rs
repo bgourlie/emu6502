@@ -131,10 +131,10 @@ fn test_hex_literal_token() {
 #[test]
 fn test_dec_literal_token() {
     assert_eq!(
-        dec_literal_token(Span::new("-234")),
+        dec_literal_token(Span::new("234")),
         Ok((
             Span {
-                offset: 4,
+                offset: 3,
                 line: 1,
                 fragment: "",
                 extra: ()
@@ -146,7 +146,7 @@ fn test_dec_literal_token() {
                     fragment: "",
                     extra: ()
                 },
-                Token::DecLiteral(-234)
+                Token::DecLiteral(234)
             )
         ))
     );
@@ -372,8 +372,9 @@ fn test_negative_precedence_issue() {
         .into_iter()
         .map(|(_, token)| token)
         .collect();
-    assert_eq!(3, tokens.len());
+    assert_eq!(4, tokens.len());
     assert_eq!(Token::Identifier("ram_top"), tokens[0]);
     assert_eq!(Token::EqualsOperator, tokens[1]);
-    assert_eq!(Token::DecLiteral(-1), tokens[2]);
+    assert_eq!(Token::MinusOperator, tokens[2]);
+    assert_eq!(Token::DecLiteral(1), tokens[3]);
 }

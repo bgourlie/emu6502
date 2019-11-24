@@ -104,7 +104,7 @@ pub fn character_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<Token
     })
 }
 
-pub fn dec_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, i32> {
+pub fn dec_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, u16> {
     match_token(input, |token| {
         if let Token::DecLiteral(val) = token {
             Some(val)
@@ -114,7 +114,7 @@ pub fn dec_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<
     })
 }
 
-pub fn hex_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, i32> {
+pub fn hex_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, u16> {
     match_token(input, |token| {
         if let Token::HexLiteral(val) = token {
             Some(val)
@@ -124,7 +124,7 @@ pub fn hex_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<
     })
 }
 
-pub fn bin_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, i32> {
+pub fn bin_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, u16> {
     match_token(input, |token| {
         if let Token::BinLiteral(val) = token {
             Some(val)
@@ -134,7 +134,7 @@ pub fn bin_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<
     })
 }
 
-pub fn oct_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, i32> {
+pub fn oct_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, u16> {
     match_token(input, |token| {
         if let Token::OctLiteral(val) = token {
             Some(val)

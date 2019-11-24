@@ -13,6 +13,7 @@ use std::{
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum UnaryOperator {
+    LogicalNot,
     Negation,
     Complement,
 }
@@ -39,7 +40,7 @@ pub enum BinaryOperator {
 #[derive(Debug, PartialEq)]
 pub enum Expression<'a> {
     CurrentAddress,
-    Literal(i32),
+    Literal(u16),
     Symbol(Symbol<'a>),
     Unary(UnaryOperator, Box<Expression<'a>>),
     Binary(Box<Expression<'a>>, BinaryOperator, Box<Expression<'a>>),

@@ -5,7 +5,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, tag_no_case, take, take_while, take_while1},
     character::complete::{char, digit1, hex_digit1, oct_digit1, one_of, space0, space1},
-    combinator::{map, map_res, opt, peek, recognize},
+    combinator::{map, map_res, opt, peek},
     multi::many0,
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
@@ -22,10 +22,10 @@ pub enum Token<'a> {
     Identifier(&'a str),
     CharacterLiteral(char),
     StringLiteral(&'a str),
-    HexLiteral(i32),
-    DecLiteral(i32),
-    BinLiteral(i32),
-    OctLiteral(i32),
+    HexLiteral(u16),
+    DecLiteral(u16),
+    BinLiteral(u16),
+    OctLiteral(u16),
     NoOptDirective,
     EquDirective,
     OpenParen,
@@ -405,13 +405,7 @@ fn hex_literal_token(input: Span) -> IResult<Span, (Span, Token)> {
 
 fn dec_literal_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
-        pair(
-            position,
-            map_res(
-                preceded(space0, recognize(preceded(opt(char('-')), digit1))),
-                parse_i32_dec,
-            ),
-        ),
+        pair(position, map_res(preceded(space0, digit1), parse_i32_dec)),
         |(pos, val)| (pos, Token::DecLiteral(val)),
     )(input)
 }
@@ -537,20 +531,20 @@ fn comment_token(input: Span) -> IResult<Span, (Span, Token)> {
     )(input)
 }
 
-fn parse_i32_hex(input: Span) -> Result<i32, std::num::ParseIntError> {
-    i32::from_str_radix(input.fragment, 16)
+fn parse_i32_hex(input: Span) -> Result<u16, std::num::ParseIntError> {
+    u16::from_str_radix(input.fragment, 16)
 }
 
-fn parse_i32_oct(input: Span) -> Result<i32, std::num::ParseIntError> {
-    i32::from_str_radix(input.fragment, 8)
+fn parse_i32_oct(input: Span) -> Result<u16, std::num::ParseIntError> {
+    u16::from_str_radix(input.fragment, 8)
 }
 
-fn parse_i32_dec(input: Span) -> Result<i32, std::num::ParseIntError> {
-    i32::from_str_radix(input.fragment, 10)
+fn parse_i32_dec(input: Span) -> Result<u16, std::num::ParseIntError> {
+    u16::from_str_radix(input.fragment, 10)
 }
 
-fn parse_i32_bin(input: Span) -> Result<i32, std::num::ParseIntError> {
-    i32::from_str_radix(input.fragment, 2)
+fn parse_i32_bin(input: Span) -> Result<u16, std::num::ParseIntError> {
+    u16::from_str_radix(input.fragment, 2)
 }
 
 fn parse_u8_dec(input: char) -> Result<u8, std::num::ParseIntError> {

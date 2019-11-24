@@ -31,7 +31,7 @@ fn test_expression_2() {
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Unary(
-            UnaryOperator::Negation,
+            UnaryOperator::LogicalNot,
             Box::new(Expression::Symbol(Symbol::Named("something")))
         ),
         expr
@@ -103,7 +103,7 @@ fn test_expression_7() {
             Box::new(Expression::Literal(10)),
             BinaryOperator::Multiply,
             Box::new(Expression::Unary(
-                UnaryOperator::Negation,
+                UnaryOperator::LogicalNot,
                 Box::new(Expression::Symbol(Symbol::Named("something")))
             ))
         ),
@@ -117,12 +117,12 @@ fn test_expression_8() {
     let (_, unary_expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Unary(
-            UnaryOperator::Negation,
+            UnaryOperator::LogicalNot,
             Box::new(Expression::Grouping(Box::new(Expression::Binary(
                 Box::new(Expression::Literal(10)),
                 BinaryOperator::Multiply,
                 Box::new(Expression::Unary(
-                    UnaryOperator::Negation,
+                    UnaryOperator::LogicalNot,
                     Box::new(Expression::Symbol(Symbol::Named("something")))
                 ))
             ),)))

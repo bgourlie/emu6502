@@ -123,7 +123,7 @@ fn symbol_or_literal<'a, T: Into<TokenSlice<'a>>>(
             Expression::Symbol(Symbol::MacroArg(pos))
         }),
         map(token::character_literal, |chr| {
-            Expression::Literal(chr as i32)
+            Expression::Literal(chr as u16)
         }),
         map(
             alt((
@@ -158,7 +158,8 @@ fn hi_or_lo<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Ex
 
 fn unary_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, UnaryOperator> {
     alt((
-        map(token::bang_operator, |_| UnaryOperator::Negation),
+        map(token::minus_operator, |_| UnaryOperator::Negation),
+        map(token::bang_operator, |_| UnaryOperator::LogicalNot),
         map(token::complement_operator, |_| UnaryOperator::Complement),
     ))(input.into())
 }
