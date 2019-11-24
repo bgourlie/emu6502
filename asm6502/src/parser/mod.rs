@@ -128,6 +128,16 @@ fn macro_invocation<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice
     ))(input.into())
 }
 
+fn include_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+    map(token::include_directive, |file| Line::Include(file))(input.into())
+}
+
+fn end_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+    map(preceded(token::end_directive, token::identifier), |label| {
+        Line::End(label)
+    })(input.into())
+}
+
 pub fn parse<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Vec<Line<'a>>> {
     many0(alt((
         map(maybe_comment_then_newline, |_| Line::Empty),
@@ -146,6 +156,8 @@ pub fn parse<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, V
                 ds_directive,
                 db_directive,
                 dw_directive,
+                include_directive,
+                end_directive,
                 map(
                     pair(opt(identifier), instruction),
                     |(label, (op, operand))| Line::Instruction(label, op, operand),

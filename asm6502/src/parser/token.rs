@@ -44,6 +44,28 @@ pub fn db_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice
     })
 }
 
+pub fn include_directive<'a, T: Into<TokenSlice<'a>>>(
+    input: T,
+) -> IResult<TokenSlice<'a>, &'a str> {
+    match_token(input, |token| {
+        if let Token::IncludeDirective(file) = token {
+            Some(file)
+        } else {
+            None
+        }
+    })
+}
+
+pub fn end_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+    match_token(input, |token| {
+        if let Token::EndDirective = token {
+            Some(())
+        } else {
+            None
+        }
+    })
+}
+
 pub fn r#else<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
     match_token(input, |token| {
         if let Token::Else = token {

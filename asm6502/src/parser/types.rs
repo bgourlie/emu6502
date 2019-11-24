@@ -86,6 +86,8 @@ pub enum Line<'a> {
     Ds(Option<&'a str>, Expression<'a>),
     Db(Option<&'a str>, Vec<Expression<'a>>),
     Dw(Option<&'a str>, Vec<Expression<'a>>),
+    Include(&'a str),
+    End(&'a str),
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
