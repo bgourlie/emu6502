@@ -123,6 +123,15 @@ pub fn bang_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlic
         }
     })
 }
+pub fn complement_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+    match_token(input, |token| {
+        if let Token::ComplementOperator = token {
+            Some(())
+        } else {
+            None
+        }
+    })
+}
 
 pub fn and_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
     match_token(input, |token| {

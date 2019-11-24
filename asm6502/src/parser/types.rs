@@ -14,6 +14,7 @@ use std::{
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum UnaryOperator {
     Negation,
+    Complement,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]

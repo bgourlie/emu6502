@@ -126,7 +126,10 @@ fn symbol_or_literal<'a, T: Into<TokenSlice<'a>>>(
 }
 
 fn unary_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, UnaryOperator> {
-    map(token::bang_operator, |_| UnaryOperator::Negation)(input.into())
+    alt((
+        map(token::bang_operator, |_| UnaryOperator::Negation),
+        map(token::complement_operator, |_| UnaryOperator::Complement),
+    ))(input.into())
 }
 
 fn multiplication_operator<'a, T: Into<TokenSlice<'a>>>(
