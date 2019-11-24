@@ -68,7 +68,7 @@ pub enum Operand<'a> {
 #[derive(Debug, PartialEq)]
 pub enum Line<'a> {
     Empty,
-    Instruction(Op, Operand<'a>),
+    Instruction(Option<&'a str>, Op, Operand<'a>),
     If(Expression<'a>),
     EndIf,
     Equals(&'a str, Expression<'a>),
@@ -76,7 +76,8 @@ pub enum Line<'a> {
     Error(&'a str),
     MacroStart(&'a str),
     MacroEnd,
-    MacroInvocation(&'a str, Option<Vec<Expression<'a>>>),
+    MacroInvocation(&'a str, Vec<Expression<'a>>),
+    MacroInvocationOrLabel(&'a str),
     NoOpt,
 }
 

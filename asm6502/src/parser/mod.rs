@@ -6,11 +6,11 @@ mod instruction;
 mod token;
 mod types;
 
-use crate::parser::types::Line;
+use crate::parser::{token::identifier, types::Line};
 use instruction::instruction;
 use nom::{
     branch::alt,
-    combinator::{map, opt},
+    combinator::{map, opt, peek},
     multi::{many0, separated_nonempty_list},
     sequence::{pair, preceded, separated_pair, terminated},
     IResult,
@@ -74,16 +74,19 @@ fn noopt_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<
 }
 
 fn macro_invocation<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
-    map(
-        pair(
-            token::identifier,
-            opt(separated_nonempty_list(
-                token::comma,
-                expression::expression,
-            )),
+    alt((
+        map(
+            pair(
+                token::identifier,
+                separated_nonempty_list(token::comma, expression::expression),
+            ),
+            |(ident, args)| Line::MacroInvocation(ident, args),
         ),
-        |(ident, maybe_list)| Line::MacroInvocation(ident, maybe_list),
-    )(input.into())
+        map(
+            terminated(token::identifier, peek(maybe_comment_then_newline)),
+            |ident| Line::MacroInvocationOrLabel(ident),
+        ),
+    ))(input.into())
 }
 
 pub fn parse<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Vec<Line<'a>>> {
@@ -100,7 +103,10 @@ pub fn parse<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, V
                 noopt_directive,
                 equ_directive,
                 macro_invocation,
-                map(instruction, |(op, operand)| Line::Instruction(op, operand)),
+                map(
+                    pair(opt(identifier), instruction),
+                    |(label, (op, operand))| Line::Instruction(label, op, operand),
+                ),
             )),
             maybe_comment_then_newline,
         ),

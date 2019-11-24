@@ -19,9 +19,12 @@ fn test_macro_end() {
 
 #[test]
 fn test_macro_invocation() {
-    let tokens = tlex("some_macro\n");
+    let tokens = tlex("some_macro_or_label\n");
     let (_, lines) = parse(&tokens).unwrap();
-    assert_eq!(Line::MacroInvocation("some_macro", None), lines[0]);
+    assert_eq!(
+        Line::MacroInvocationOrLabel("some_macro_or_label"),
+        lines[0]
+    );
 }
 
 #[test]
@@ -39,7 +42,7 @@ fn test_macro_invocation_with_args() {
         Expression::Literal(4),
     ];
 
-    if let Line::MacroInvocation(macro_name, Some(args)) = &lines[0] {
+    if let Line::MacroInvocation(macro_name, args) = &lines[0] {
         assert_eq!(&"some_macro", macro_name);
         expected_args
             .iter()
@@ -48,7 +51,7 @@ fn test_macro_invocation_with_args() {
                 assert_eq!(expected, actual);
             })
     } else {
-        panic!("Not a macro invocation line or args list was none");
+        panic!("Not a macro invocation line with args");
     }
 }
 
