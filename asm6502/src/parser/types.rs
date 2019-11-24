@@ -44,6 +44,8 @@ pub enum Expression<'a> {
     Unary(UnaryOperator, Box<Expression<'a>>),
     Binary(Box<Expression<'a>>, BinaryOperator, Box<Expression<'a>>),
     Grouping(Box<Expression<'a>>),
+    Hi(Box<Expression<'a>>),
+    Lo(Box<Expression<'a>>),
 }
 
 #[derive(Debug, PartialEq)]

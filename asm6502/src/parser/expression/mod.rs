@@ -4,9 +4,15 @@ mod tests;
 use super::types::TokenSlice;
 use crate::parser::{
     token,
+    token::identifier,
     types::{BinaryOperator, Expression, Symbol, UnaryOperator},
 };
-use nom::{branch::alt, combinator::map, IResult};
+use nom::{
+    branch::alt,
+    combinator::{map, map_res},
+    sequence::{delimited, pair},
+    IResult,
+};
 
 /// Top-level expression parser
 pub fn expression<'a, T: Into<TokenSlice<'a>>>(
@@ -94,7 +100,9 @@ fn precedence1<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>,
 /// Parses expressions with the lowest precedence (literals, symbols, and subexpressions)
 fn precedence0<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Expression<'a>> {
     let input = input.into();
-    if let Ok((input, expr)) = symbol_or_literal(input) {
+    if let Ok((input, expr)) = hi_or_lo(input) {
+        Ok((input, expr))
+    } else if let Ok((input, expr)) = symbol_or_literal(input) {
         Ok((input, expr))
     } else {
         let (input, _) = token::open_paren(input)?;
@@ -128,6 +136,24 @@ fn symbol_or_literal<'a, T: Into<TokenSlice<'a>>>(
         ),
         map(token::star_operator, |_| Expression::CurrentAddress),
     ))(input.into())
+}
+
+fn hi_or_lo<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Expression<'a>> {
+    map_res(
+        pair(
+            identifier,
+            delimited(token::open_paren, expression, token::close_paren),
+        ),
+        |(ident, expr)| {
+            if ident.eq_ignore_ascii_case("hi") {
+                Ok(Expression::Hi(Box::new(expr)))
+            } else if ident.eq_ignore_ascii_case("lo") {
+                Ok(Expression::Lo(Box::new(expr)))
+            } else {
+                Err(())
+            }
+        },
+    )(input.into())
 }
 
 fn unary_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, UnaryOperator> {
