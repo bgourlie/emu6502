@@ -8,7 +8,7 @@ use crate::parser::{
 };
 use nom::{
     branch::alt,
-    combinator::map,
+    combinator::{map, peek},
     sequence::{delimited, pair, preceded, terminated},
     IResult,
 };
@@ -22,7 +22,7 @@ pub fn instruction<'a, T: Into<TokenSlice<'a>>>(
 
 fn operand<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Operand<'a>> {
     alt((
-        map(maybe_comment_then_newline, |_| Operand::Implied),
+        map(peek(maybe_comment_then_newline), |_| Operand::Implied),
         alt((
             operand_immediate,
             operand_indirect_indexed,
