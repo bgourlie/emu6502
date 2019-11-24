@@ -81,6 +81,9 @@ pub enum Line<'a> {
     MacroInvocation(&'a str, Vec<Expression<'a>>),
     MacroInvocationOrLabel(&'a str),
     NoOpt,
+    Ds(Option<&'a str>, Expression<'a>),
+    Db(Option<&'a str>, Vec<Expression<'a>>),
+    Dw(Option<&'a str>, Vec<Expression<'a>>),
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]

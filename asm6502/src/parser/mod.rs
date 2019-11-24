@@ -6,7 +6,10 @@ mod instruction;
 mod token;
 mod types;
 
-use crate::parser::{token::identifier, types::Line};
+use crate::parser::{
+    token::identifier,
+    types::{Expression, Line},
+};
 use instruction::instruction;
 use nom::{
     branch::alt,
@@ -73,15 +76,47 @@ fn noopt_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<
     map(token::noopt_directive, |_| Line::NoOpt)(input.into())
 }
 
+fn ds_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+    map(
+        pair(
+            opt(token::identifier),
+            preceded(token::ds_directive, expression::expression),
+        ),
+        |(ident, expr)| Line::Ds(ident, expr),
+    )(input.into())
+}
+
+fn db_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+    map(
+        pair(
+            opt(token::identifier),
+            preceded(token::db_directive, expression_list),
+        ),
+        |(ident, args)| Line::Db(ident, args),
+    )(input.into())
+}
+
+fn dw_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+    map(
+        pair(
+            opt(token::identifier),
+            preceded(token::dw_directive, expression_list),
+        ),
+        |(ident, args)| Line::Dw(ident, args),
+    )(input.into())
+}
+
+fn expression_list<'a, T: Into<TokenSlice<'a>>>(
+    input: T,
+) -> IResult<TokenSlice<'a>, Vec<Expression<'a>>> {
+    separated_nonempty_list(token::comma, expression::expression)(input.into())
+}
+
 fn macro_invocation<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
     alt((
-        map(
-            pair(
-                token::identifier,
-                separated_nonempty_list(token::comma, expression::expression),
-            ),
-            |(ident, args)| Line::MacroInvocation(ident, args),
-        ),
+        map(pair(token::identifier, expression_list), |(ident, args)| {
+            Line::MacroInvocation(ident, args)
+        }),
         map(
             terminated(token::identifier, peek(maybe_comment_then_newline)),
             |ident| Line::MacroInvocationOrLabel(ident),
@@ -103,6 +138,9 @@ pub fn parse<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, V
                 noopt_directive,
                 equ_directive,
                 macro_invocation,
+                ds_directive,
+                db_directive,
+                dw_directive,
                 map(
                     pair(opt(identifier), instruction),
                     |(label, (op, operand))| Line::Instruction(label, op, operand),

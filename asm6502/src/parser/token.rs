@@ -24,6 +24,36 @@ pub fn identifier<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'
     })
 }
 
+pub fn ds_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+    match_token(input, |token| {
+        if let Token::DsDirective = token {
+            Some(())
+        } else {
+            None
+        }
+    })
+}
+
+pub fn db_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+    match_token(input, |token| {
+        if let Token::DbDirective = token {
+            Some(())
+        } else {
+            None
+        }
+    })
+}
+
+pub fn dw_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+    match_token(input, |token| {
+        if let Token::DwDirective = token {
+            Some(())
+        } else {
+            None
+        }
+    })
+}
+
 pub fn macro_pos_arg<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, u8> {
     match_token(input, |token| {
         if let Token::MacroPositionalArg(arg_num) = token {
