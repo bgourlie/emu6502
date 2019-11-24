@@ -51,6 +51,7 @@ pub enum Token<'a> {
     MacroExpansionCount,
     MacroEnd,
     IfStart,
+    Else,
     IfEnd,
     Mnemonic(Op),
     ImmediatePrefix,
@@ -78,6 +79,7 @@ pub fn lex(input: Span) -> IResult<Span, Vec<(Span, Token)>> {
             macro_invocation_count_arg_token,
             include_directive_token,
             if_start_token,
+            else_token,
             if_end_token,
             mnemonic_token,
             immediate_prefix_token,
@@ -88,9 +90,9 @@ pub fn lex(input: Span) -> IResult<Span, Vec<(Span, Token)>> {
             offset_operand_token("y", |(pos, _)| (pos, Token::OffsetByYOperand)),
             end_directive_token,
             identifier_token,
-            operator_token("=", |(pos, _)| (pos, Token::EqualsOperator)),
         )),
         alt((
+            operator_token("=", |(pos, _)| (pos, Token::EqualsOperator)),
             dec_literal_token,
             hex_literal_token,
             oct_literal_token,
@@ -111,9 +113,9 @@ pub fn lex(input: Span) -> IResult<Span, Vec<(Span, Token)>> {
             operator_token(">", |(pos, _)| (pos, Token::GreaterThanOperator)),
             operator_token("<", |(pos, _)| (pos, Token::LessThanOperator)),
             open_paren_token,
-            close_paren_token,
         )),
         alt((
+            close_paren_token,
             string_literal_token,
             character_literal_token,
             comma_token,
@@ -318,6 +320,13 @@ fn if_end_token(input: Span) -> IResult<Span, (Span, Token)> {
     map(
         pair(position, delimited(space0, tag_no_case("endif"), space0)),
         |(pos, _)| (pos, Token::IfEnd),
+    )(input)
+}
+
+fn else_token(input: Span) -> IResult<Span, (Span, Token)> {
+    map(
+        pair(position, delimited(space0, tag_no_case("else"), space0)),
+        |(pos, _)| (pos, Token::Else),
     )(input)
 }
 

@@ -58,13 +58,17 @@ fn equ_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a
     )(input.into())
 }
 
-fn if_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+fn if_statement<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
     map(preceded(token::r#if, expression::expression), |expr| {
         Line::If(expr)
     })(input.into())
 }
 
-fn end_if_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+fn else_statement<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+    map(token::r#else, |_| Line::Else)(input.into())
+}
+
+fn end_if_statement<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
     map(token::end_if, |_| Line::EndIf)(input.into())
 }
 
@@ -132,8 +136,9 @@ pub fn parse<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, V
                 macro_decl,
                 macro_end,
                 equals_operator,
-                if_directive,
-                end_if_directive,
+                if_statement,
+                else_statement,
+                end_if_statement,
                 error_directive,
                 noopt_directive,
                 equ_directive,

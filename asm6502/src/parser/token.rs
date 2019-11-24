@@ -44,6 +44,16 @@ pub fn db_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice
     })
 }
 
+pub fn r#else<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+    match_token(input, |token| {
+        if let Token::Else = token {
+            Some(())
+        } else {
+            None
+        }
+    })
+}
+
 pub fn dw_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
     match_token(input, |token| {
         if let Token::DwDirective = token {

@@ -73,6 +73,7 @@ pub enum Line<'a> {
     Empty,
     Instruction(Option<&'a str>, Op, Operand<'a>),
     If(Expression<'a>),
+    Else,
     EndIf,
     Equals(&'a str, Expression<'a>),
     Equ(&'a str, Expression<'a>),

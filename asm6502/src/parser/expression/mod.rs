@@ -10,7 +10,7 @@ use crate::parser::{
 use nom::{
     branch::alt,
     combinator::{map, map_res},
-    sequence::{delimited, pair},
+    sequence::pair,
     IResult,
 };
 
@@ -139,21 +139,15 @@ fn symbol_or_literal<'a, T: Into<TokenSlice<'a>>>(
 }
 
 fn hi_or_lo<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Expression<'a>> {
-    map_res(
-        pair(
-            identifier,
-            delimited(token::open_paren, expression, token::close_paren),
-        ),
-        |(ident, expr)| {
-            if ident.eq_ignore_ascii_case("hi") {
-                Ok(Expression::Hi(Box::new(expr)))
-            } else if ident.eq_ignore_ascii_case("lo") {
-                Ok(Expression::Lo(Box::new(expr)))
-            } else {
-                Err(())
-            }
-        },
-    )(input.into())
+    map_res(pair(identifier, expression), |(ident, expr)| {
+        if ident.eq_ignore_ascii_case("hi") {
+            Ok(Expression::Hi(Box::new(expr)))
+        } else if ident.eq_ignore_ascii_case("lo") {
+            Ok(Expression::Lo(Box::new(expr)))
+        } else {
+            Err(())
+        }
+    })(input.into())
 }
 
 fn unary_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, UnaryOperator> {
