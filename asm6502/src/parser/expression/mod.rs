@@ -4,7 +4,7 @@ mod tests;
 use super::types::TokenSlice;
 use crate::parser::{
     token,
-    types::{BinaryOperator, Expression, UnaryOperator},
+    types::{BinaryOperator, Expression, Symbol, UnaryOperator},
 };
 use nom::{branch::alt, combinator::map, IResult};
 
@@ -108,7 +108,12 @@ fn symbol_or_literal<'a, T: Into<TokenSlice<'a>>>(
     input: T,
 ) -> IResult<TokenSlice<'a>, Expression<'a>> {
     alt((
-        map(token::identifier, |ident| Expression::Symbol(ident)),
+        map(token::identifier, |ident| {
+            Expression::Symbol(Symbol::Named(ident))
+        }),
+        map(token::macro_pos_arg, |pos| {
+            Expression::Symbol(Symbol::MacroArg(pos))
+        }),
         map(token::character_literal, |chr| {
             Expression::Literal(chr as i32)
         }),

@@ -1,7 +1,7 @@
 use super::instruction;
 use crate::parser::{
     tlex,
-    types::{BinaryOperator, Expression, Operand},
+    types::{BinaryOperator, Expression, Operand, Symbol},
 };
 use shared6502::Op;
 
@@ -87,7 +87,7 @@ fn test_indirect_indexed_with_complex_expr() {
     assert_eq!(
         Operand::IndirectIndexed(Box::new(Expression::Grouping(Box::new(
             Expression::Binary(
-                Box::new(Expression::Symbol("addr")),
+                Box::new(Expression::Symbol(Symbol::Named("addr"))),
                 BinaryOperator::Subtraction,
                 Box::new(Expression::Literal(1))
             )

@@ -24,6 +24,16 @@ pub fn identifier<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'
     })
 }
 
+pub fn macro_pos_arg<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, u8> {
+    match_token(input, |token| {
+        if let Token::MacroPositionalArg(arg_num) = token {
+            Some(arg_num)
+        } else {
+            None
+        }
+    })
+}
+
 pub fn comma<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
     match_token(input, |token| {
         if let Token::Comma = token {

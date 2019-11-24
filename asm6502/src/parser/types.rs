@@ -40,10 +40,16 @@ pub enum BinaryOperator {
 pub enum Expression<'a> {
     CurrentAddress,
     Literal(i32),
-    Symbol(&'a str),
+    Symbol(Symbol<'a>),
     Unary(UnaryOperator, Box<Expression<'a>>),
     Binary(Box<Expression<'a>>, BinaryOperator, Box<Expression<'a>>),
     Grouping(Box<Expression<'a>>),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Symbol<'a> {
+    Named(&'a str),
+    MacroArg(u8),
 }
 
 #[derive(Debug, PartialEq)]
