@@ -11,7 +11,7 @@ fn main() -> Result<(), std::io::Error> {
     let tokens: Vec<Token> = tokens.into_iter().map(|(_, token)| token).collect();
     println!("{} tokens", tokens.len());
     let (remaining, lines) = asm6502::parse(&tokens).unwrap();
-    let mut resolver = Resolver::new();
+    let mut resolver = Resolver::default();
     for (line) in lines.into_iter() {
         resolver.next_line(line);
     }

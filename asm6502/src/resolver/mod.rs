@@ -2,9 +2,11 @@ use crate::parser::types::Line;
 use fnv::{FnvHashMap, FnvHashSet};
 
 pub enum ResolveError<'a> {
+    LabelAlreadyDefined(&'a str),
     MacroAlreadyDefined(&'a str),
 }
 
+#[derive(Default)]
 pub struct Resolver<'a> {
     cur_addr: u32,
     label_map: FnvHashMap<&'a str, u32>,
@@ -14,22 +16,20 @@ pub struct Resolver<'a> {
 }
 
 impl<'a> Resolver<'a> {
-    pub fn new() -> Resolver<'a> {
-        Resolver {
-            cur_addr: 0,
-            label_map: FnvHashMap::default(),
-            macro_set: FnvHashSet::default(),
-        }
-    }
-
     pub fn next_line(&mut self, line: Line<'a>) -> Result<(), ResolveError<'a>> {
         match line {
             Line::Instruction(maybe_label, _op, _opcode) => {
                 if let Some(label) = maybe_label {
-                    self.label_map.insert(label, self.cur_addr);
+                    if self.label_map.contains_key(label) {
+                        Err(ResolveError::LabelAlreadyDefined(label))
+                    } else {
+                        self.label_map.insert(label, self.cur_addr);
+                        self.cur_addr += 1;
+                        Ok(())
+                    }
+                } else {
+                    Ok(())
                 }
-                self.cur_addr += 1;
-                Ok(())
             }
             Line::MacroStart(macro_name) => {
                 if self.macro_set.contains(macro_name) {
