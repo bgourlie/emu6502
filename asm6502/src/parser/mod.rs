@@ -4,7 +4,7 @@ mod tests;
 mod expression;
 mod instruction;
 mod token;
-mod types;
+pub mod types;
 
 use crate::parser::{
     token::identifier,
