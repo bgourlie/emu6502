@@ -3,6 +3,7 @@ use nom::{
     error::{ErrorKind, ParseError},
     Err, InputIter, InputLength, InputTake, InputTakeAtPosition, Needed, Slice,
 };
+use std::rc::Rc;
 
 use shared6502::Op;
 use std::{
@@ -75,7 +76,7 @@ pub enum Line<'a> {
     If(Expression<'a>),
     Else,
     EndIf,
-    Equals(&'a str, Expression<'a>),
+    Equals(&'a str, Rc<Expression<'a>>),
     Equ(&'a str, Expression<'a>),
     Error(&'a str),
     MacroStart(&'a str),

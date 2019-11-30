@@ -18,6 +18,7 @@ use nom::{
     sequence::{pair, preceded, separated_pair, terminated},
     IResult,
 };
+use std::rc::Rc;
 use types::TokenSlice;
 
 pub fn maybe_comment_then_newline<'a, T: Into<TokenSlice<'a>>>(
@@ -43,7 +44,7 @@ fn equals_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<
             token::equals_operator,
             expression::expression,
         ),
-        |(ident, expr)| Line::Equals(ident, expr),
+        |(ident, expr)| Line::Equals(ident, Rc::new(expr)),
     )(input.into())
 }
 

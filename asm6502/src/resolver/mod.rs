@@ -1,5 +1,6 @@
 use crate::parser::types::{Expression, Line};
 use fnv::FnvHashMap;
+use std::rc::Rc;
 
 // TODO: We need to determine which lines are "live" by resolving any compiler expressions (if/else)
 // State machine?
@@ -18,7 +19,7 @@ pub struct Resolver<'a> {
     lines: Vec<Line<'a>>,
     line_state: Vec<bool>,
     variable_scope_depth: usize,
-    variables: Vec<FnvHashMap<&'a str, ()>>,
+    variables: Vec<FnvHashMap<&'a str, Rc<Expression<'a>>>>,
     label_map: FnvHashMap<&'a str, usize>,
     macro_map: FnvHashMap<&'a str, usize>,
 }
@@ -59,7 +60,7 @@ impl<'a> Resolver<'a> {
                     Ok(())
                 }
             }
-            Line::Equals(var, _expr) => {
+            Line::Equals(var, expr) => {
                 // TODO: Move this up to where we determine we've entered a new scope
                 if self.variables.len() == self.variable_scope_depth {
                     self.variables.push(FnvHashMap::default())
@@ -68,7 +69,7 @@ impl<'a> Resolver<'a> {
                 if self.variables[self.variable_scope_depth].contains_key(var) {
                     Err(ResolveError::VariableAlreadyDefined(cur_line, var))
                 } else {
-                    self.variables[self.variable_scope_depth].insert(var, ());
+                    self.variables[self.variable_scope_depth].insert(var, Rc::clone(expr));
                     Ok(())
                 }
             }
@@ -83,10 +84,14 @@ impl<'a> Resolver<'a> {
             println!("{}: {:?}", label, line);
         }
 
-        println!("MACRO DECLARATIONS:");
-
+        println!("macro declarations:");
         for (macro_name, line_index) in self.macro_map.iter() {
             println!("{}: {}", line_index, macro_name);
+        }
+
+        println!("global macro declarations:");
+        for (var, expr) in self.variables[0].iter() {
+            println!("{}: {:?}", var, expr);
         }
     }
 }
