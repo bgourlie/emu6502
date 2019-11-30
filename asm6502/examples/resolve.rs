@@ -11,9 +11,11 @@ fn main() -> Result<(), std::io::Error> {
     let tokens: Vec<Token> = tokens.into_iter().map(|(_, token)| token).collect();
     println!("{} tokens", tokens.len());
     let (remaining, lines) = asm6502::parse(&tokens).unwrap();
-    let mut resolver = Resolver::default();
-    for (line) in lines.into_iter() {
-        resolver.next_line(line);
+    let mut resolver = Resolver::new(lines.len());
+    for line in lines.into_iter() {
+        if let Err(err) = resolver.resolve_line(line) {
+            println!("ERROR\n{:?}", err);
+        }
     }
     resolver.print_macros();
     println!("{:?}", remaining);
