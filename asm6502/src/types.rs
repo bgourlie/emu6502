@@ -161,7 +161,7 @@ impl<'a> From<&'a [Token<'a>]> for TokenSlice<'a> {
 impl<'a> InputIter for TokenSlice<'a> {
     type Item = Token<'a>;
     type Iter = Enumerate<Self::IterElem>;
-    type IterElem = Copied<Iter<'a, Token<'a>>>;
+    type IterElem = Copied<Iter<'a, Self::Item>>;
 
     #[inline]
     fn iter_indices(&self) -> Self::Iter {
@@ -169,16 +169,14 @@ impl<'a> InputIter for TokenSlice<'a> {
     }
     #[inline]
     fn iter_elements(&self) -> Self::IterElem {
-        let TokenSlice(inner) = self;
-        inner.iter().copied()
+        self.0.iter().copied()
     }
     #[inline]
     fn position<P>(&self, predicate: P) -> Option<usize>
     where
         P: Fn(Self::Item) -> bool,
     {
-        let TokenSlice(inner) = self;
-        inner.iter().position(|b| predicate(*b))
+        self.0.iter().position(|b| predicate(*b))
     }
     #[inline]
     fn slice_index(&self, count: usize) -> Option<usize> {
@@ -212,13 +210,11 @@ impl<'a> InputLength for TokenSlice<'a> {
 
 impl<'a> InputTake for TokenSlice<'a> {
     fn take(&self, count: usize) -> Self {
-        let TokenSlice(inner) = self;
-        TokenSlice(&inner[0..count])
+        TokenSlice(&self.0[0..count])
     }
 
     fn take_split(&self, count: usize) -> (Self, Self) {
-        let TokenSlice(inner) = *self;
-        let (prefix, suffix) = inner.split_at(count);
+        let (prefix, suffix) = self.0.split_at(count);
         (TokenSlice(suffix), TokenSlice(prefix))
     }
 }
@@ -233,9 +229,8 @@ impl<'a> InputTakeAtPosition for TokenSlice<'a> {
     where
         P: Fn(Self::Item) -> bool,
     {
-        let TokenSlice(inner) = self;
-        match (0..inner.len()).find(|b| predicate(inner[*b])) {
-            Some(i) => Ok((TokenSlice(&inner[i..]), TokenSlice(&inner[..i]))),
+        match (0..self.0.len()).find(|b| predicate(self.0[*b])) {
+            Some(i) => Ok((TokenSlice(&self.0[i..]), TokenSlice(&self.0[..i]))),
             None => Err(Err::Incomplete(Needed::Size(1))),
         }
     }
@@ -248,10 +243,9 @@ impl<'a> InputTakeAtPosition for TokenSlice<'a> {
     where
         P: Fn(Self::Item) -> bool,
     {
-        let TokenSlice(inner) = self;
-        match (0..inner.len()).find(|b| predicate(inner[*b])) {
+        match (0..self.0.len()).find(|b| predicate(self.0[*b])) {
             Some(0) => Err(Err::Error(E::from_error_kind(*self, e))),
-            Some(i) => Ok((TokenSlice(&inner[i..]), TokenSlice(&inner[..i]))),
+            Some(i) => Ok((TokenSlice(&self.0[i..]), TokenSlice(&self.0[..i]))),
             None => Err(Err::Incomplete(Needed::Size(1))),
         }
     }
@@ -263,9 +257,8 @@ impl<'a> InputTakeAtPosition for TokenSlice<'a> {
     where
         P: Fn(Self::Item) -> bool,
     {
-        let TokenSlice(inner) = self;
-        match (0..inner.len()).find(|b| predicate(inner[*b])) {
-            Some(i) => Ok((TokenSlice(&inner[i..]), TokenSlice(&inner[..i]))),
+        match (0..self.0.len()).find(|b| predicate(self.0[*b])) {
+            Some(i) => Ok((TokenSlice(&self.0[i..]), TokenSlice(&self.0[..i]))),
             None => Ok(self.take_split(self.input_len())),
         }
     }
@@ -278,12 +271,11 @@ impl<'a> InputTakeAtPosition for TokenSlice<'a> {
     where
         P: Fn(Self::Item) -> bool,
     {
-        let TokenSlice(inner) = self;
-        match (0..inner.len()).find(|b| predicate(inner[*b])) {
+        match (0..self.0.len()).find(|b| predicate(self.0[*b])) {
             Some(0) => Err(Err::Error(E::from_error_kind(*self, e))),
-            Some(i) => Ok((TokenSlice(&inner[i..]), TokenSlice(&inner[..i]))),
+            Some(i) => Ok((TokenSlice(&self.0[i..]), TokenSlice(&self.0[..i]))),
             None => {
-                if inner.is_empty() {
+                if self.0.is_empty() {
                     Err(Err::Error(E::from_error_kind(*self, e)))
                 } else {
                     Ok(self.take_split(self.input_len()))
