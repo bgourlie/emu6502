@@ -55,7 +55,7 @@ fn equ_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a
             token::equ_directive,
             expression::expression,
         ),
-        |(ident, expr)| Line::Equ(ident, expr),
+        |(ident, expr)| Line::Equ(ident, Rc::new(expr)),
     )(input.into())
 }
 
@@ -87,7 +87,7 @@ fn ds_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>
             opt(token::identifier),
             preceded(token::ds_directive, expression::expression),
         ),
-        |(ident, expr)| Line::Ds(ident, expr),
+        |(ident, expr)| Line::Ds(ident, Rc::new(expr)),
     )(input.into())
 }
 
@@ -113,8 +113,11 @@ fn dw_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>
 
 fn expression_list<'a, T: Into<TokenSlice<'a>>>(
     input: T,
-) -> IResult<TokenSlice<'a>, Vec<Expression<'a>>> {
-    separated_nonempty_list(token::comma, expression::expression)(input.into())
+) -> IResult<TokenSlice<'a>, Vec<Rc<Expression<'a>>>> {
+    separated_nonempty_list(
+        token::comma,
+        map(expression::expression, |expr| Rc::new(expr)),
+    )(input.into())
 }
 
 fn macro_invocation<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {

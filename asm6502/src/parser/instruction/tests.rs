@@ -4,6 +4,7 @@ use crate::parser::{
     types::{BinaryOperator, Expression, Operand, Symbol},
 };
 use shared6502::Op;
+use std::rc::Rc;
 
 #[test]
 fn test_implied() {
@@ -19,7 +20,7 @@ fn test_immediate() {
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
-        Operand::Immediate(Box::new(Expression::Literal(20))),
+        Operand::Immediate(Rc::new(Expression::Literal(20))),
         operand
     );
 }
@@ -30,7 +31,7 @@ fn test_indirect() {
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Jmp, opcode);
     assert_eq!(
-        Operand::Indirect(Box::new(Expression::Literal(0xff))),
+        Operand::Indirect(Rc::new(Expression::Literal(0xff))),
         operand
     );
 }
@@ -41,7 +42,7 @@ fn test_indexed_indirect() {
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
-        Operand::IndexedIndirect(Box::new(Expression::Literal(0xff))),
+        Operand::IndexedIndirect(Rc::new(Expression::Literal(0xff))),
         operand
     );
 }
@@ -52,7 +53,7 @@ fn test_indirect_indexed() {
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
-        Operand::IndirectIndexed(Box::new(Expression::Literal(0xff))),
+        Operand::IndirectIndexed(Rc::new(Expression::Literal(0xff))),
         operand
     );
 }
@@ -63,7 +64,7 @@ fn test_absolute_x() {
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
-        Operand::AbsoluteX(Box::new(Expression::Literal(0xffff))),
+        Operand::AbsoluteX(Rc::new(Expression::Literal(0xffff))),
         operand
     );
 }
@@ -74,7 +75,7 @@ fn test_absolute_y() {
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
-        Operand::AbsoluteY(Box::new(Expression::Literal(0xffff))),
+        Operand::AbsoluteY(Rc::new(Expression::Literal(0xffff))),
         operand
     );
 }
@@ -85,13 +86,11 @@ fn test_indirect_indexed_with_complex_expr() {
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
-        Operand::IndirectIndexed(Box::new(Expression::Grouping(Box::new(
-            Expression::Binary(
-                Box::new(Expression::Symbol(Symbol::Named("addr"))),
-                BinaryOperator::Subtraction,
-                Box::new(Expression::Literal(1))
-            )
-        )))),
+        Operand::IndirectIndexed(Rc::new(Expression::Grouping(Rc::new(Expression::Binary(
+            Rc::new(Expression::Symbol(Symbol::Named("addr"))),
+            BinaryOperator::Subtraction,
+            Rc::new(Expression::Literal(1))
+        ))))),
         operand
     );
 }
@@ -102,7 +101,7 @@ fn test_absolute_or_relative() {
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
-        Operand::AbsoluteOrRelative(Box::new(Expression::Literal(0xff))),
+        Operand::AbsoluteOrRelative(Rc::new(Expression::Literal(0xff))),
         operand
     );
 }

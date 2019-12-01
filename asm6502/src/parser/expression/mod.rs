@@ -12,6 +12,7 @@ use nom::{
     sequence::pair,
     IResult,
 };
+use std::rc::Rc;
 
 /// Top-level expression parser
 pub fn expression<'a, T: Into<TokenSlice<'a>>>(
@@ -22,7 +23,7 @@ pub fn expression<'a, T: Into<TokenSlice<'a>>>(
         let (input, right) = expression(input)?;
         Ok((
             input,
-            Expression::Binary(Box::new(left), operator, Box::new(right)),
+            Expression::Binary(Rc::new(left), operator, Rc::new(right)),
         ))
     } else {
         Ok((input, left))
@@ -36,7 +37,7 @@ fn precedence5<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>,
         let (input, right) = precedence5(input)?;
         Ok((
             input,
-            Expression::Binary(Box::new(left), operator, Box::new(right)),
+            Expression::Binary(Rc::new(left), operator, Rc::new(right)),
         ))
     } else {
         Ok((input, left))
@@ -50,7 +51,7 @@ fn precedence4<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>,
         let (input, right) = precedence4(input)?;
         Ok((
             input,
-            Expression::Binary(Box::new(left), operator, Box::new(right)),
+            Expression::Binary(Rc::new(left), operator, Rc::new(right)),
         ))
     } else {
         Ok((input, left))
@@ -64,7 +65,7 @@ fn precedence3<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>,
         let (input, right) = precedence3(input)?;
         Ok((
             input,
-            Expression::Binary(Box::new(left), operator, Box::new(right)),
+            Expression::Binary(Rc::new(left), operator, Rc::new(right)),
         ))
     } else {
         Ok((input, left))
@@ -78,7 +79,7 @@ fn precedence2<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>,
         let (input, right) = precedence2(input)?;
         Ok((
             input,
-            Expression::Binary(Box::new(left), operator, Box::new(right)),
+            Expression::Binary(Rc::new(left), operator, Rc::new(right)),
         ))
     } else {
         Ok((input, left))
@@ -90,7 +91,7 @@ fn precedence1<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>,
     let input = input.into();
     if let Ok((input, operator)) = unary_operator(input) {
         let (input, expr) = precedence1(input)?;
-        Ok((input, Expression::Unary(operator, Box::new(expr))))
+        Ok((input, Expression::Unary(operator, Rc::new(expr))))
     } else {
         precedence0(input)
     }
@@ -107,7 +108,7 @@ fn precedence0<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>,
         let (input, _) = token::open_paren(input)?;
         let (input, expr) = expression(input)?;
         let (input, _) = token::close_paren(input)?;
-        Ok((input, Expression::Grouping(Box::new(expr))))
+        Ok((input, Expression::Grouping(Rc::new(expr))))
     }
 }
 
@@ -140,9 +141,9 @@ fn symbol_or_literal<'a, T: Into<TokenSlice<'a>>>(
 fn hi_or_lo<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Expression<'a>> {
     map_res(pair(identifier, expression), |(ident, expr)| {
         if ident.eq_ignore_ascii_case("hi") {
-            Ok(Expression::Hi(Box::new(expr)))
+            Ok(Expression::Hi(Rc::new(expr)))
         } else if ident.eq_ignore_ascii_case("lo") {
-            Ok(Expression::Lo(Box::new(expr)))
+            Ok(Expression::Lo(Rc::new(expr)))
         } else {
             Err(())
         }

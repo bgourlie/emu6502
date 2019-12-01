@@ -43,11 +43,11 @@ pub enum Expression<'a> {
     CurrentAddress,
     Literal(u16),
     Symbol(Symbol<'a>),
-    Unary(UnaryOperator, Box<Expression<'a>>),
-    Binary(Box<Expression<'a>>, BinaryOperator, Box<Expression<'a>>),
-    Grouping(Box<Expression<'a>>),
-    Hi(Box<Expression<'a>>),
-    Lo(Box<Expression<'a>>),
+    Unary(UnaryOperator, Rc<Expression<'a>>),
+    Binary(Rc<Expression<'a>>, BinaryOperator, Rc<Expression<'a>>),
+    Grouping(Rc<Expression<'a>>),
+    Hi(Rc<Expression<'a>>),
+    Lo(Rc<Expression<'a>>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -58,15 +58,15 @@ pub enum Symbol<'a> {
 
 #[derive(Debug, PartialEq)]
 pub enum Operand<'a> {
-    AbsoluteOrRelative(Box<Expression<'a>>),
-    AbsoluteX(Box<Expression<'a>>),
-    AbsoluteY(Box<Expression<'a>>),
+    AbsoluteOrRelative(Rc<Expression<'a>>),
+    AbsoluteX(Rc<Expression<'a>>),
+    AbsoluteY(Rc<Expression<'a>>),
     Accumulator,
-    IndexedIndirect(Box<Expression<'a>>),
-    IndirectIndexed(Box<Expression<'a>>),
+    IndexedIndirect(Rc<Expression<'a>>),
+    IndirectIndexed(Rc<Expression<'a>>),
     Implied,
-    Immediate(Box<Expression<'a>>),
-    Indirect(Box<Expression<'a>>),
+    Immediate(Rc<Expression<'a>>),
+    Indirect(Rc<Expression<'a>>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -77,16 +77,16 @@ pub enum Line<'a> {
     Else,
     EndIf,
     Equals(&'a str, Rc<Expression<'a>>),
-    Equ(&'a str, Expression<'a>),
+    Equ(&'a str, Rc<Expression<'a>>),
     Error(&'a str),
     MacroStart(&'a str),
     MacroEnd,
-    MacroInvocation(&'a str, Vec<Expression<'a>>),
+    MacroInvocation(&'a str, Vec<Rc<Expression<'a>>>),
     MacroInvocationOrLabel(&'a str),
     NoOpt,
-    Ds(Option<&'a str>, Expression<'a>),
-    Db(Option<&'a str>, Vec<Expression<'a>>),
-    Dw(Option<&'a str>, Vec<Expression<'a>>),
+    Ds(Option<&'a str>, Rc<Expression<'a>>),
+    Db(Option<&'a str>, Vec<Rc<Expression<'a>>>),
+    Dw(Option<&'a str>, Vec<Rc<Expression<'a>>>),
     Include(&'a str),
     End(&'a str),
 }

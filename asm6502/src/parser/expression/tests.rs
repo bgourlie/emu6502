@@ -3,6 +3,7 @@ use crate::parser::{
     tlex,
     types::{BinaryOperator, Expression, Symbol, UnaryOperator},
 };
+use std::rc::Rc;
 
 #[test]
 fn test_literal_expr() {
@@ -17,9 +18,9 @@ fn test_expression_1() {
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
-            Box::new(Expression::Symbol(Symbol::Named("something"))),
+            Rc::new(Expression::Symbol(Symbol::Named("something"))),
             BinaryOperator::Equals,
-            Box::new(Expression::Literal(1))
+            Rc::new(Expression::Literal(1))
         ),
         expr
     );
@@ -32,7 +33,7 @@ fn test_expression_2() {
     assert_eq!(
         Expression::Unary(
             UnaryOperator::LogicalNot,
-            Box::new(Expression::Symbol(Symbol::Named("something")))
+            Rc::new(Expression::Symbol(Symbol::Named("something")))
         ),
         expr
     );
@@ -44,9 +45,9 @@ fn test_expression_3() {
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
-            Box::new(Expression::Literal(10)),
+            Rc::new(Expression::Literal(10)),
             BinaryOperator::Multiply,
-            Box::new(Expression::Literal(5))
+            Rc::new(Expression::Literal(5))
         ),
         expr
     );
@@ -58,9 +59,9 @@ fn test_expression_4() {
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
-            Box::new(Expression::Literal(10)),
+            Rc::new(Expression::Literal(10)),
             BinaryOperator::Addition,
-            Box::new(Expression::Literal(5))
+            Rc::new(Expression::Literal(5))
         ),
         expr
     );
@@ -72,9 +73,9 @@ fn test_expression_5() {
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
-            Box::new(Expression::Literal(10)),
+            Rc::new(Expression::Literal(10)),
             BinaryOperator::GreaterThan,
-            Box::new(Expression::Literal(5))
+            Rc::new(Expression::Literal(5))
         ),
         expr
     );
@@ -86,9 +87,9 @@ fn test_expression_6() {
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
-            Box::new(Expression::Literal(10)),
+            Rc::new(Expression::Literal(10)),
             BinaryOperator::Equals,
-            Box::new(Expression::Literal(5))
+            Rc::new(Expression::Literal(5))
         ),
         expr
     );
@@ -100,11 +101,11 @@ fn test_expression_7() {
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
-            Box::new(Expression::Literal(10)),
+            Rc::new(Expression::Literal(10)),
             BinaryOperator::Multiply,
-            Box::new(Expression::Unary(
+            Rc::new(Expression::Unary(
                 UnaryOperator::LogicalNot,
-                Box::new(Expression::Symbol(Symbol::Named("something")))
+                Rc::new(Expression::Symbol(Symbol::Named("something")))
             ))
         ),
         expr
@@ -118,12 +119,12 @@ fn test_expression_8() {
     assert_eq!(
         Expression::Unary(
             UnaryOperator::LogicalNot,
-            Box::new(Expression::Grouping(Box::new(Expression::Binary(
-                Box::new(Expression::Literal(10)),
+            Rc::new(Expression::Grouping(Rc::new(Expression::Binary(
+                Rc::new(Expression::Literal(10)),
                 BinaryOperator::Multiply,
-                Box::new(Expression::Unary(
+                Rc::new(Expression::Unary(
                     UnaryOperator::LogicalNot,
-                    Box::new(Expression::Symbol(Symbol::Named("something")))
+                    Rc::new(Expression::Symbol(Symbol::Named("something")))
                 ))
             ),)))
         ),
@@ -137,17 +138,17 @@ fn test_expression_9() {
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
-            Box::new(Expression::Binary(
-                Box::new(Expression::Binary(
-                    Box::new(Expression::Literal(2)),
+            Rc::new(Expression::Binary(
+                Rc::new(Expression::Binary(
+                    Rc::new(Expression::Literal(2)),
                     BinaryOperator::Multiply,
-                    Box::new(Expression::Literal(3))
+                    Rc::new(Expression::Literal(3))
                 )),
                 BinaryOperator::Addition,
-                Box::new(Expression::Literal(1))
+                Rc::new(Expression::Literal(1))
             )),
             BinaryOperator::Equals,
-            Box::new(Expression::Literal(7))
+            Rc::new(Expression::Literal(7))
         ),
         expr
     );
@@ -159,13 +160,13 @@ fn test_expression_10() {
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
-            Box::new(Expression::Grouping(Box::new(Expression::Binary(
-                Box::new(Expression::Symbol(Symbol::Named("data_segment"))),
+            Rc::new(Expression::Grouping(Rc::new(Expression::Binary(
+                Rc::new(Expression::Symbol(Symbol::Named("data_segment"))),
                 BinaryOperator::And,
-                Box::new(Expression::Literal(255))
+                Rc::new(Expression::Literal(255))
             )))),
             BinaryOperator::NotEquals,
-            Box::new(Expression::Literal(0))
+            Rc::new(Expression::Literal(0))
         ),
         expr
     );

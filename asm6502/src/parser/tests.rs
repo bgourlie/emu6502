@@ -2,6 +2,7 @@ use crate::parser::{
     parse, tlex,
     types::{BinaryOperator, Expression, Line},
 };
+use std::rc::Rc;
 
 #[test]
 fn test_macro_decl() {
@@ -32,14 +33,14 @@ fn test_macro_invocation_with_args() {
     let tokens = tlex("some_macro 1,2+2,3,4\n");
     let (_, lines) = parse(&tokens).unwrap();
     let expected_args = vec![
-        Expression::Literal(1),
-        Expression::Binary(
-            Box::new(Expression::Literal(2)),
+        Rc::new(Expression::Literal(1)),
+        Rc::new(Expression::Binary(
+            Rc::new(Expression::Literal(2)),
             BinaryOperator::Addition,
-            Box::new(Expression::Literal(2)),
-        ),
-        Expression::Literal(3),
-        Expression::Literal(4),
+            Rc::new(Expression::Literal(2)),
+        )),
+        Rc::new(Expression::Literal(3)),
+        Rc::new(Expression::Literal(4)),
     ];
 
     if let Line::MacroInvocation(macro_name, args) = &lines[0] {
@@ -60,5 +61,8 @@ fn test_eq_directive2() {
     let tokens = tlex("carry   equ %00000001\n");
     let (_, lines) = parse(&tokens).unwrap();
     assert_eq!(1, lines.len());
-    assert_eq!(Line::Equ("carry", Expression::Literal(1)), lines[0]);
+    assert_eq!(
+        Line::Equ("carry", Rc::new(Expression::Literal(1))),
+        lines[0]
+    );
 }
