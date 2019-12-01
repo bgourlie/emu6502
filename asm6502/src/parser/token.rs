@@ -1,6 +1,5 @@
 /// A collection of parsers that match a single token.
-use crate::parser::types::TokenSlice;
-use crate::Token;
+use crate::types::{Token, TokenSlice};
 use nom::{bytes::complete::take, combinator::map_res, IResult};
 use shared6502::Op;
 

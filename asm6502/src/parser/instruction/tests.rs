@@ -1,7 +1,7 @@
 use super::instruction;
 use crate::{
-    parser::types::{BinaryOperator, Expression, Operand, Symbol},
     tlex,
+    types::{BinaryOperator, Expression, Operand, Symbol},
 };
 use shared6502::Op;
 use std::rc::Rc;

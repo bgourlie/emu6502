@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod tests;
 
-use super::types::TokenSlice;
-use crate::parser::{
-    token::{self, identifier},
-    types::{BinaryOperator, Expression, Symbol, UnaryOperator},
+use crate::{
+    parser::token::{self, identifier},
+    types::{BinaryOperator, Expression, Symbol, TokenSlice, UnaryOperator},
 };
+
 use nom::{
     branch::alt,
     combinator::{map, map_res},

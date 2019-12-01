@@ -1,16 +1,69 @@
-use crate::Token;
 use nom::{
     error::{ErrorKind, ParseError},
     Err, InputIter, InputLength, InputTake, InputTakeAtPosition, Needed, Slice,
 };
 use std::rc::Rc;
 
+use nom_locate::LocatedSpan;
 use shared6502::Op;
 use std::{
     iter::{Copied, Enumerate},
     ops::Index,
     slice::Iter,
 };
+
+pub type Span<'a> = LocatedSpan<&'a str>;
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum Token<'a> {
+    Newline,
+    Comment(&'a str),
+    Identifier(&'a str),
+    CharacterLiteral(char),
+    StringLiteral(&'a str),
+    HexLiteral(u16),
+    DecLiteral(u16),
+    BinLiteral(u16),
+    OctLiteral(u16),
+    NoOptDirective,
+    EquDirective,
+    OpenParen,
+    CloseParen,
+    BangOperator,
+    EqualsOperator,
+    NotEqualsOperator,
+    PlusOperator,
+    MinusOperator,
+    StarOperator,
+    RightShiftOperator,
+    LeftShiftOperator,
+    GreaterThanOperator,
+    GreaterThanOrEqualToOperator,
+    LessThanOperator,
+    LessThanOrEqualToOperator,
+    ComplementOperator,
+    AndOperator,
+    OrOperator,
+    XorOperator,
+    MacroStart,
+    MacroPositionalArg(u8),
+    MacroExpansionCount,
+    MacroEnd,
+    IfStart,
+    Else,
+    IfEnd,
+    Mnemonic(Op),
+    ImmediatePrefix,
+    OffsetByXOperand,
+    OffsetByYOperand,
+    Comma,
+    ErrorDirective(&'a str),
+    EndDirective,
+    DbDirective,
+    DsDirective,
+    DwDirective,
+    IncludeDirective(&'a str),
+}
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum UnaryOperator {

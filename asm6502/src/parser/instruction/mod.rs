@@ -1,9 +1,8 @@
 #[cfg(test)]
 mod tests;
 
-use crate::parser::{
-    expression::expression,
-    maybe_comment_then_newline, token,
+use crate::{
+    parser::{expression::expression, maybe_comment_then_newline, token},
     types::{Operand, TokenSlice},
 };
 use nom::{

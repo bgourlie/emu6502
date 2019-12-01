@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::parser::types::{BinaryOperator, Expression, Line, Symbol, UnaryOperator};
+use crate::types::{BinaryOperator, Expression, Line, Symbol, UnaryOperator};
 use fnv::FnvHashMap;
 use std::{borrow::Borrow, convert::TryFrom, rc::Rc};
 
@@ -122,8 +122,7 @@ impl<'a> Resolver<'a> {
                     .and_then(|val| match operator {
                         UnaryOperator::Complement => Ok(!val),
                         UnaryOperator::Negation => Ok(-val),
-                        UnaryOperator::LogicalNot => Ok(i32::from(!(val > 0))),
-                        _ => Ok(0),
+                        UnaryOperator::LogicalNot => Ok(i32::from(val <= 0)),
                     })
             }
             Expression::Hi(expr) => self

@@ -4,11 +4,10 @@ mod tests;
 mod expression;
 mod instruction;
 mod token;
-pub mod types;
 
-use crate::parser::{
-    token::identifier,
-    types::{Expression, Line},
+use crate::{
+    parser::token::identifier,
+    types::{Expression, Line, TokenSlice},
 };
 use instruction::instruction;
 use nom::{
@@ -19,7 +18,6 @@ use nom::{
     IResult,
 };
 use std::rc::Rc;
-use types::TokenSlice;
 
 pub fn maybe_comment_then_newline<'a, T: Into<TokenSlice<'a>>>(
     input: T,

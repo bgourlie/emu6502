@@ -11,5 +11,6 @@ fn test_resolve_expr() {
         resolver.resolve_line(line);
     }
 
-    assert_eq!(Line::Equals("val", 14), resolver.lines[0])
+    unimplemented!()
+    //assert_eq!(Line::Equals("val", 14), resolver.lines[0])
 }
