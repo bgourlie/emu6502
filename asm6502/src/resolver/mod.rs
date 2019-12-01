@@ -24,7 +24,7 @@ pub struct Resolver<'a> {
     lines: Vec<Line<'a>>,
     line_state: Vec<bool>,
     cur_addr: u16,
-    variables: FnvHashMap<&'a str, Rc<Expression<'a>>>,
+    variables: FnvHashMap<&'a str, i32>,
     label_map: FnvHashMap<&'a str, usize>,
     macro_map: FnvHashMap<&'a str, usize>,
 }
@@ -69,7 +69,8 @@ impl<'a> Resolver<'a> {
                 if self.variables.contains_key(var) {
                     Err(ResolveError::VariableAlreadyDefined(cur_line, var))
                 } else {
-                    self.variables.insert(var, Rc::clone(expr));
+                    let val = self.resolve_expr(Rc::clone(expr))?;
+                    self.variables.insert(var, val);
                     Ok(())
                 }
             }
@@ -84,8 +85,8 @@ impl<'a> Resolver<'a> {
             Expression::CurrentAddress => Ok(i32::from(self.cur_addr)),
             Expression::Symbol(Symbol::MacroArg(_arg_num)) => unimplemented!(),
             Expression::Symbol(Symbol::Named(name)) => {
-                if let Some(expr) = self.variables.get(name) {
-                    self.resolve_expr(Rc::clone(expr))
+                if let Some(val) = self.variables.get(name) {
+                    Ok(*val)
                 } else {
                     Err(ResolveError::SymbolNotDefined(name))
                 }
