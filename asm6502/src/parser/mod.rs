@@ -171,10 +171,3 @@ pub fn parse<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, V
         ),
     )))(input.into())
 }
-
-#[cfg(test)]
-fn tlex(input: &'static str) -> Vec<crate::Token> {
-    let input = crate::Span::new(input);
-    let (_, parsed) = crate::lex(input).unwrap();
-    parsed.into_iter().map(|(_, token)| token).collect()
-}

@@ -1,4 +1,7 @@
-use crate::parser::types::{BinaryOperator, Expression, Line, Symbol};
+#[cfg(test)]
+mod tests;
+
+use crate::parser::types::{BinaryOperator, Expression, Line, Symbol, UnaryOperator};
 use fnv::FnvHashMap;
 use std::{borrow::Borrow, convert::TryFrom, rc::Rc};
 
@@ -20,6 +23,7 @@ pub enum ResolveError<'a> {
 pub struct Resolver<'a> {
     lines: Vec<Line<'a>>,
     line_state: Vec<bool>,
+    cur_addr: u16,
     variables: FnvHashMap<&'a str, Rc<Expression<'a>>>,
     label_map: FnvHashMap<&'a str, usize>,
     macro_map: FnvHashMap<&'a str, usize>,
@@ -30,6 +34,7 @@ impl<'a> Resolver<'a> {
         let lines = Vec::with_capacity(num_lines);
         Resolver {
             lines,
+            cur_addr: 0,
             line_state: vec![false; num_lines],
             variables: FnvHashMap::default(),
             label_map: FnvHashMap::default(),
@@ -61,7 +66,6 @@ impl<'a> Resolver<'a> {
                 }
             }
             Line::Equals(var, expr) => {
-                // TODO: Move this up to where we determine we've entered a new scope
                 if self.variables.contains_key(var) {
                     Err(ResolveError::VariableAlreadyDefined(cur_line, var))
                 } else {
@@ -77,6 +81,8 @@ impl<'a> Resolver<'a> {
     fn resolve_expr(&self, expr: Rc<Expression<'a>>) -> Result<i32, ResolveError<'a>> {
         match expr.borrow() {
             Expression::Literal(val) => Ok(i32::from(*val)),
+            Expression::CurrentAddress => Ok(i32::from(self.cur_addr)),
+            Expression::Symbol(Symbol::MacroArg(_arg_num)) => unimplemented!(),
             Expression::Symbol(Symbol::Named(name)) => {
                 if let Some(expr) = self.variables.get(name) {
                     self.resolve_expr(Rc::clone(expr))
@@ -84,6 +90,7 @@ impl<'a> Resolver<'a> {
                     Err(ResolveError::SymbolNotDefined(name))
                 }
             }
+            Expression::Grouping(expr) => self.resolve_expr(Rc::clone(expr)),
             Expression::Binary(left, operation, right) => {
                 self.resolve_expr(Rc::clone(left)).and_then(|left| {
                     self.resolve_expr(Rc::clone(right))
@@ -109,7 +116,21 @@ impl<'a> Resolver<'a> {
                         })
                 })
             }
-            _ => Ok(0),
+            Expression::Unary(operator, expr) => {
+                self.resolve_expr(Rc::clone(expr))
+                    .and_then(|val| match operator {
+                        UnaryOperator::Complement => Ok(!val),
+                        UnaryOperator::Negation => Ok(-val),
+                        UnaryOperator::LogicalNot => Ok(i32::from(!(val > 0))),
+                        _ => Ok(0),
+                    })
+            }
+            Expression::Hi(expr) => self
+                .resolve_expr(Rc::clone(expr))
+                .and_then(|val| Ok((val & 0xffff) >> 8)),
+            Expression::Lo(expr) => self
+                .resolve_expr(Rc::clone(expr))
+                .and_then(|val| Ok(val & 0xff)),
         }
     }
 

@@ -1,6 +1,7 @@
-use crate::parser::{
-    parse, tlex,
-    types::{BinaryOperator, Expression, Line},
+use crate::{
+    parse,
+    parser::types::{BinaryOperator, Expression, Line},
+    tlex,
 };
 use std::rc::Rc;
 
