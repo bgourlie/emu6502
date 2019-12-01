@@ -1,6 +1,6 @@
-use crate::parser::types::{Expression, Line};
+use crate::parser::types::{Expression, Line, Symbol};
 use fnv::FnvHashMap;
-use std::rc::Rc;
+use std::{borrow::Borrow, rc::Rc};
 
 // TODO: We need to determine which lines are "live" by resolving any compiler expressions (if/else)
 // State machine?
@@ -13,13 +13,13 @@ pub enum ResolveError<'a> {
     LabelAlreadyDefined(usize, &'a str),
     MacroAlreadyDefined(usize, &'a str),
     VariableAlreadyDefined(usize, &'a str),
+    SymbolNotDefined(&'a str),
 }
 
 pub struct Resolver<'a> {
     lines: Vec<Line<'a>>,
     line_state: Vec<bool>,
-    variable_scope_depth: usize,
-    variables: Vec<FnvHashMap<&'a str, Rc<Expression<'a>>>>,
+    variables: FnvHashMap<&'a str, Rc<Expression<'a>>>,
     label_map: FnvHashMap<&'a str, usize>,
     macro_map: FnvHashMap<&'a str, usize>,
 }
@@ -30,8 +30,7 @@ impl<'a> Resolver<'a> {
         Resolver {
             lines,
             line_state: vec![false; num_lines],
-            variable_scope_depth: 0,
-            variables: Vec::default(),
+            variables: FnvHashMap::default(),
             label_map: FnvHashMap::default(),
             macro_map: FnvHashMap::default(),
         }
@@ -62,20 +61,30 @@ impl<'a> Resolver<'a> {
             }
             Line::Equals(var, expr) => {
                 // TODO: Move this up to where we determine we've entered a new scope
-                if self.variables.len() == self.variable_scope_depth {
-                    self.variables.push(FnvHashMap::default())
-                }
-
-                if self.variables[self.variable_scope_depth].contains_key(var) {
+                if self.variables.contains_key(var) {
                     Err(ResolveError::VariableAlreadyDefined(cur_line, var))
                 } else {
-                    self.variables[self.variable_scope_depth].insert(var, Rc::clone(expr));
+                    self.variables.insert(var, Rc::clone(expr));
                     Ok(())
                 }
             }
             _ => Ok(()),
         };
         result
+    }
+
+    fn resolve_expr(&self, expr: Rc<Expression<'a>>) -> Result<i32, ResolveError<'a>> {
+        match expr.borrow() {
+            Expression::Literal(val) => Ok(i32::from(*val)),
+            Expression::Symbol(Symbol::Named(name)) => {
+                if let Some(expr) = self.variables.get(name) {
+                    self.resolve_expr(Rc::clone(expr))
+                } else {
+                    Err(ResolveError::SymbolNotDefined(name))
+                }
+            }
+            _ => Ok(0),
+        }
     }
 
     pub fn print_macros(&self) {
@@ -90,7 +99,7 @@ impl<'a> Resolver<'a> {
         }
 
         println!("global macro declarations:");
-        for (var, expr) in self.variables[0].iter() {
+        for (var, expr) in self.variables.iter() {
             println!("{}: {:?}", var, expr);
         }
     }

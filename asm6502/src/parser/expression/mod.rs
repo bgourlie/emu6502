@@ -3,8 +3,7 @@ mod tests;
 
 use super::types::TokenSlice;
 use crate::parser::{
-    token,
-    token::identifier,
+    token::{self, identifier},
     types::{BinaryOperator, Expression, Symbol, UnaryOperator},
 };
 use nom::{
