@@ -192,8 +192,7 @@ impl<'a> InputIter for TokenSlice<'a> {
 
 impl<'a> Slice<std::ops::RangeFrom<usize>> for TokenSlice<'a> {
     fn slice(&self, range: std::ops::RangeFrom<usize>) -> Self {
-        let TokenSlice(inner) = self;
-        TokenSlice(inner.slice(range))
+        TokenSlice(self.0.slice(range))
     }
 }
 
@@ -201,15 +200,13 @@ impl<'a> Index<usize> for TokenSlice<'a> {
     type Output = Token<'a>;
 
     fn index(&self, index: usize) -> &Self::Output {
-        let TokenSlice(inner) = self;
-        &inner[index]
+        &self.0[index]
     }
 }
 
 impl<'a> InputLength for TokenSlice<'a> {
     fn input_len(&self) -> usize {
-        let TokenSlice(inner) = self;
-        inner.input_len()
+        self.0.input_len()
     }
 }
 
