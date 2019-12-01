@@ -22,7 +22,6 @@ pub enum ResolveError<'a> {
 
 pub struct Resolver<'a> {
     lines: Vec<Line<'a>>,
-    line_state: Vec<bool>,
     cur_addr: u16,
     variables: FnvHashMap<&'a str, i32>,
     label_map: FnvHashMap<&'a str, usize>,
@@ -35,7 +34,6 @@ impl<'a> Resolver<'a> {
         Resolver {
             lines,
             cur_addr: 0,
-            line_state: vec![false; num_lines],
             variables: FnvHashMap::default(),
             label_map: FnvHashMap::default(),
             macro_map: FnvHashMap::default(),
@@ -44,7 +42,7 @@ impl<'a> Resolver<'a> {
     pub fn resolve_line(&mut self, line: Line<'a>) -> Result<(), ResolveError<'a>> {
         let cur_line = self.lines.len();
         self.lines.push(line);
-        let result = match &self.lines[cur_line] {
+        match &self.lines[cur_line] {
             Line::Instruction(maybe_label, _op, _opcode) => {
                 if let Some(label) = maybe_label {
                     if self.label_map.contains_key(label) {
@@ -75,8 +73,7 @@ impl<'a> Resolver<'a> {
                 }
             }
             _ => Ok(()),
-        };
-        result
+        }
     }
 
     fn resolve_expr(&self, expr: Rc<Expression<'a>>) -> Result<i32, ResolveError<'a>> {

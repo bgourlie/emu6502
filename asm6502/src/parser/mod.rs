@@ -112,10 +112,7 @@ fn dw_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>
 fn expression_list<'a, T: Into<TokenSlice<'a>>>(
     input: T,
 ) -> IResult<TokenSlice<'a>, Vec<Rc<Expression<'a>>>> {
-    separated_nonempty_list(
-        token::comma,
-        map(expression::expression, |expr| Rc::new(expr)),
-    )(input.into())
+    separated_nonempty_list(token::comma, map(expression::expression, Rc::new))(input.into())
 }
 
 fn macro_invocation<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {

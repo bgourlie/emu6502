@@ -14,7 +14,7 @@ use nom::{
 use nom_locate::position;
 use shared6502::Op;
 
-pub fn lex(input: Span) -> IResult<Span, Vec<(Span, Token)>> {
+pub fn lex<'a, T: Into<Span<'a>>>(input: T) -> IResult<Span<'a>, Vec<(Span<'a>, Token<'a>)>> {
     many0(alt((
         alt((
             comment_token,
@@ -69,7 +69,7 @@ pub fn lex(input: Span) -> IResult<Span, Vec<(Span, Token)>> {
             comma_token,
             newline_token,
         )),
-    )))(input)
+    )))(input.into())
 }
 
 fn newline(input: Span) -> IResult<Span, char> {
@@ -99,7 +99,7 @@ fn error_directive_token(input: Span) -> IResult<Span, (Span, Token)> {
                 take_while1(|chr: char| chr.is_ascii() && !chr.is_ascii_control()),
             ),
         ),
-        |(pos, msg): (Span, Span)| (pos, Token::ErrorDirective(msg.fragment)),
+        |(pos, msg): (Span, Span)| (pos, Token::ErrorDirective(msg.fragment())),
     )(input)
 }
 
@@ -131,7 +131,7 @@ fn character_literal_token(input: Span) -> IResult<Span, (Span, Token)> {
     map_res(
         pair(position, delimited(char('\''), take(1_usize), char('\''))),
         |(pos, chr): (Span, Span)| {
-            let chr: char = chr.fragment.chars().nth(0_usize).unwrap();
+            let chr: char = chr.fragment().chars().nth(0_usize).unwrap();
             if chr.is_ascii() && !chr.is_ascii_control() {
                 Ok((pos, Token::CharacterLiteral(chr)))
             } else {
@@ -404,7 +404,7 @@ fn string_literal_token(input: Span) -> IResult<Span, (Span, Token)> {
                 char('"'),
             ),
         ),
-        |(pos, string): (Span, Span)| (pos, Token::StringLiteral(string.fragment)),
+        |(pos, string): (Span, Span)| (pos, Token::StringLiteral(string.fragment())),
     )(input)
 }
 
@@ -424,12 +424,12 @@ fn identifier_token(input: Span) -> IResult<Span, (Span, Token)> {
         ),
         |(pos, identifier): (_, Span)| {
             // '/' and '?' are only valid when used together ("/?"), and we validate that here
-            let slash_count = identifier.fragment.matches('\\').count();
-            let question_count = identifier.fragment.matches('?').count();
-            let macro_expansion_count = identifier.fragment.matches("\\?").count();
+            let slash_count = identifier.fragment().matches('\\').count();
+            let question_count = identifier.fragment().matches('?').count();
+            let macro_expansion_count = identifier.fragment().matches("\\?").count();
 
             if slash_count == question_count && question_count == macro_expansion_count {
-                Ok((pos, Token::Identifier(identifier.fragment)))
+                Ok((pos, Token::Identifier(identifier.fragment())))
             } else {
                 Err(())
             }
@@ -440,7 +440,7 @@ fn identifier_token(input: Span) -> IResult<Span, (Span, Token)> {
 fn valid_identifier_start(input: Span) -> IResult<Span, Span> {
     map_res(peek(take(1_u32)), |first_char: Span| {
         if first_char
-            .fragment
+            .fragment()
             .chars()
             .nth(0)
             .unwrap()
@@ -468,7 +468,7 @@ fn include_directive_token(input: Span) -> IResult<Span, (Span, Token)> {
                 ),
             ),
         ),
-        |(pos, path): (Span, Span)| (pos, Token::IncludeDirective(path.fragment)),
+        |(pos, path): (Span, Span)| (pos, Token::IncludeDirective(path.fragment())),
     )(input)
 }
 
@@ -484,24 +484,24 @@ fn comment_token(input: Span) -> IResult<Span, (Span, Token)> {
                 ),
             ),
         ),
-        |(pos, comment): (Span, Span)| (pos, Token::Comment(comment.fragment)),
+        |(pos, comment): (Span, Span)| (pos, Token::Comment(comment.fragment())),
     )(input)
 }
 
 fn parse_i32_hex(input: Span) -> Result<u16, std::num::ParseIntError> {
-    u16::from_str_radix(input.fragment, 16)
+    u16::from_str_radix(input.fragment(), 16)
 }
 
 fn parse_i32_oct(input: Span) -> Result<u16, std::num::ParseIntError> {
-    u16::from_str_radix(input.fragment, 8)
+    u16::from_str_radix(input.fragment(), 8)
 }
 
 fn parse_i32_dec(input: Span) -> Result<u16, std::num::ParseIntError> {
-    u16::from_str_radix(input.fragment, 10)
+    u16::from_str_radix(input.fragment(), 10)
 }
 
 fn parse_i32_bin(input: Span) -> Result<u16, std::num::ParseIntError> {
-    u16::from_str_radix(input.fragment, 2)
+    u16::from_str_radix(input.fragment(), 2)
 }
 
 fn parse_u8_dec(input: char) -> Result<u8, std::num::ParseIntError> {

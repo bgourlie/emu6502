@@ -8,7 +8,7 @@ fn test_resolve_expr() {
 
     let mut resolver = Resolver::new(lines.len());
     for line in lines.into_iter() {
-        resolver.resolve_line(line);
+        resolver.resolve_line(line).unwrap();
     }
 
     unimplemented!()
