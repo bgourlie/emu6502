@@ -30,7 +30,6 @@ pub enum BinaryOperator {
     GreaterThanOrEquals,
     LessThan,
     LessThanOrEquals,
-    Complement,
     And,
     Or,
     Xor,

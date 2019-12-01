@@ -1,6 +1,6 @@
-use crate::parser::types::{Expression, Line, Symbol};
+use crate::parser::types::{BinaryOperator, Expression, Line, Symbol};
 use fnv::FnvHashMap;
-use std::{borrow::Borrow, rc::Rc};
+use std::{borrow::Borrow, convert::TryFrom, rc::Rc};
 
 // TODO: We need to determine which lines are "live" by resolving any compiler expressions (if/else)
 // State machine?
@@ -14,6 +14,7 @@ pub enum ResolveError<'a> {
     MacroAlreadyDefined(usize, &'a str),
     VariableAlreadyDefined(usize, &'a str),
     SymbolNotDefined(&'a str),
+    InvalidShiftOperand,
 }
 
 pub struct Resolver<'a> {
@@ -82,6 +83,31 @@ impl<'a> Resolver<'a> {
                 } else {
                     Err(ResolveError::SymbolNotDefined(name))
                 }
+            }
+            Expression::Binary(left, operation, right) => {
+                self.resolve_expr(Rc::clone(left)).and_then(|left| {
+                    self.resolve_expr(Rc::clone(right))
+                        .and_then(|right| match operation {
+                            BinaryOperator::Equals => Ok(i32::from(left == right)),
+                            BinaryOperator::NotEquals => Ok(i32::from(left != right)),
+                            BinaryOperator::LessThanOrEquals => Ok(i32::from(left <= right)),
+                            BinaryOperator::LessThan => Ok(i32::from(left < right)),
+                            BinaryOperator::GreaterThanOrEquals => Ok(i32::from(left >= right)),
+                            BinaryOperator::GreaterThan => Ok(i32::from(left > right)),
+                            BinaryOperator::Subtraction => Ok(left - right),
+                            BinaryOperator::Addition => Ok(left + right),
+                            BinaryOperator::Multiply => Ok(left * right),
+                            BinaryOperator::Or => Ok(left | right),
+                            BinaryOperator::And => Ok(left & right),
+                            BinaryOperator::Xor => Ok(left ^ right),
+                            BinaryOperator::RightShift => u16::try_from(right)
+                                .and_then(|shift_amount| Ok(left >> shift_amount))
+                                .map_err(|_| ResolveError::InvalidShiftOperand),
+                            BinaryOperator::LeftShift => u16::try_from(right)
+                                .and_then(|shift_amount| Ok(left << shift_amount))
+                                .map_err(|_| ResolveError::InvalidShiftOperand),
+                        })
+                })
             }
             _ => Ok(0),
         }
