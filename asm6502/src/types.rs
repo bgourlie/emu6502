@@ -145,12 +145,13 @@ pub enum Line<'a> {
 pub struct LexErr<'a>(pub LexInput<'a>, pub LexErrorKind);
 
 impl<'a> nom::error::ParseError<LexInput<'a>> for LexErr<'a> {
-    fn from_error_kind(_input: LexInput<'a>, _kind: ErrorKind) -> Self {
-        unimplemented!()
+    fn from_error_kind(input: LexInput<'a>, kind: ErrorKind) -> Self {
+        LexErr(input, LexErrorKind::SubParser(kind))
     }
 
-    fn append(_input: LexInput<'a>, _kind: ErrorKind, _other: Self) -> Self {
-        unimplemented!()
+    fn append(_input: LexInput<'a>, _kind: ErrorKind, other: Self) -> Self {
+        // TODO: implement real appending
+        other
     }
 }
 
@@ -226,6 +227,7 @@ impl<'a> InputIter for LexInput<'a> {
 
 #[derive(Copy, Clone, Debug)]
 pub enum LexErrorKind {
+    SubParser(nom::error::ErrorKind),
     BinLiteral,
     Comment,
     Comma,
