@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::types::Token;
+use crate::types::{LexErr, LexErrorKind, LexInput, Token};
 use nom::{
     branch::alt,
     bytes::complete::{tag, tag_no_case, take, take_while, take_while1},
@@ -13,13 +13,6 @@ use nom::{
 };
 use shared6502::Op;
 
-pub type LexErr<'a> = (&'a str, LexErrorKind);
-
-#[derive(Debug)]
-pub enum LexErrorKind {
-    Invalid,
-}
-
 #[derive(Debug, Default)]
 pub struct Lexer<'a> {
     tokens: Vec<Token<'a>>,
@@ -28,7 +21,7 @@ pub struct Lexer<'a> {
 impl<'a> Lexer<'a> {
     pub fn lex<I: Into<&'a str>>(input: I) -> Result<Self, Self> {
         let mut lexer = Lexer::default();
-        let mut input = input.into();
+        let mut input = LexInput(input.into());
         loop {
             match lex2(input) {
                 Ok((remaining, token)) => {
@@ -49,9 +42,7 @@ impl<'a> Lexer<'a> {
     }
 }
 
-pub fn lex2<'a, T: Into<&'a str>>(
-    input: T,
-) -> IResult<&'a str, Token<'a>, (&'a str, LexErrorKind)> {
+pub fn lex2<'a, T: Into<LexInput<'a>>>(input: T) -> IResult<LexInput<'a>, Token<'a>, LexErr<'a>> {
     alt((
         alt((
             comment_token,
@@ -107,23 +98,24 @@ pub fn lex2<'a, T: Into<&'a str>>(
             newline_token,
         )),
     ))(input.into())
-    .map_err(res_mapper(|| LexErrorKind::Invalid))
 }
 
-pub fn res_mapper<F>(
+pub fn err_mapper<F>(
     mapper: F,
-) -> impl FnOnce(nom::Err<(&str, nom::error::ErrorKind)>) -> nom::Err<LexErr>
+) -> impl FnOnce(nom::Err<(LexInput, nom::error::ErrorKind)>) -> nom::Err<LexErr>
 where
     F: FnOnce() -> LexErrorKind,
 {
     |err| match err {
         nom::Err::Incomplete(needed) => nom::Err::Incomplete(needed),
-        nom::Err::Failure((i, _)) => nom::Err::Failure((i, mapper())),
-        nom::Err::Error((i, _)) => nom::Err::Error((i, mapper())),
+        nom::Err::Failure((i, _)) => nom::Err::Failure(LexErr(i, mapper())),
+        nom::Err::Error((i, _)) => nom::Err::Error(LexErr(i, mapper())),
     }
 }
 
-pub fn lex<'a, T: Into<&'a str>>(input: T) -> IResult<&'a str, Vec<Token<'a>>> {
+pub fn lex<'a, T: Into<LexInput<'a>>>(
+    input: T,
+) -> IResult<LexInput<'a>, Vec<Token<'a>>, LexErr<'a>> {
     many0(alt((
         alt((
             comment_token,
@@ -181,59 +173,79 @@ pub fn lex<'a, T: Into<&'a str>>(input: T) -> IResult<&'a str, Vec<Token<'a>>> {
     )))(input.into())
 }
 
-fn newline(input: &str) -> IResult<&str, char> {
+fn comment_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
+    map(
+        preceded(
+            space0,
+            preceded(
+                char(';'),
+                take_while(|chr: char| chr.is_ascii() && !chr.is_ascii_control()),
+            ),
+        ),
+        |i: LexInput| Token::Comment(i.0),
+    )(input)
+    .map_err(err_mapper(|| LexErrorKind::Comment))
+}
+
+fn newline(input: LexInput) -> IResult<LexInput, char, LexErr> {
     preceded(
         space0,
         preceded(opt(char('\r')), nom::character::complete::newline),
     )(input)
+    .map_err(err_mapper(|| LexErrorKind::Newline))
 }
 
-fn newline_token(input: &str) -> IResult<&str, Token> {
+fn newline_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(newline, |_| Token::Newline)(input)
 }
 
-fn end_directive_token(input: &str) -> IResult<&str, Token> {
+fn end_directive_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(preceded(space0, tag_no_case("end")), |_| {
         Token::EndDirective
     })(input)
+    .map_err(err_mapper(|| LexErrorKind::EndDirective))
 }
 
-fn error_directive_token(input: &str) -> IResult<&str, Token> {
+fn error_directive_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(
         preceded(
             delimited(space0, tag("ERROR ERROR ERROR"), space1),
             take_while1(|chr: char| chr.is_ascii() && !chr.is_ascii_control()),
         ),
-        Token::ErrorDirective,
+        |i: LexInput| Token::ErrorDirective(i.0),
     )(input)
+    .map_err(err_mapper(|| LexErrorKind::ErrorDirective))
 }
 
-fn comma_token(input: &str) -> IResult<&str, Token> {
-    map(tag(","), |_| Token::Comma)(input)
+fn comma_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
+    map(tag(","), |_| Token::Comma)(input).map_err(err_mapper(|| LexErrorKind::Comma))
 }
 
 fn offset_operand_token<'a, F>(
     register: &'static str,
     mapper: F,
-) -> impl Fn(&'a str) -> IResult<&'a str, Token<'a>>
+) -> impl Fn(LexInput<'a>) -> IResult<LexInput<'a>, Token<'a>, LexErr>
 where
-    F: Fn(&'a str) -> Token<'a>,
+    F: Fn(LexInput<'a>) -> Token<'a> + Copy,
 {
-    map(
-        preceded(
-            space0,
-            preceded(char(','), preceded(space0, tag_no_case(register))),
-        ),
-        mapper,
-    )
+    move |input| {
+        map(
+            preceded(
+                space0,
+                preceded(char(','), preceded(space0, tag_no_case(register))),
+            ),
+            mapper,
+        )(input)
+        .map_err(err_mapper(|| LexErrorKind::OffsetOperand))
+    }
 }
 
 // TODO: Add escaping https://github.com/Geal/nom/issues/1014
-fn character_literal_token(input: &str) -> IResult<&str, Token> {
+fn character_literal_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map_res(
         delimited(char('\''), take(1_usize), char('\'')),
-        |chr: &str| {
-            let chr: char = chr.chars().nth(0_usize).unwrap();
+        |chr: LexInput| {
+            let chr: char = chr.0.chars().nth(0_usize).unwrap();
             if chr.is_ascii() && !chr.is_ascii_control() {
                 Ok(Token::CharacterLiteral(chr))
             } else {
@@ -241,40 +253,51 @@ fn character_literal_token(input: &str) -> IResult<&str, Token> {
             }
         },
     )(input)
+    .map_err(err_mapper(|| LexErrorKind::CharacterLiteral))
 }
 
-fn immediate_prefix_token(input: &str) -> IResult<&str, Token> {
+fn immediate_prefix_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(char('#'), |_| Token::ImmediatePrefix)(input)
+        .map_err(err_mapper(|| LexErrorKind::ImmediatePrefix))
 }
 
 fn operator_token<'a, F>(
     chars: &'static str,
     mapper: F,
-) -> impl Fn(&'a str) -> IResult<&'a str, Token<'a>>
+) -> impl Fn(LexInput<'a>) -> IResult<LexInput<'a>, Token<'a>, LexErr>
 where
-    F: Fn(&'a str) -> Token<'a>,
+    F: Fn(LexInput<'a>) -> Token<'a> + Copy,
 {
-    map(delimited(space0, tag(chars), space0), mapper)
+    move |input| {
+        map(delimited(space0, tag(chars), space0), mapper)(input)
+            .map_err(err_mapper(|| LexErrorKind::Operator))
+    }
 }
 
+// TODO: Make lazy
 fn mnemonic_implied<'a>(
     mnemonic: &'static str,
     op: Op,
-) -> impl Fn(&'a str) -> IResult<&'a str, Op> {
-    map(
-        terminated(tag_no_case(mnemonic), comment_or_newline),
-        move |_| op,
-    )
+) -> impl Fn(LexInput<'a>) -> IResult<LexInput<'a>, Op, LexErr> {
+    move |input| {
+        map(
+            terminated(tag_no_case(mnemonic), peek_comment_or_newline),
+            move |_| op,
+        )(input)
+    }
 }
 
 fn mnemonic_operand<'a>(
     mnemonic: &'static str,
     op: Op,
-) -> impl Fn(&'a str) -> IResult<&'a str, Op> {
-    map(terminated(tag_no_case(mnemonic), space1), move |_| op)
+) -> impl Fn(LexInput<'a>) -> IResult<LexInput<'a>, Op, LexErr> {
+    move |input| {
+        map(terminated(tag_no_case(mnemonic), space1), move |_| op)(input)
+            .map_err(err_mapper(|| LexErrorKind::Mnemonic))
+    }
 }
 
-fn mnemonic_token(input: &str) -> IResult<&str, Token> {
+fn mnemonic_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(
         preceded(
             space0,
@@ -347,45 +370,51 @@ fn mnemonic_token(input: &str) -> IResult<&str, Token> {
     )(input)
 }
 
-fn if_start_token(input: &str) -> IResult<&str, Token> {
+fn if_start_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(delimited(space0, tag_no_case("if"), space1), |_| {
         Token::IfStart
     })(input)
+    .map_err(err_mapper(|| LexErrorKind::If))
 }
 
-fn comment_or_newline(input: &str) -> IResult<&str, ()> {
+fn peek_comment_or_newline(input: LexInput) -> IResult<LexInput, (), LexErr> {
     peek(alt((map(newline, |_| ()), map(comment_token, |_| ()))))(input)
 }
 
-fn if_end_token(input: &str) -> IResult<&str, Token> {
+fn if_end_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(delimited(space0, tag_no_case("endif"), space0), |_| {
         Token::IfEnd
     })(input)
+    .map_err(err_mapper(|| LexErrorKind::EndIf))
 }
 
-fn else_token(input: &str) -> IResult<&str, Token> {
+fn else_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(delimited(space0, tag_no_case("else"), space0), |_| {
         Token::Else
     })(input)
+    .map_err(err_mapper(|| LexErrorKind::Else))
 }
 
-fn macro_start_token(input: &str) -> IResult<&str, Token> {
+fn macro_start_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(preceded(space1, tag_no_case("macro")), |_| {
         Token::MacroStart
     })(input)
+    .map_err(err_mapper(|| LexErrorKind::MacroStart))
 }
 
-fn macro_end_token(input: &str) -> IResult<&str, Token> {
+fn macro_end_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(delimited(space0, tag_no_case("endm"), space0), |_| {
         Token::MacroEnd
     })(input)
+    .map_err(err_mapper(|| LexErrorKind::MacroEnd))
 }
 
-fn macro_invocation_count_arg_token(input: &str) -> IResult<&str, Token> {
+fn macro_invocation_count_arg_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(preceded(space0, tag("\\?")), |_| Token::MacroExpansionCount)(input)
+        .map_err(err_mapper(|| LexErrorKind::MacroInvocationCount))
 }
 
-fn macro_positional_arg_token(input: &str) -> IResult<&str, Token> {
+fn macro_positional_arg_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(
         map_res(
             preceded(space0, preceded(char('\\'), one_of("123456789"))),
@@ -393,59 +422,68 @@ fn macro_positional_arg_token(input: &str) -> IResult<&str, Token> {
         ),
         Token::MacroPositionalArg,
     )(input)
+    .map_err(err_mapper(|| LexErrorKind::MacroPositionalArg))
 }
 
-fn noopt_directive_token(input: &str) -> IResult<&str, Token> {
+fn noopt_directive_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(preceded(space0, tag_no_case("noopt")), |_| {
         Token::NoOptDirective
     })(input)
+    .map_err(err_mapper(|| LexErrorKind::NoOptDirective))
 }
 
-fn open_paren_token(input: &str) -> IResult<&str, Token> {
-    map(char('('), |_| Token::OpenParen)(input)
+fn open_paren_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
+    map(char('('), |_| Token::OpenParen)(input).map_err(err_mapper(|| LexErrorKind::OpenParen))
 }
 
-fn close_paren_token(input: &str) -> IResult<&str, Token> {
-    map(char(')'), |_| Token::CloseParen)(input)
+fn close_paren_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
+    map(char(')'), |_| Token::CloseParen)(input).map_err(err_mapper(|| LexErrorKind::CloseParen))
 }
 
-fn equ_directive_token(input: &str) -> IResult<&str, Token> {
+fn equ_directive_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(delimited(space0, tag_no_case("equ"), space1), |_| {
         Token::EquDirective
     })(input)
+    .map_err(err_mapper(|| LexErrorKind::EquDirective))
 }
 
 fn define_directive_token<'a, F>(
     chars: &'static str,
     mapper: F,
-) -> impl Fn(&'a str) -> IResult<&'a str, Token<'a>>
+) -> impl Fn(LexInput<'a>) -> IResult<LexInput<'a>, Token<'a>, LexErr<'a>>
 where
-    F: Fn(&'a str) -> Token<'a>,
+    F: Fn(LexInput<'a>) -> Token<'a> + Copy,
 {
-    map(delimited(space1, tag_no_case(chars), space1), mapper)
+    move |input| {
+        map(delimited(space1, tag_no_case(chars), space1), mapper)(input)
+            .map_err(err_mapper(|| LexErrorKind::DefineDirective))
+    }
 }
 
-fn hex_literal_token(input: &str) -> IResult<&str, Token> {
+fn hex_literal_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(
         map_res(preceded(pair(space0, char('$')), hex_digit1), parse_i32_hex),
         Token::HexLiteral,
     )(input)
+    .map_err(err_mapper(|| LexErrorKind::HexLiteral))
 }
 
-fn dec_literal_token(input: &str) -> IResult<&str, Token> {
+fn dec_literal_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(map_res(preceded(space0, digit1), parse_i32_dec), |val| {
         Token::DecLiteral(val)
     })(input)
+    .map_err(err_mapper(|| LexErrorKind::DecLiteral))
 }
 
-fn oct_literal_token(input: &str) -> IResult<&str, Token> {
+fn oct_literal_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(
         map_res(preceded(pair(space0, char('@')), oct_digit1), parse_i32_oct),
         Token::OctLiteral,
     )(input)
+    .map_err(err_mapper(|| LexErrorKind::OctLiteral))
 }
 
-fn bin_literal_token(input: &str) -> IResult<&str, Token> {
+fn bin_literal_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(
         map_res(
             preceded(
@@ -456,21 +494,23 @@ fn bin_literal_token(input: &str) -> IResult<&str, Token> {
         ),
         Token::BinLiteral,
     )(input)
+    .map_err(err_mapper(|| LexErrorKind::BinLiteral))
 }
 
 // TODO: Add escaping https://github.com/Geal/nom/issues/1014
-fn string_literal_token(input: &str) -> IResult<&str, Token> {
+fn string_literal_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(
         delimited(
             pair(space0, char('"')),
             take_while(|chr: char| chr.is_ascii() && !chr.is_ascii_control() && chr != '\"'),
             char('"'),
         ),
-        Token::StringLiteral,
+        |i: LexInput| Token::StringLiteral(i.0),
     )(input)
+    .map_err(err_mapper(|| LexErrorKind::StringLiteral))
 }
 
-fn identifier_token(input: &str) -> IResult<&str, Token> {
+fn identifier_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map_res(
         preceded(
             space0,
@@ -483,30 +523,31 @@ fn identifier_token(input: &str) -> IResult<&str, Token> {
         ),
         |identifier| {
             // '/' and '?' are only valid when used together ("/?"), and we validate that here
-            let slash_count = identifier.matches('\\').count();
-            let question_count = identifier.matches('?').count();
-            let macro_expansion_count = identifier.matches("\\?").count();
+            let slash_count = identifier.0.matches('\\').count();
+            let question_count = identifier.0.matches('?').count();
+            let macro_expansion_count = identifier.0.matches("\\?").count();
 
             if slash_count == question_count && question_count == macro_expansion_count {
-                Ok(Token::Identifier(identifier))
+                Ok(Token::Identifier(identifier.0))
             } else {
                 Err(())
             }
         },
     )(input)
+    .map_err(err_mapper(|| LexErrorKind::Identifier))
 }
 
-fn valid_identifier_start(input: &str) -> IResult<&str, &str> {
-    map_res(peek(take(1_u32)), |first_char: &str| {
-        if first_char.chars().nth(0).unwrap().is_ascii_alphabetic() {
-            Ok(first_char)
+fn valid_identifier_start(input: LexInput) -> IResult<LexInput, &str> {
+    map_res(peek(take(1_u32)), |first_char: LexInput| {
+        if first_char.0.chars().nth(0).unwrap().is_ascii_alphabetic() {
+            Ok(first_char.0)
         } else {
             Err(())
         }
     })(input)
 }
 
-fn include_directive_token(input: &str) -> IResult<&str, Token> {
+fn include_directive_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
     map(
         preceded(
             space0,
@@ -516,37 +557,25 @@ fn include_directive_token(input: &str) -> IResult<&str, Token> {
                 char('"'),
             ),
         ),
-        |path: &str| Token::IncludeDirective(path),
+        |path: LexInput| Token::IncludeDirective(path.0),
     )(input)
+    .map_err(err_mapper(|| LexErrorKind::IncludeDirective))
 }
 
-fn comment_token(input: &str) -> IResult<&str, Token> {
-    map(
-        preceded(
-            space0,
-            preceded(
-                char(';'),
-                take_while(|chr: char| chr.is_ascii() && !chr.is_ascii_control()),
-            ),
-        ),
-        Token::Comment,
-    )(input)
+fn parse_i32_hex(input: LexInput) -> Result<u16, std::num::ParseIntError> {
+    u16::from_str_radix(input.0, 16)
 }
 
-fn parse_i32_hex(input: &str) -> Result<u16, std::num::ParseIntError> {
-    u16::from_str_radix(input, 16)
+fn parse_i32_oct(input: LexInput) -> Result<u16, std::num::ParseIntError> {
+    u16::from_str_radix(input.0, 8)
 }
 
-fn parse_i32_oct(input: &str) -> Result<u16, std::num::ParseIntError> {
-    u16::from_str_radix(input, 8)
+fn parse_i32_dec(input: LexInput) -> Result<u16, std::num::ParseIntError> {
+    u16::from_str_radix(input.0, 10)
 }
 
-fn parse_i32_dec(input: &str) -> Result<u16, std::num::ParseIntError> {
-    u16::from_str_radix(input, 10)
-}
-
-fn parse_i32_bin(input: &str) -> Result<u16, std::num::ParseIntError> {
-    u16::from_str_radix(input, 2)
+fn parse_i32_bin(input: LexInput) -> Result<u16, std::num::ParseIntError> {
+    u16::from_str_radix(input.0, 2)
 }
 
 fn parse_u8_dec(input: char) -> Result<u8, std::num::ParseIntError> {
