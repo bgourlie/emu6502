@@ -104,18 +104,16 @@ pub fn lex2<'a, T: Into<&'a str>>(input: T) -> IResult<&'a str, Token<'a>, (&'a 
             newline_token,
         )),
     ))(input.into())
-    .map_err(|err| match err {
-        nom::Err::Incomplete(needed) => nom::Err::Incomplete(needed),
-        nom::Err::Failure((i, _)) => nom::Err::Failure((i, LexError::Invalid)),
-        nom::Err::Error((i, _)) => nom::Err::Error((i, LexError::Invalid)),
-    })
+    .map_err(res_mapper(|| LexError::Invalid))
 }
 
-pub fn res_mapper<F>(err: nom::Err<(&str, ErrorKind)>, mapper: F) -> nom::Err<(&str, LexError)>
+pub fn res_mapper<F>(
+    mapper: F,
+) -> impl FnOnce(nom::Err<(&str, ErrorKind)>) -> nom::Err<(&str, LexError)>
 where
-    F: Fn() -> LexError,
+    F: FnOnce() -> LexError,
 {
-    match err {
+    |err| match err {
         nom::Err::Incomplete(needed) => nom::Err::Incomplete(needed),
         nom::Err::Failure((i, _)) => nom::Err::Failure((i, mapper())),
         nom::Err::Error((i, _)) => nom::Err::Error((i, mapper())),
