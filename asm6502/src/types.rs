@@ -150,7 +150,6 @@ impl<'a> nom::error::ParseError<LexInput<'a>> for LexErr<'a> {
     }
 
     fn append(_input: LexInput<'a>, _kind: ErrorKind, other: Self) -> Self {
-        // TODO: implement real appending
         other
     }
 }
