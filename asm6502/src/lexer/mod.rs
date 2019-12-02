@@ -7,15 +7,16 @@ use nom::{
     bytes::complete::{tag, tag_no_case, take, take_while, take_while1},
     character::complete::{char, digit1, hex_digit1, oct_digit1, one_of, space0, space1},
     combinator::{map, map_res, opt, peek},
-    error::{ErrorKind, ParseError},
     multi::many0,
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
 };
 use shared6502::Op;
 
+pub type LexErr<'a> = (&'a str, LexErrorKind);
+
 #[derive(Debug)]
-pub enum LexError {
+pub enum LexErrorKind {
     Invalid,
 }
 
@@ -48,7 +49,9 @@ impl<'a> Lexer<'a> {
     }
 }
 
-pub fn lex2<'a, T: Into<&'a str>>(input: T) -> IResult<&'a str, Token<'a>, (&'a str, LexError)> {
+pub fn lex2<'a, T: Into<&'a str>>(
+    input: T,
+) -> IResult<&'a str, Token<'a>, (&'a str, LexErrorKind)> {
     alt((
         alt((
             comment_token,
@@ -104,14 +107,14 @@ pub fn lex2<'a, T: Into<&'a str>>(input: T) -> IResult<&'a str, Token<'a>, (&'a 
             newline_token,
         )),
     ))(input.into())
-    .map_err(res_mapper(|| LexError::Invalid))
+    .map_err(res_mapper(|| LexErrorKind::Invalid))
 }
 
 pub fn res_mapper<F>(
     mapper: F,
-) -> impl FnOnce(nom::Err<(&str, ErrorKind)>) -> nom::Err<(&str, LexError)>
+) -> impl FnOnce(nom::Err<(&str, nom::error::ErrorKind)>) -> nom::Err<LexErr>
 where
-    F: FnOnce() -> LexError,
+    F: FnOnce() -> LexErrorKind,
 {
     |err| match err {
         nom::Err::Incomplete(needed) => nom::Err::Incomplete(needed),
