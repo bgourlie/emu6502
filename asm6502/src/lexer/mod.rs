@@ -7,11 +7,17 @@ use nom::{
     bytes::complete::{tag, tag_no_case, take, take_while, take_while1},
     character::complete::{char, digit1, hex_digit1, oct_digit1, one_of, space0, space1},
     combinator::{map, map_res, opt, peek},
+    error::{ErrorKind, ParseError},
     multi::many0,
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
 };
 use shared6502::Op;
+
+#[derive(Debug)]
+pub enum LexError {
+    Invalid,
+}
 
 #[derive(Debug, Default)]
 pub struct Lexer<'a> {
@@ -42,7 +48,7 @@ impl<'a> Lexer<'a> {
     }
 }
 
-pub fn lex2<'a, T: Into<&'a str>>(input: T) -> IResult<&'a str, Token<'a>> {
+pub fn lex2<'a, T: Into<&'a str>>(input: T) -> IResult<&'a str, Token<'a>, (&'a str, LexError)> {
     alt((
         alt((
             comment_token,
@@ -98,6 +104,22 @@ pub fn lex2<'a, T: Into<&'a str>>(input: T) -> IResult<&'a str, Token<'a>> {
             newline_token,
         )),
     ))(input.into())
+    .map_err(|err| match err {
+        nom::Err::Incomplete(needed) => nom::Err::Incomplete(needed),
+        nom::Err::Failure((i, _)) => nom::Err::Failure((i, LexError::Invalid)),
+        nom::Err::Error((i, _)) => nom::Err::Error((i, LexError::Invalid)),
+    })
+}
+
+pub fn res_mapper<F>(err: nom::Err<(&str, ErrorKind)>, mapper: F) -> nom::Err<(&str, LexError)>
+where
+    F: Fn() -> LexError,
+{
+    match err {
+        nom::Err::Incomplete(needed) => nom::Err::Incomplete(needed),
+        nom::Err::Failure((i, _)) => nom::Err::Failure((i, mapper())),
+        nom::Err::Error((i, _)) => nom::Err::Error((i, mapper())),
+    }
 }
 
 pub fn lex<'a, T: Into<&'a str>>(input: T) -> IResult<&'a str, Vec<Token<'a>>> {
