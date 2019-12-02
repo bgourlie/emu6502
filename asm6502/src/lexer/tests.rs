@@ -2,17 +2,19 @@ use super::*;
 
 #[test]
 fn test_character_literal_token() {
-    let result = character_literal_token("'a'".into());
-    if let Ok((_, (token_span, token))) = result {
-        assert_eq!(0, token_span.offset());
-        assert_eq!(1, token_span.line());
-        assert_eq!(Token::CharacterLiteral('a'), token);
+    let result = Lexer::lex("'a'");
+    if let Ok(lexer) = result {
+        assert_eq!(Token::CharacterLiteral('a'), lexer.tokens[0]);
     } else {
         panic!("Expected Ok result, was {:?}", result)
     }
 
-    let result = character_literal_token("'\n'".into());
-    assert_eq!(true, result.is_err());
+    //    let result = Lexer::lex("'\n'");
+    //    if let Ok(lexer) = result {
+    //        assert_eq!(Token::Newline, lexer.tokens[0]);
+    //    } else {
+    //        panic!("Expected Ok result, was {:?}", result)
+    //    }
 }
 
 //#[test]

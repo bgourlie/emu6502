@@ -1,4 +1,3 @@
-use asm6502::Token;
 use std::{fs::File, io::Read};
 
 fn main() -> Result<(), std::io::Error> {
@@ -6,7 +5,6 @@ fn main() -> Result<(), std::io::Error> {
     let mut buffer = String::new();
     file.read_to_string(&mut buffer)?;
     let (_, tokens) = asm6502::lex(buffer.as_str()).unwrap();
-    let tokens: Vec<Token> = tokens.into_iter().map(|(_, token)| token).collect();
     println!("{} tokens", tokens.len());
     let (remaining, lines) = asm6502::parse(&tokens).unwrap();
     for (line_num, line) in lines.iter().enumerate() {

@@ -1,101 +1,15 @@
 use nom::{
     error::{ErrorKind, ParseError},
-    Compare, CompareResult, Err, InputIter, InputLength, InputTake, InputTakeAtPosition, Needed,
-    Slice, UnspecializedInput,
+    Err, InputIter, InputLength, InputTake, InputTakeAtPosition, Needed, Slice,
 };
 use std::rc::Rc;
 
-use nom_locate::LocatedSpan;
 use shared6502::Op;
 use std::{
     iter::{Copied, Enumerate},
-    ops::{Index, RangeFrom},
+    ops::Index,
     slice::Iter,
-    str::{CharIndices, Chars},
 };
-
-#[derive(PartialEq, Debug, Clone, Copy)]
-pub struct Span<'a>(LocatedSpan<&'a str>);
-
-impl<'a> Span<'a> {
-    pub fn fragment(self) -> &'a str {
-        self.0.fragment
-    }
-
-    pub fn offset(self) -> usize {
-        self.0.offset
-    }
-
-    pub fn line(self) -> u32 {
-        self.0.line
-    }
-}
-
-impl<'a> From<&'a str> for Span<'a> {
-    fn from(input: &'a str) -> Self {
-        Span(LocatedSpan::new(input))
-    }
-}
-
-impl<'a> Slice<RangeFrom<usize>> for Span<'a> {
-    fn slice(&self, range: RangeFrom<usize>) -> Self {
-        Span(self.0.slice(range))
-    }
-}
-
-impl<'a> Compare<&str> for Span<'a> {
-    fn compare(&self, t: &str) -> CompareResult {
-        self.0.compare(t)
-    }
-
-    fn compare_no_case(&self, t: &str) -> CompareResult {
-        self.0.compare_no_case(t)
-    }
-}
-
-impl<'a> InputLength for Span<'a> {
-    fn input_len(&self) -> usize {
-        self.0.input_len()
-    }
-}
-
-impl<'a> UnspecializedInput for Span<'a> {}
-
-impl<'a> InputIter for Span<'a> {
-    type Item = char;
-    type Iter = CharIndices<'a>;
-    type IterElem = Chars<'a>;
-
-    fn iter_indices(&self) -> Self::Iter {
-        self.0.iter_indices()
-    }
-
-    fn iter_elements(&self) -> Self::IterElem {
-        self.0.iter_elements()
-    }
-
-    fn position<P>(&self, predicate: P) -> Option<usize>
-    where
-        P: Fn(Self::Item) -> bool,
-    {
-        self.0.position(predicate)
-    }
-
-    fn slice_index(&self, count: usize) -> Option<usize> {
-        self.0.slice_index(count)
-    }
-}
-
-impl<'a> InputTake for Span<'a> {
-    fn take(&self, count: usize) -> Self {
-        Span(self.0.take(count))
-    }
-
-    fn take_split(&self, count: usize) -> (Self, Self) {
-        let (left, right) = self.0.take_split(count);
-        (Span(left), Span(right))
-    }
-}
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Token<'a> {

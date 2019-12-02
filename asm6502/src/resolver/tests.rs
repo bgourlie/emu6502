@@ -1,9 +1,9 @@
 use super::*;
-use crate::{parse, tlex};
+use crate::{lex, parse};
 
 #[test]
 fn test_resolve_expr() {
-    let tokens = tlex("val = 2 * (3 + 4)\n");
+    let (_, tokens) = lex("val = 2 * (3 + 4)\n").unwrap();
     let (_, lines) = parse(&tokens).unwrap();
 
     let mut resolver = Resolver::new(lines.len());
