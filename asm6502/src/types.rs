@@ -277,15 +277,6 @@ impl<'a> nom::Compare<LexInput<'a>> for &'a str {
     }
 }
 
-impl<'a> ParseError<LexInput<'a>> for (LexInput<'a>, LexErrorKind) {
-    fn from_error_kind(_input: LexInput<'a>, _kind: nom::error::ErrorKind) -> Self {
-        unimplemented!()
-    }
-
-    fn append(_input: LexInput<'a>, _kind: nom::error::ErrorKind, _other: Self) -> Self {
-        unimplemented!()
-    }
-}
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TokenSlice<'a>(pub &'a [Token<'a>]);
 
