@@ -275,25 +275,31 @@ where
 }
 
 // TODO: Make lazy
-fn mnemonic_implied<'a>(
+fn mnemonic_implied<'a, F>(
     mnemonic: &'static str,
-    op: Op,
-) -> impl Fn(LexInput<'a>) -> IResult<LexInput<'a>, Op, LexErr> {
+    mapper: F,
+) -> impl Fn(LexInput<'a>) -> IResult<LexInput<'a>, Op, LexErr>
+where
+    F: Copy + Fn(LexInput<'a>) -> Op,
+{
     move |input| {
         map(
             terminated(tag_no_case(mnemonic), peek_comment_or_newline),
-            move |_| op,
+            mapper,
         )(input)
     }
 }
 
-fn mnemonic_operand<'a>(
+fn mnemonic_operand<'a, F>(
     mnemonic: &'static str,
-    op: Op,
-) -> impl Fn(LexInput<'a>) -> IResult<LexInput<'a>, Op, LexErr> {
+    mapper: F,
+) -> impl Fn(LexInput<'a>) -> IResult<LexInput<'a>, Op, LexErr>
+where
+    F: Copy + Fn(LexInput<'a>) -> Op,
+{
     move |input| {
-        map(terminated(tag_no_case(mnemonic), space1), move |_| op)(input)
-            .map_err(err_mapper(|| LexErrorKind::Mnemonic))
+        map(terminated(tag_no_case(mnemonic), space1), mapper)(input)
+            .map_err(err_mapper(|| LexErrorKind::Mnemonic(mnemonic)))
     }
 }
 
@@ -303,66 +309,66 @@ fn mnemonic_token(input: LexInput) -> IResult<LexInput, Token, LexErr> {
             space0,
             alt((
                 alt((
-                    mnemonic_operand("adc", Op::Adc),
-                    mnemonic_operand("and", Op::And),
-                    mnemonic_operand("asl", Op::Asl),
-                    mnemonic_operand("bcc", Op::Bcc),
-                    mnemonic_operand("bcs", Op::Bcs),
-                    mnemonic_operand("beq", Op::Beq),
-                    mnemonic_implied("bit", Op::Bit),
-                    mnemonic_operand("bmi", Op::Bmi),
-                    mnemonic_operand("bne", Op::Bne),
-                    mnemonic_operand("bpl", Op::Bpl),
-                    mnemonic_implied("brk", Op::Brk),
-                    mnemonic_operand("bvc", Op::Bvc),
-                    mnemonic_operand("bvs", Op::Bvs),
-                    mnemonic_implied("clc", Op::Clc),
-                    mnemonic_implied("cld", Op::Cld),
-                    mnemonic_implied("cli", Op::Cli),
-                    mnemonic_implied("clv", Op::Clv),
-                    mnemonic_operand("cmp", Op::Cmp),
-                    mnemonic_operand("cpx", Op::Cpx),
-                    mnemonic_operand("cpy", Op::Cpy),
-                    mnemonic_operand("dec", Op::Dec),
+                    mnemonic_operand("adc", |_| Op::Adc),
+                    mnemonic_operand("and", |_| Op::And),
+                    mnemonic_operand("asl", |_| Op::Asl),
+                    mnemonic_operand("bcc", |_| Op::Bcc),
+                    mnemonic_operand("bcs", |_| Op::Bcs),
+                    mnemonic_operand("beq", |_| Op::Beq),
+                    mnemonic_implied("bit", |_| Op::Bit),
+                    mnemonic_operand("bmi", |_| Op::Bmi),
+                    mnemonic_operand("bne", |_| Op::Bne),
+                    mnemonic_operand("bpl", |_| Op::Bpl),
+                    mnemonic_implied("brk", |_| Op::Brk),
+                    mnemonic_operand("bvc", |_| Op::Bvc),
+                    mnemonic_operand("bvs", |_| Op::Bvs),
+                    mnemonic_implied("clc", |_| Op::Clc),
+                    mnemonic_implied("cld", |_| Op::Cld),
+                    mnemonic_implied("cli", |_| Op::Cli),
+                    mnemonic_implied("clv", |_| Op::Clv),
+                    mnemonic_operand("cmp", |_| Op::Cmp),
+                    mnemonic_operand("cpx", |_| Op::Cpx),
+                    mnemonic_operand("cpy", |_| Op::Cpy),
+                    mnemonic_operand("dec", |_| Op::Dec),
                 )),
                 alt((
-                    mnemonic_implied("dex", Op::Dex),
-                    mnemonic_implied("dey", Op::Dey),
-                    mnemonic_operand("eor", Op::Eor),
-                    mnemonic_operand("inc", Op::Inc),
-                    mnemonic_implied("inx", Op::Inx),
-                    mnemonic_implied("iny", Op::Iny),
-                    mnemonic_operand("jmp", Op::Jmp),
-                    mnemonic_operand("jsr", Op::Jsr),
-                    mnemonic_operand("lda", Op::Lda),
-                    mnemonic_operand("ldx", Op::Ldx),
-                    mnemonic_operand("ldy", Op::Ldy),
-                    mnemonic_operand("lsr", Op::Lsr),
-                    mnemonic_implied("nop", Op::Nop),
-                    mnemonic_operand("ora", Op::Ora),
-                    mnemonic_implied("pha", Op::Pha),
-                    mnemonic_implied("php", Op::Php),
-                    mnemonic_implied("pla", Op::Pla),
-                    mnemonic_implied("plp", Op::Plp),
-                    mnemonic_operand("rol", Op::Rol),
-                    mnemonic_operand("ror", Op::Ror),
-                    mnemonic_implied("rti", Op::Rti),
+                    mnemonic_implied("dex", |_| Op::Dex),
+                    mnemonic_implied("dey", |_| Op::Dey),
+                    mnemonic_operand("eor", |_| Op::Eor),
+                    mnemonic_operand("inc", |_| Op::Inc),
+                    mnemonic_implied("inx", |_| Op::Inx),
+                    mnemonic_implied("iny", |_| Op::Iny),
+                    mnemonic_operand("jmp", |_| Op::Jmp),
+                    mnemonic_operand("jsr", |_| Op::Jsr),
+                    mnemonic_operand("lda", |_| Op::Lda),
+                    mnemonic_operand("ldx", |_| Op::Ldx),
+                    mnemonic_operand("ldy", |_| Op::Ldy),
+                    mnemonic_operand("lsr", |_| Op::Lsr),
+                    mnemonic_implied("nop", |_| Op::Nop),
+                    mnemonic_operand("ora", |_| Op::Ora),
+                    mnemonic_implied("pha", |_| Op::Pha),
+                    mnemonic_implied("php", |_| Op::Php),
+                    mnemonic_implied("pla", |_| Op::Pla),
+                    mnemonic_implied("plp", |_| Op::Plp),
+                    mnemonic_operand("rol", |_| Op::Rol),
+                    mnemonic_operand("ror", |_| Op::Ror),
+                    mnemonic_implied("rti", |_| Op::Rti),
                 )),
                 alt((
-                    mnemonic_implied("rts", Op::Rts),
-                    mnemonic_operand("sbc", Op::Sbc),
-                    mnemonic_implied("sec", Op::Sec),
-                    mnemonic_implied("sed", Op::Sed),
-                    mnemonic_implied("sei", Op::Sei),
-                    mnemonic_operand("sta", Op::Sta),
-                    mnemonic_operand("stx", Op::Stx),
-                    mnemonic_operand("sty", Op::Sty),
-                    mnemonic_implied("tax", Op::Tax),
-                    mnemonic_implied("tay", Op::Tay),
-                    mnemonic_implied("tsx", Op::Tsx),
-                    mnemonic_implied("txa", Op::Txa),
-                    mnemonic_implied("txs", Op::Txs),
-                    mnemonic_implied("tya", Op::Tya),
+                    mnemonic_implied("rts", |_| Op::Rts),
+                    mnemonic_operand("sbc", |_| Op::Sbc),
+                    mnemonic_implied("sec", |_| Op::Sec),
+                    mnemonic_implied("sed", |_| Op::Sed),
+                    mnemonic_implied("sei", |_| Op::Sei),
+                    mnemonic_operand("sta", |_| Op::Sta),
+                    mnemonic_operand("stx", |_| Op::Stx),
+                    mnemonic_operand("sty", |_| Op::Sty),
+                    mnemonic_implied("tax", |_| Op::Tax),
+                    mnemonic_implied("tay", |_| Op::Tay),
+                    mnemonic_implied("tsx", |_| Op::Tsx),
+                    mnemonic_implied("txa", |_| Op::Txa),
+                    mnemonic_implied("txs", |_| Op::Txs),
+                    mnemonic_implied("tya", |_| Op::Tya),
                 )),
             )),
         ),
