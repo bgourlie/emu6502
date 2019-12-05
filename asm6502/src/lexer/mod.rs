@@ -40,6 +40,10 @@ impl<'a> Lexer<'a> {
 
         Ok(lexer)
     }
+
+    pub fn tokens(&self) -> &'a [Token] {
+        &self.tokens
+    }
 }
 
 pub fn lex2<'a, T: Into<LexInput<'a>>>(input: T) -> IResult<LexInput<'a>, Token<'a>, LexErr<'a>> {
