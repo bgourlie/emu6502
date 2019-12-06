@@ -5,7 +5,7 @@ fn main() -> Result<(), std::io::Error> {
     let mut buffer = String::new();
     file.read_to_string(&mut buffer)?;
 
-    let lexer = asm6502::Lexer::lex(buffer.as_str()).unwrap();
+    let lexer = asm6502::Lexer::lex(buffer.as_str());
     for token in lexer.tokens() {
         println!("{:?}", token);
     }

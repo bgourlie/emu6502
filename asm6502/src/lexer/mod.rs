@@ -19,26 +19,25 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn lex<I: Into<&'a str>>(input: I) -> Result<Self, Self> {
+    pub fn lex<I: Into<&'a str>>(input: I) -> Self {
         let mut lexer = Lexer::default();
         let mut input = LexInput(input.into());
+
         loop {
             match lex2(input) {
                 Ok((remaining, token)) => {
                     lexer.tokens.push(token);
                     input = remaining;
                 }
-                Err(nom::Err::Incomplete(_n)) => {
+                Err(nom::Err::Error(LexErr(LexInput(remaining), err))) => {
+                    println!("{:?}: {}", err, remaining);
                     break;
                 }
-                Err(e) => {
-                    println!("{:?}", e);
-                    break;
-                }
+                _ => unreachable!(),
             }
         }
 
-        Ok(lexer)
+        lexer
     }
 
     pub fn tokens(&self) -> &'a [Token] {
