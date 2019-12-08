@@ -12,6 +12,12 @@ use nom::{
 };
 use shared6502::Op;
 use nom::character::complete::newline;
+use regex::Regex;
+use lazy_static::lazy_static;
+
+lazy_static! {
+        static ref IDENT_REGEX: Regex = Regex::new("^[a-zA-Z_]+(:?[a-zA-Z0-9_]+|\\\\\\?)*$").unwrap();
+    }
 
 #[derive(Debug, Default)]
 pub struct Lexer<'a> {
@@ -413,36 +419,18 @@ fn identifier_token(input: &str) -> IResult<&str, Token> {
     map_res(
         preceded(
             space0,
-            preceded(
-                valid_identifier_start,
-                take_while1(|chr: char| {
-                    chr.is_ascii_alphanumeric() || chr == '_' || chr == '\\' || chr == '?'
-                }),
-            ),
+            take_while1(|chr: char| {
+                chr.is_ascii_alphanumeric() || chr == '_' || chr == '\\' || chr == '?'
+            }),
         ),
-        |identifier| {
-            // '/' and '?' are only valid when used together ("/?"), and we validate that here
-            let slash_count = identifier.matches('\\').count();
-            let question_count = identifier.matches('?').count();
-            let macro_expansion_count = identifier.matches("\\?").count();
-
-            if slash_count == question_count && question_count == macro_expansion_count {
+        |identifier: &str| {
+            if IDENT_REGEX.is_match(identifier) {
                 Ok(Token::Identifier(identifier))
             } else {
                 Err(())
             }
         },
     )(input)
-}
-
-fn valid_identifier_start(input: &str) -> IResult<&str, &str> {
-    map_res(peek(take(1_u32)), |first_char: &str| {
-        if first_char.chars().nth(0).unwrap().is_ascii_alphabetic() {
-            Ok(first_char)
-        } else {
-            Err(())
-        }
-    })(input)
 }
 
 fn include_directive_token(input: &str) -> IResult<&str, Token> {
