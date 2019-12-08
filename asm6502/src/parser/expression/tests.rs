@@ -1,20 +1,21 @@
 use super::expression;
 use crate::{
-    lex,
+    Token,
+    Lexer,
     types::{BinaryOperator, Expression, Symbol, UnaryOperator},
 };
 use std::rc::Rc;
 
 #[test]
 fn test_literal_expr() {
-    let (_, tokens) = lex("123 ; hello\n ;asdfasdfasdf\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("123 ; hello\n ;asdfasdfasdf\n").collect();
     let (_, primary) = expression(&tokens).unwrap();
     assert_eq!(Expression::Literal(123), primary);
 }
 
 #[test]
 fn test_expression_1() {
-    let (_, tokens) = lex("something = 1; hello\n ;asdfasdfasdf\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("something = 1; hello\n ;asdfasdfasdf\n").collect();
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
@@ -28,7 +29,7 @@ fn test_expression_1() {
 
 #[test]
 fn test_expression_2() {
-    let (_, tokens) = lex("!something ; hello\n ;asdfasdfasdf\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("!something ; hello\n ;asdfasdfasdf\n").collect();
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Unary(
@@ -41,7 +42,7 @@ fn test_expression_2() {
 
 #[test]
 fn test_expression_3() {
-    let (_, tokens) = lex("10 * 5 ; hello\n ;asdfasdfasdf\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("10 * 5 ; hello\n ;asdfasdfasdf\n").collect();
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
@@ -55,7 +56,7 @@ fn test_expression_3() {
 
 #[test]
 fn test_expression_4() {
-    let (_, tokens) = lex("10 + 5 ; hello\n ;asdfasdfasdf\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("10 + 5 ; hello\n ;asdfasdfasdf\n").collect();
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
@@ -69,7 +70,7 @@ fn test_expression_4() {
 
 #[test]
 fn test_expression_5() {
-    let (_, tokens) = lex("10 > 5 ; hello\n ;asdfasdfasdf\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("10 > 5 ; hello\n ;asdfasdfasdf\n").collect();
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
@@ -83,7 +84,7 @@ fn test_expression_5() {
 
 #[test]
 fn test_expression_6() {
-    let (_, tokens) = lex("10 = 5 ; hello\n ;asdfasdfasdf\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("10 = 5 ; hello\n ;asdfasdfasdf\n").collect();
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
@@ -97,7 +98,7 @@ fn test_expression_6() {
 
 #[test]
 fn test_expression_7() {
-    let (_, tokens) = lex("10 * !something ; hello\n ;asdfasdfasdf\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("10 * !something ; hello\n ;asdfasdfasdf\n").collect();
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
@@ -114,7 +115,7 @@ fn test_expression_7() {
 
 #[test]
 fn test_expression_8() {
-    let (_, tokens) = lex("!(10 * !something) ; hello\n ;asdfasdfasdf\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("!(10 * !something) ; hello\n ;asdfasdfasdf\n").collect();
     let (_, unary_expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Unary(
@@ -134,7 +135,7 @@ fn test_expression_8() {
 
 #[test]
 fn test_expression_9() {
-    let (_, tokens) = lex("2 * 3 + 1 = 7 ; hello\n ;asdfasdfasdf\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("2 * 3 + 1 = 7 ; hello\n ;asdfasdfasdf\n").collect();
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(
@@ -156,7 +157,7 @@ fn test_expression_9() {
 
 #[test]
 fn test_expression_10() {
-    let (_, tokens) = lex("(data_segment & $ff) != 0\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("(data_segment & $ff) != 0\n").collect();
     let (_, expr) = expression(&tokens).unwrap();
     assert_eq!(
         Expression::Binary(

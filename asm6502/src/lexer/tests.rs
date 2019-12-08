@@ -2,8 +2,8 @@ use super::*;
 
 #[test]
 fn test_character_literal_token() {
-    let lexer = Lexer::lex("'a'");
-    assert_eq!(Token::CharacterLiteral('a'), lexer.tokens[0]);
+    let mut lexer = Lexer::new("'a'");
+    assert_eq!(Some(Token::CharacterLiteral('a')), lexer.next());
 
     //    let result = Lexer::lex("'\n'");
     //    if let Ok(lexer) = result {

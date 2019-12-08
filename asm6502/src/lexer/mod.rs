@@ -7,7 +7,6 @@ use nom::{
     bytes::complete::{tag, tag_no_case, take, take_while, take_while1},
     character::complete::{char, digit1, hex_digit1, oct_digit1, one_of, space0, space1},
     combinator::{map, map_res, opt, peek},
-    multi::many0,
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
 };
@@ -15,36 +14,41 @@ use shared6502::Op;
 
 #[derive(Debug, Default)]
 pub struct Lexer<'a> {
-    tokens: Vec<Token<'a>>,
+    remaining: &'a str
 }
 
 impl<'a> Lexer<'a> {
-    pub fn lex<I: Into<&'a str>>(input: I) -> Self {
-        let mut lexer = Lexer::default();
-        let mut input = input.into();
-        loop {
-            match lex2(input) {
-                Ok((remaining, token)) => {
-                    lexer.tokens.push(token);
-                    input = remaining;
-                }
-                Err(nom::Err::Error(err)) => {
-                    println!("{:?}", err);
-                    break;
-                }
-                _ => unreachable!(),
-            }
+    pub fn new(input: &'a str) -> Self {
+        Lexer {
+            remaining: input
         }
-
-        lexer
-    }
-
-    pub fn tokens(&self) -> &'a [Token] {
-        &self.tokens
     }
 }
 
-pub fn lex2(input: &str) -> IResult<&str, Token> {
+impl<'a> Iterator for Lexer<'a> {
+    type Item = Token<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match lex(self.remaining) {
+            Ok((remaining, token)) => {
+                self.remaining = remaining;
+                Some(token)
+            }
+            Err(nom::Err::Error((remaining, _))) => {
+                if remaining == "" {
+                    None
+                } else {
+                    let token = Some(Token::Invalid(&self.remaining[0..1]));
+                    self.remaining = &self.remaining[1..];
+                    token
+                }
+            }
+            _ => unreachable!(),
+        }
+    }
+}
+
+fn lex(input: &str) -> IResult<&str, Token> {
     alt((
         alt((
             comment_token,
@@ -100,66 +104,6 @@ pub fn lex2(input: &str) -> IResult<&str, Token> {
             newline_token,
         )),
     ))(input.into())
-}
-
-pub fn lex(
-    input: &str,
-) -> IResult<&str, Vec<Token>> {
-    many0(alt((
-        alt((
-            comment_token,
-            error_directive_token,
-            equ_directive_token,
-            noopt_directive_token,
-            macro_start_token,
-            macro_end_token,
-            macro_positional_arg_token,
-            macro_invocation_count_arg_token,
-            include_directive_token,
-            if_start_token,
-            else_token,
-            if_end_token,
-            mnemonic_token,
-            immediate_prefix_token,
-            define_directive_token("db", |_| Token::DbDirective),
-            define_directive_token("dw", |_| Token::DwDirective),
-            define_directive_token("ds", |_| Token::DsDirective),
-            offset_operand_token("x", |_| Token::OffsetByXOperand),
-            offset_operand_token("y", |_| Token::OffsetByYOperand),
-            end_directive_token,
-            identifier_token,
-        )),
-        alt((
-            operator_token("=", |_| Token::EqualsOperator),
-            dec_literal_token,
-            hex_literal_token,
-            oct_literal_token,
-            bin_literal_token,
-            operator_token("!=", |_| Token::NotEqualsOperator),
-            operator_token("!", |_| Token::BangOperator),
-            operator_token("~", |_| Token::ComplementOperator),
-            operator_token("|", |_| Token::OrOperator),
-            operator_token("^", |_| Token::XorOperator),
-            operator_token("&", |_| Token::AndOperator),
-            operator_token("+", |_| Token::PlusOperator),
-            operator_token("-", |_| Token::MinusOperator),
-            operator_token("*", |_| Token::StarOperator),
-            operator_token("<<", |_| Token::LeftShiftOperator),
-            operator_token(">>", |_| Token::RightShiftOperator),
-            operator_token(">=", |_| Token::GreaterThanOrEqualToOperator),
-            operator_token("<=", |_| Token::LessThanOrEqualToOperator),
-            operator_token(">", |_| Token::GreaterThanOperator),
-            operator_token("<", |_| Token::LessThanOperator),
-            open_paren_token,
-        )),
-        alt((
-            close_paren_token,
-            string_literal_token,
-            character_literal_token,
-            comma_token,
-            newline_token,
-        )),
-    )))(input.into())
 }
 
 fn comment_token(input: &str) -> IResult<&str, Token> {

@@ -6099,5 +6099,5 @@ vec_bss equ $fffa
         dw  irq_trap
     endif
 
-        end start
+        end`start
             

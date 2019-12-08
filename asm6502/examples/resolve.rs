@@ -1,4 +1,4 @@
-use asm6502::Resolver;
+use asm6502::{Resolver, Token};
 
 use std::{fs::File, io::Read};
 
@@ -6,8 +6,7 @@ fn main() -> Result<(), std::io::Error> {
     let mut file = File::open("./test_roms/6502_functional_test.a65")?;
     let mut buffer = String::new();
     file.read_to_string(&mut buffer)?;
-    let (_, tokens) = asm6502::lex(buffer.as_str()).unwrap();
-    println!("{} tokens", tokens.len());
+    let tokens: Vec<Token> = asm6502::Lexer::new(buffer.as_str()).collect();
     let (remaining, lines) = asm6502::parse(&tokens).unwrap();
     let mut resolver = Resolver::new(lines.len());
     for line in lines.into_iter() {

@@ -1,6 +1,6 @@
 use super::instruction;
 use crate::{
-    lex,
+    Token, Lexer,
     types::{BinaryOperator, Expression, Operand, Symbol},
 };
 use shared6502::Op;
@@ -8,7 +8,7 @@ use std::rc::Rc;
 
 #[test]
 fn test_implied() {
-    let (_, tokens) = lex("BRK\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("BRK\n").collect();
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Brk, opcode);
     assert_eq!(Operand::Implied, operand);
@@ -16,7 +16,7 @@ fn test_implied() {
 
 #[test]
 fn test_immediate() {
-    let (_, tokens) = lex("LDA #20\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("LDA #20\n").collect();
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
@@ -27,7 +27,7 @@ fn test_immediate() {
 
 #[test]
 fn test_indirect() {
-    let (_, tokens) = lex("JMP ($ff)\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("JMP ($ff)\n").collect();
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Jmp, opcode);
     assert_eq!(
@@ -38,7 +38,7 @@ fn test_indirect() {
 
 #[test]
 fn test_indexed_indirect() {
-    let (_, tokens) = lex("LDA ($ff,x)\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("LDA ($ff,x)\n").collect();
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
@@ -49,7 +49,7 @@ fn test_indexed_indirect() {
 
 #[test]
 fn test_indirect_indexed() {
-    let (_, tokens) = lex("LDA ($ff),y\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("LDA ($ff),y\n").collect();
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
@@ -60,7 +60,7 @@ fn test_indirect_indexed() {
 
 #[test]
 fn test_absolute_x() {
-    let (_, tokens) = lex("LDA $ffff,x\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("LDA $ffff,x\n").collect();
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
@@ -71,7 +71,7 @@ fn test_absolute_x() {
 
 #[test]
 fn test_absolute_y() {
-    let (_, tokens) = lex("LDA $ffff,y\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("LDA $ffff,y\n").collect();
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
@@ -82,7 +82,7 @@ fn test_absolute_y() {
 
 #[test]
 fn test_indirect_indexed_with_complex_expr() {
-    let (_, tokens) = lex("LDA ((addr - 1)),y\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("LDA ((addr - 1)),y\n").collect();
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
@@ -97,7 +97,7 @@ fn test_indirect_indexed_with_complex_expr() {
 
 #[test]
 fn test_absolute_or_relative() {
-    let (_, tokens) = lex("LDA $ff\n").unwrap();
+    let tokens: Vec<Token> = Lexer::new("LDA $ff\n").collect();
     let (_, (opcode, operand)) = instruction(&tokens).unwrap();
     assert_eq!(Op::Lda, opcode);
     assert_eq!(
