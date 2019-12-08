@@ -7,7 +7,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, tag_no_case, take, take_while, take_while1},
     character::complete::{char, digit1, hex_digit1, newline, oct_digit1, one_of, space0, space1},
-    combinator::{map, map_res, peek},
+    combinator::{map, map_res, not, peek},
     sequence::{delimited, preceded, terminated, tuple},
     IResult,
 };
@@ -302,7 +302,10 @@ fn hex_literal_token(input: &str) -> IResult<&str, Token> {
 }
 
 fn dec_literal_token(input: &str) -> IResult<&str, Token> {
-    map(map_res(digit1, parse_i32_dec), |val| Token::DecLiteral(val))(input)
+    map(
+        terminated(map_res(digit1, parse_i32_dec), not(identifier_token)),
+        |val| Token::DecLiteral(val),
+    )(input)
 }
 
 fn oct_literal_token(input: &str) -> IResult<&str, Token> {
