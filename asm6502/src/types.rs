@@ -60,7 +60,7 @@ pub enum Token<'a> {
     DsDirective,
     DwDirective,
     IncludeDirective(&'a str),
-    Invalid(&'a str)
+    Invalid(&'a str),
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]

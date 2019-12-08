@@ -1,7 +1,7 @@
 use super::instruction;
 use crate::{
-    Token, Lexer,
     types::{BinaryOperator, Expression, Operand, Symbol},
+    Lexer, Token,
 };
 use shared6502::Op;
 use std::rc::Rc;

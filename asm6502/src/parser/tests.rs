@@ -1,4 +1,8 @@
-use crate::{parse, Lexer, types::{BinaryOperator, Expression, Line}, Token};
+use crate::{
+    parse,
+    types::{BinaryOperator, Expression, Line},
+    Lexer, Token,
+};
 use std::rc::Rc;
 
 #[test]

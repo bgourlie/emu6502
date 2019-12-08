@@ -1,5 +1,5 @@
-use std::{fs::File, io::Read};
 use asm6502::Token;
+use std::{fs::File, io::Read};
 
 fn main() -> Result<(), std::io::Error> {
     let mut file = File::open("./test_roms/6502_functional_test.a65")?;

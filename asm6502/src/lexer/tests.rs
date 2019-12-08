@@ -62,7 +62,10 @@ fn test_comment_token() {
 #[test]
 fn test_string_literal_token() {
     let mut lexer = Lexer::new("\"Why ~hello~ there!\"");
-    assert_eq!(Some(Token::StringLiteral("Why ~hello~ there!")), lexer.next());
+    assert_eq!(
+        Some(Token::StringLiteral("Why ~hello~ there!")),
+        lexer.next()
+    );
 }
 
 #[test]

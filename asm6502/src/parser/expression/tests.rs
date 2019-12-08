@@ -1,8 +1,7 @@
 use super::expression;
 use crate::{
-    Token,
-    Lexer,
     types::{BinaryOperator, Expression, Symbol, UnaryOperator},
+    Lexer, Token,
 };
 use std::rc::Rc;
 

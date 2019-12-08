@@ -1,5 +1,5 @@
 use super::*;
-use crate::{Lexer, Token, parse};
+use crate::{parse, Lexer, Token};
 
 #[test]
 fn test_resolve_expr() {
