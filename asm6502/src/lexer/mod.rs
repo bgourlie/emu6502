@@ -8,7 +8,7 @@ use nom::{
     bytes::complete::{tag, tag_no_case, take, take_while, take_while1},
     character::{
         complete::{char, digit1, hex_digit1, newline, oct_digit1, space0, space1},
-        is_digit,
+        is_digit, is_space,
     },
     combinator::{map, map_res, not, peek},
     sequence::{delimited, preceded, terminated, tuple},
@@ -16,6 +16,7 @@ use nom::{
 };
 use regex::Regex;
 use shared6502::Op;
+use std::iter::FusedIterator;
 
 lazy_static! {
     static ref IDENT_REGEX: Regex = Regex::new("^[a-zA-Z_]+(:?[a-zA-Z0-9_]+|\\\\\\?)*$").unwrap();
@@ -41,19 +42,13 @@ impl<'a> Iterator for Lexer<'a> {
                 self.remaining = remaining;
                 Some(token)
             }
-            Err(nom::Err::Error((remaining, _))) => {
-                if remaining == "" {
-                    None
-                } else {
-                    let token = Some(Token::Invalid(&self.remaining[0..1]));
-                    self.remaining = &self.remaining[1..];
-                    token
-                }
-            }
+            Err(nom::Err::Error(("", _))) => None,
             _ => unreachable!(),
         }
     }
 }
+
+impl<'a> FusedIterator for Lexer<'a> {}
 
 fn lex(input: &str) -> IResult<&str, Token> {
     alt((
@@ -138,8 +133,16 @@ fn lex(input: &str) -> IResult<&str, Token> {
             character_literal_token,
             map(tag(","), |_| Token::Comma),
             preceded(space0, map(newline, |_| Token::Newline)),
+            preceded(space0, invalid_token),
         )),
-    ))(input.into())
+    ))(input)
+}
+
+fn invalid_token(input: &str) -> IResult<&str, Token> {
+    map(
+        take_while1(|chr: char| !chr.is_ascii() || !(is_space(chr as u8) || chr == '\n')),
+        Token::Invalid,
+    )(input)
 }
 
 fn comment_token(input: &str) -> IResult<&str, Token> {
@@ -148,7 +151,7 @@ fn comment_token(input: &str) -> IResult<&str, Token> {
             char(';'),
             take_while(|chr: char| chr.is_ascii() && !chr.is_ascii_control()),
         ),
-        |i| Token::Comment(i),
+        Token::Comment,
     )(input)
 }
 
@@ -158,7 +161,7 @@ fn error_directive_token(input: &str) -> IResult<&str, Token> {
             terminated(tag("ERROR ERROR ERROR"), space1),
             take_while1(|chr: char| chr.is_ascii() && !chr.is_ascii_control()),
         ),
-        |i| Token::ErrorDirective(i),
+        Token::ErrorDirective,
     )(input)
 }
 
@@ -336,7 +339,7 @@ fn string_literal_token(input: &str) -> IResult<&str, Token> {
             take_while(|chr: char| chr.is_ascii() && !chr.is_ascii_control() && chr != '\"'),
             char('"'),
         ),
-        |i| Token::StringLiteral(i),
+        Token::StringLiteral,
     )(input)
 }
 
