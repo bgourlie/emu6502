@@ -11,12 +11,12 @@ use nom::{
         is_digit, is_space,
     },
     combinator::{map, map_res, not, peek},
-    sequence::{delimited, preceded, terminated, tuple},
+    sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
 };
 use regex::Regex;
 use shared6502::Op;
-use std::iter::FusedIterator;
+use std::{convert::TryFrom, iter::FusedIterator};
 
 lazy_static! {
     static ref IDENT_REGEX: Regex = Regex::new("^[a-zA-Z_]+(:?[a-zA-Z0-9_]+|\\\\\\?)*$").unwrap();
@@ -24,23 +24,55 @@ lazy_static! {
 
 #[derive(Debug, Default)]
 pub struct Lexer<'a> {
+    cur_line: u32,
+    cur_column: u16,
     remaining: &'a str,
+    remaining_len: usize,
 }
 
 impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Self {
-        Lexer { remaining: input }
+        Lexer {
+            cur_line: 1,
+            cur_column: 0,
+            remaining_len: input.chars().count(),
+            remaining: input,
+        }
     }
 }
 
 impl<'a> Iterator for Lexer<'a> {
-    type Item = Token<'a>;
+    type Item = (Token<'a>, u32, u16, u16);
 
     fn next(&mut self) -> Option<Self::Item> {
         match lex(self.remaining) {
-            Ok((remaining, token)) => {
+            Ok((remaining, (token, left_padding, right_padding))) => {
+                let (token_start, token_end, line) = if let Token::Invalid(chars) = token {
+                    // Invalid tokens may contain non-ascii characters, so we need to count chars
+                    // instead of bytes here.
+                    let consumed =
+                        u16::try_from(self.remaining_len - chars.chars().count()).unwrap();
+                    self.remaining_len -= usize::from(consumed);
+                    let token_start = self.cur_column + left_padding;
+                    let token_end = token_start + consumed - right_padding;
+                    self.cur_column += consumed;
+                    (token_start, token_end, self.cur_line)
+                } else {
+                    let consumed = u16::try_from(self.remaining_len - remaining.len()).unwrap();
+                    self.remaining_len -= usize::from(consumed);
+                    let token_start = self.cur_column + left_padding;
+                    let token_end = token_start + consumed - right_padding;
+                    let line = self.cur_line;
+
+                    if let Token::Newline = token {
+                        self.cur_line += 1;
+                        self.cur_column = 0;
+                    }
+                    (token_start, token_end, line)
+                };
+
                 self.remaining = remaining;
-                Some(token)
+                Some((token, line, token_start, token_end))
             }
             Err(nom::Err::Error(("", _))) => None,
             _ => unreachable!(),
@@ -50,32 +82,32 @@ impl<'a> Iterator for Lexer<'a> {
 
 impl<'a> FusedIterator for Lexer<'a> {}
 
-fn lex(input: &str) -> IResult<&str, Token> {
+fn lex(input: &str) -> IResult<&str, (Token, u16, u16)> {
     alt((
         alt((
-            preceded(space0, comment_token),
-            preceded(space0, error_directive_token),
-            delimited(
+            pl(space0, comment_token),
+            pl(space0, error_directive_token),
+            pb(
                 space0,
                 map(tag_no_case("equ"), |_| Token::EquDirective),
                 space1,
             ),
-            preceded(space0, map(tag_no_case("noopt"), |_| Token::NoOptDirective)),
-            preceded(space1, map(tag_no_case("macro"), |_| Token::MacroStart)),
-            delimited(
+            pl(space0, map(tag_no_case("noopt"), |_| Token::NoOptDirective)),
+            pl(space1, map(tag_no_case("macro"), |_| Token::MacroStart)),
+            pb(
                 space0,
                 map(tag_no_case("endm"), |_| Token::MacroEnd),
                 space0,
             ),
-            preceded(space0, macro_positional_arg_token),
-            preceded(space0, map(tag("\\?"), |_| Token::MacroExpansionCount)),
-            preceded(space0, include_directive_token),
-            delimited(space0, map(tag_no_case("if"), |_| Token::IfStart), space1),
-            delimited(space0, map(tag_no_case("else"), |_| Token::Else), space0),
-            delimited(space0, map(tag_no_case("endif"), |_| Token::IfEnd), space0),
-            preceded(space0, mnemonic_token),
-            map(char('#'), |_| Token::ImmediatePrefix),
-            delimited(
+            pl(space0, macro_positional_arg_token),
+            pl(space0, map(tag("\\?"), |_| Token::MacroExpansionCount)),
+            pl(space0, include_directive_token),
+            pb(space0, map(tag_no_case("if"), |_| Token::IfStart), space1),
+            pb(space0, map(tag_no_case("else"), |_| Token::Else), space0),
+            pb(space0, map(tag_no_case("endif"), |_| Token::IfEnd), space0),
+            pl(space0, mnemonic_token),
+            pn(map(char('#'), |_| Token::ImmediatePrefix)),
+            pb(
                 space1,
                 alt((
                     map(tag_no_case("db"), |_| Token::DbDirective),
@@ -84,28 +116,30 @@ fn lex(input: &str) -> IResult<&str, Token> {
                 )),
                 space1,
             ),
-            preceded(
+            pl(
                 space0,
                 alt((
                     offset_operand_token("x", |_| Token::OffsetByXOperand),
                     offset_operand_token("y", |_| Token::OffsetByYOperand),
                 )),
             ),
-            preceded(space0, map(tag_no_case("end"), |_| Token::EndDirective)),
-            preceded(space0, identifier_token),
+            pl(space0, map(tag_no_case("end"), |_| Token::EndDirective)),
+            pl(space0, identifier_token),
         )),
         alt((
-            delimited(
+            pl(
                 space0,
-                alt((
-                    dec_literal_token,
-                    hex_literal_token,
-                    oct_literal_token,
-                    bin_literal_token,
-                )),
-                not(identifier_token),
+                terminated(
+                    alt((
+                        dec_literal_token,
+                        hex_literal_token,
+                        oct_literal_token,
+                        bin_literal_token,
+                    )),
+                    not(identifier_token),
+                ),
             ),
-            delimited(
+            pb(
                 space0,
                 alt((
                     map(tag("="), |_| Token::EqualsOperator),
@@ -127,15 +161,71 @@ fn lex(input: &str) -> IResult<&str, Token> {
                 )),
                 space0,
             ),
-            map(char('('), |_| Token::OpenParen),
-            map(char(')'), |_| Token::CloseParen),
-            preceded(space0, string_literal_token),
-            character_literal_token,
-            map(tag(","), |_| Token::Comma),
-            preceded(space0, map(newline, |_| Token::Newline)),
-            preceded(space0, invalid_token),
+            pn(map(char('('), |_| Token::OpenParen)),
+            pn(map(char(')'), |_| Token::CloseParen)),
+            pl(space0, string_literal_token),
+            pn(character_literal_token),
+            pn(map(tag(","), |_| Token::Comma)),
+            pl(space0, map(newline, |_| Token::Newline)),
+            pl(space0, invalid_token),
         )),
     ))(input)
+}
+
+/// Returns the token alongside the left and right padding in spaces. This method is for left-padded
+/// tokens and unconditionally returns 0 right padding.
+fn pl<'a, F, G>(
+    space_parser: F,
+    token_parser: G,
+) -> impl Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16, u16)>
+where
+    F: Fn(&'a str) -> IResult<&'a str, &'a str>,
+    G: Fn(&'a str) -> IResult<&'a str, Token<'a>>,
+{
+    map(
+        pair(
+            map(space_parser, |padding| {
+                u16::try_from(padding.len()).unwrap()
+            }),
+            token_parser,
+        ),
+        |(padding_left, token)| (token, padding_left, 0),
+    )
+}
+
+/// Returns the token alongside the left and right padding in spaces. This method is for tokens that
+/// may have padding on both sides of it.
+fn pb<'a, F, F2, G>(
+    space_parser_left: F,
+    token_parser: G,
+    space_parser_right: F2,
+) -> impl Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16, u16)>
+where
+    F: Fn(&'a str) -> IResult<&'a str, &'a str>,
+    F2: Fn(&'a str) -> IResult<&'a str, &'a str>,
+    G: Fn(&'a str) -> IResult<&'a str, Token<'a>>,
+{
+    map(
+        tuple((
+            map(space_parser_left, |padding| {
+                u16::try_from(padding.len()).unwrap()
+            }),
+            token_parser,
+            map(space_parser_right, |padding| {
+                u16::try_from(padding.len()).unwrap()
+            }),
+        )),
+        |(padding_left, token, padding_right)| (token, padding_left, padding_right),
+    )
+}
+
+/// Returns the token alongside the left and right padding in spaces. This method is for tokens that
+/// have no padding on either side, and unconditionally return zero for left and right padding.
+fn pn<'a, G>(token_parser: G) -> impl Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16, u16)>
+where
+    G: Fn(&'a str) -> IResult<&'a str, Token<'a>>,
+{
+    map(token_parser, |token| (token, 0, 0))
 }
 
 fn invalid_token(input: &str) -> IResult<&str, Token> {
