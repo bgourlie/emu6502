@@ -6,7 +6,10 @@ use lazy_static::lazy_static;
 use nom::{
     branch::alt,
     bytes::complete::{tag, tag_no_case, take, take_while, take_while1},
-    character::complete::{char, digit1, hex_digit1, newline, oct_digit1, one_of, space0, space1},
+    character::{
+        complete::{char, digit1, hex_digit1, newline, oct_digit1, space0, space1},
+        is_digit,
+    },
     combinator::{map, map_res, not, peek},
     sequence::{delimited, preceded, terminated, tuple},
     IResult,
@@ -93,14 +96,20 @@ fn lex(input: &str) -> IResult<&str, Token> {
                     offset_operand_token("y", |_| Token::OffsetByYOperand),
                 )),
             ),
-            preceded(space0, end_directive_token),
+            preceded(space0, map(tag_no_case("end"), |_| Token::EndDirective)),
             preceded(space0, identifier_token),
         )),
         alt((
-            preceded(space0, dec_literal_token),
-            preceded(space0, hex_literal_token),
-            preceded(space0, oct_literal_token),
-            preceded(space0, bin_literal_token),
+            delimited(
+                space0,
+                alt((
+                    dec_literal_token,
+                    hex_literal_token,
+                    oct_literal_token,
+                    bin_literal_token,
+                )),
+                not(identifier_token),
+            ),
             delimited(
                 space0,
                 alt((
@@ -127,8 +136,8 @@ fn lex(input: &str) -> IResult<&str, Token> {
             map(char(')'), |_| Token::CloseParen),
             preceded(space0, string_literal_token),
             character_literal_token,
-            comma_token,
-            preceded(space0, newline_token),
+            map(tag(","), |_| Token::Comma),
+            preceded(space0, map(newline, |_| Token::Newline)),
         )),
     ))(input.into())
 }
@@ -143,14 +152,6 @@ fn comment_token(input: &str) -> IResult<&str, Token> {
     )(input)
 }
 
-fn newline_token(input: &str) -> IResult<&str, Token> {
-    map(newline, |_| Token::Newline)(input)
-}
-
-fn end_directive_token(input: &str) -> IResult<&str, Token> {
-    map(tag_no_case("end"), |_| Token::EndDirective)(input)
-}
-
 fn error_directive_token(input: &str) -> IResult<&str, Token> {
     map(
         preceded(
@@ -159,10 +160,6 @@ fn error_directive_token(input: &str) -> IResult<&str, Token> {
         ),
         |i| Token::ErrorDirective(i),
     )(input)
-}
-
-fn comma_token(input: &str) -> IResult<&str, Token> {
-    map(tag(","), |_| Token::Comma)(input)
 }
 
 fn offset_operand_token<'a, F>(
@@ -289,28 +286,34 @@ fn peek_comment_or_newline(input: &str) -> IResult<&str, ()> {
 
 fn macro_positional_arg_token(input: &str) -> IResult<&str, Token> {
     map(
-        map_res(preceded(char('\\'), one_of("123456790")), parse_u8_dec),
+        map_res(
+            preceded(char('\\'), take_while1(|chr: char| is_digit(chr as u8))),
+            |digits| u8::from_str_radix(digits, 10),
+        ),
         Token::MacroPositionalArg,
     )(input)
 }
 
 fn hex_literal_token(input: &str) -> IResult<&str, Token> {
     map(
-        map_res(preceded(char('$'), hex_digit1), parse_i32_hex),
+        map_res(preceded(char('$'), hex_digit1), |val| {
+            u16::from_str_radix(val, 16)
+        }),
         Token::HexLiteral,
     )(input)
 }
 
 fn dec_literal_token(input: &str) -> IResult<&str, Token> {
-    map(
-        terminated(map_res(digit1, parse_i32_dec), not(identifier_token)),
-        |val| Token::DecLiteral(val),
-    )(input)
+    map(map_res(digit1, |val| u16::from_str_radix(val, 10)), |val| {
+        Token::DecLiteral(val)
+    })(input)
 }
 
 fn oct_literal_token(input: &str) -> IResult<&str, Token> {
     map(
-        map_res(preceded(char('@'), oct_digit1), parse_i32_oct),
+        map_res(preceded(char('@'), oct_digit1), |val| {
+            u16::from_str_radix(val, 8)
+        }),
         Token::OctLiteral,
     )(input)
 }
@@ -319,7 +322,7 @@ fn bin_literal_token(input: &str) -> IResult<&str, Token> {
     map(
         map_res(
             preceded(char('%'), take_while1(|chr| chr == '0' || chr == '1')),
-            parse_i32_bin,
+            |val| u16::from_str_radix(val, 2),
         ),
         Token::BinLiteral,
     )(input)
@@ -361,25 +364,4 @@ fn include_directive_token(input: &str) -> IResult<&str, Token> {
         ),
         |path: &str| Token::IncludeDirective(path),
     )(input)
-}
-
-fn parse_i32_hex(input: &str) -> Result<u16, std::num::ParseIntError> {
-    u16::from_str_radix(input, 16)
-}
-
-fn parse_i32_oct(input: &str) -> Result<u16, std::num::ParseIntError> {
-    u16::from_str_radix(input, 8)
-}
-
-fn parse_i32_dec(input: &str) -> Result<u16, std::num::ParseIntError> {
-    u16::from_str_radix(input, 10)
-}
-
-fn parse_i32_bin(input: &str) -> Result<u16, std::num::ParseIntError> {
-    u16::from_str_radix(input, 2)
-}
-
-fn parse_u8_dec(input: char) -> Result<u8, std::num::ParseIntError> {
-    let mut tmp = [0_u8; 1];
-    u8::from_str_radix(char::encode_utf8(input, &mut tmp), 10)
 }
