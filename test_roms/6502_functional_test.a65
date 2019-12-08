@@ -6100,4 +6100,3 @@ vec_bss equ $fffa
     endif
 
         end start
-            

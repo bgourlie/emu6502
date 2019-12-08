@@ -6,11 +6,12 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, tag_no_case, take, take_while, take_while1},
     character::complete::{char, digit1, hex_digit1, oct_digit1, one_of, space0, space1},
-    combinator::{map, map_res, opt, peek},
+    combinator::{map, map_res, peek},
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
 };
 use shared6502::Op;
+use nom::character::complete::newline;
 
 #[derive(Debug, Default)]
 pub struct Lexer<'a> {
@@ -119,15 +120,8 @@ fn comment_token(input: &str) -> IResult<&str, Token> {
     )(input)
 }
 
-fn newline(input: &str) -> IResult<&str, char> {
-    preceded(
-        space0,
-        preceded(opt(char('\r')), nom::character::complete::newline),
-    )(input)
-}
-
 fn newline_token(input: &str) -> IResult<&str, Token> {
-    map(newline, |_| Token::Newline)(input)
+    map(preceded(space0, newline), |_| Token::Newline)(input)
 }
 
 fn end_directive_token(input: &str) -> IResult<&str, Token> {
