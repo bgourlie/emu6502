@@ -8,7 +8,7 @@ use nom::{
         is_digit, is_space,
     },
     combinator::{map, map_res, not, peek},
-    sequence::{delimited, pair, preceded, terminated, tuple},
+    sequence::{delimited, pair, preceded, terminated},
     IResult,
 };
 use regex::Regex;
@@ -43,12 +43,12 @@ impl<'a> Iterator for Lexer<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match lex(self.remaining) {
-            Ok((remaining, (token, token_length, left_padding, right_padding))) => {
+            Ok((remaining, (token, token_length, left_padding))) => {
                 let (token_start, token_end, token_line) = {
-                    let consumed = left_padding + token_length + right_padding;
+                    let consumed = left_padding + token_length;
                     self.remaining_len -= usize::from(consumed);
                     let token_start = self.cur_column + left_padding;
-                    let token_end = token_start + consumed - left_padding - right_padding;
+                    let token_end = token_start + consumed - left_padding;
                     let token_line = self.cur_line;
 
                     if token == Token::Newline {
@@ -75,15 +75,17 @@ impl<'a> Iterator for Lexer<'a> {
 
 impl<'a> FusedIterator for Lexer<'a> {}
 
-fn lex(input: &str) -> IResult<&str, (Token, u16, u16, u16)> {
+fn lex(input: &str) -> IResult<&str, (Token, u16, u16)> {
     alt((
         alt((
             pl(space0, comment_token),
             pl(space0, error_directive_token),
-            pb(
+            pl(
                 space1,
-                map(tag_no_case("equ"), |_| (Token::EquDirective, 3)),
-                space1,
+                terminated(
+                    map(tag_no_case("equ"), |_| (Token::EquDirective, 3)),
+                    peek(space1),
+                ),
             ),
             pl(
                 space0,
@@ -97,23 +99,26 @@ fn lex(input: &str) -> IResult<&str, (Token, u16, u16, u16)> {
             pl(space0, macro_positional_arg_token),
             pl(space0, map(tag("\\?"), |_| (Token::MacroExpansionCount, 2))),
             pl(space0, include_directive_token),
-            pb(
+            pl(
                 space0,
-                map(tag_no_case("if"), |_| (Token::IfStart, 2)),
-                space1,
+                map(terminated(tag_no_case("if"), peek(space1)), |_| {
+                    (Token::IfStart, 2)
+                }),
             ),
             pl(space0, map(tag_no_case("else"), |_| (Token::Else, 4))),
             pl(space0, map(tag_no_case("endif"), |_| (Token::IfEnd, 5))),
             pl(space0, mnemonic_token),
             pl(space1, map(char('#'), |_| (Token::ImmediatePrefix, 1))),
-            pb(
+            pl(
                 space1,
-                alt((
-                    map(tag_no_case("db"), |_| (Token::DbDirective, 2)),
-                    map(tag_no_case("dw"), |_| (Token::DwDirective, 2)),
-                    map(tag_no_case("ds"), |_| (Token::DsDirective, 2)),
-                )),
-                space1,
+                terminated(
+                    alt((
+                        map(tag_no_case("db"), |_| (Token::DbDirective, 2)),
+                        map(tag_no_case("dw"), |_| (Token::DwDirective, 2)),
+                        map(tag_no_case("ds"), |_| (Token::DsDirective, 2)),
+                    )),
+                    peek(space1),
+                ),
             ),
             pn(alt((
                 offset_operand_token("x", |_| Token::OffsetByXOperand),
@@ -176,7 +181,7 @@ fn lex(input: &str) -> IResult<&str, (Token, u16, u16, u16)> {
 fn pl<'a, F, G>(
     space_parser: F,
     token_parser: G,
-) -> impl Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16, u16, u16)>
+) -> impl Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16, u16)>
 where
     F: Fn(&'a str) -> IResult<&'a str, &'a str>,
     G: Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16)>,
@@ -188,45 +193,17 @@ where
             }),
             token_parser,
         ),
-        |(padding_left, (token, token_length))| (token, token_length, padding_left, 0),
-    )
-}
-
-/// Returns the token alongside the length in bytes consumed by the token, and the left and right
-/// padding in spaces. This method is for tokens that may have padding on both sides of it.
-fn pb<'a, F, F2, G>(
-    space_parser_left: F,
-    token_parser: G,
-    space_parser_right: F2,
-) -> impl Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16, u16, u16)>
-where
-    F: Fn(&'a str) -> IResult<&'a str, &'a str>,
-    F2: Fn(&'a str) -> IResult<&'a str, &'a str>,
-    G: Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16)>,
-{
-    map(
-        tuple((
-            map(space_parser_left, |padding| {
-                u16::try_from(padding.len()).unwrap()
-            }),
-            token_parser,
-            map(space_parser_right, |padding| {
-                u16::try_from(padding.len()).unwrap()
-            }),
-        )),
-        |(padding_left, (token, token_length), padding_right)| {
-            (token, token_length, padding_left, padding_right)
-        },
+        |(padding_left, (token, token_length))| (token, token_length, padding_left),
     )
 }
 
 /// Returns the token alongside the left and right padding in spaces. This method is for tokens that
 /// have no padding on either side, and unconditionally return zero for left and right padding.
-fn pn<'a, G>(token_parser: G) -> impl Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16, u16, u16)>
+fn pn<'a, G>(token_parser: G) -> impl Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16, u16)>
 where
     G: Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16)>,
 {
-    map(token_parser, |(token, token_len)| (token, token_len, 0, 0))
+    map(token_parser, |(token, token_len)| (token, token_len, 0))
 }
 
 fn invalid_token(input: &str) -> IResult<&str, (Token, u16)> {
