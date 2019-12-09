@@ -43,22 +43,12 @@ impl<'a> Iterator for Lexer<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match lex(self.remaining) {
-            Ok((remaining, (token, left_padding, right_padding))) => {
-                let (token_start, token_end, token_line) = if let Token::Invalid(chars) = token {
-                    // Invalid tokens may contain non-ascii characters, so we need to count chars
-                    // instead of bytes here.
-                    let consumed =
-                        u16::try_from(self.remaining_len - chars.chars().count()).unwrap();
+            Ok((remaining, (token, token_length, left_padding, right_padding))) => {
+                let (token_start, token_end, token_line) = {
+                    let consumed = left_padding + token_length + right_padding;
                     self.remaining_len -= usize::from(consumed);
                     let token_start = self.cur_column + left_padding;
-                    let token_end = token_start + consumed - right_padding;
-                    self.cur_column += consumed;
-                    (token_start, token_end, self.cur_line)
-                } else {
-                    let consumed = u16::try_from(self.remaining_len - remaining.len()).unwrap();
-                    self.remaining_len -= usize::from(consumed);
-                    let token_start = self.cur_column + left_padding;
-                    let token_end = token_start + consumed - right_padding;
+                    let token_end = token_start + consumed - left_padding - right_padding;
                     let token_line = self.cur_line;
 
                     if token == Token::Newline {
@@ -85,33 +75,43 @@ impl<'a> Iterator for Lexer<'a> {
 
 impl<'a> FusedIterator for Lexer<'a> {}
 
-fn lex(input: &str) -> IResult<&str, (Token, u16, u16)> {
+fn lex(input: &str) -> IResult<&str, (Token, u16, u16, u16)> {
     alt((
         alt((
             pl(space0, comment_token),
             pl(space0, error_directive_token),
             pb(
                 space1,
-                map(tag_no_case("equ"), |_| Token::EquDirective),
+                map(tag_no_case("equ"), |_| (Token::EquDirective, 3)),
                 space1,
             ),
-            pl(space0, map(tag_no_case("noopt"), |_| Token::NoOptDirective)),
-            pl(space1, map(tag_no_case("macro"), |_| Token::MacroStart)),
-            pl(space0, map(tag_no_case("endm"), |_| Token::MacroEnd)),
+            pl(
+                space0,
+                map(tag_no_case("noopt"), |_| (Token::NoOptDirective, 5)),
+            ),
+            pl(
+                space1,
+                map(tag_no_case("macro"), |_| (Token::MacroStart, 5)),
+            ),
+            pl(space0, map(tag_no_case("endm"), |_| (Token::MacroEnd, 4))),
             pl(space0, macro_positional_arg_token),
-            pl(space0, map(tag("\\?"), |_| Token::MacroExpansionCount)),
+            pl(space0, map(tag("\\?"), |_| (Token::MacroExpansionCount, 2))),
             pl(space0, include_directive_token),
-            pb(space0, map(tag_no_case("if"), |_| Token::IfStart), space1),
-            pl(space0, map(tag_no_case("else"), |_| Token::Else)),
-            pl(space0, map(tag_no_case("endif"), |_| Token::IfEnd)),
+            pb(
+                space0,
+                map(tag_no_case("if"), |_| (Token::IfStart, 2)),
+                space1,
+            ),
+            pl(space0, map(tag_no_case("else"), |_| (Token::Else, 4))),
+            pl(space0, map(tag_no_case("endif"), |_| (Token::IfEnd, 5))),
             pl(space0, mnemonic_token),
-            pl(space1, map(char('#'), |_| Token::ImmediatePrefix)),
+            pl(space1, map(char('#'), |_| (Token::ImmediatePrefix, 1))),
             pb(
                 space1,
                 alt((
-                    map(tag_no_case("db"), |_| Token::DbDirective),
-                    map(tag_no_case("dw"), |_| Token::DwDirective),
-                    map(tag_no_case("ds"), |_| Token::DsDirective),
+                    map(tag_no_case("db"), |_| (Token::DbDirective, 2)),
+                    map(tag_no_case("dw"), |_| (Token::DwDirective, 2)),
+                    map(tag_no_case("ds"), |_| (Token::DsDirective, 2)),
                 )),
                 space1,
             ),
@@ -119,7 +119,10 @@ fn lex(input: &str) -> IResult<&str, (Token, u16, u16)> {
                 offset_operand_token("x", |_| Token::OffsetByXOperand),
                 offset_operand_token("y", |_| Token::OffsetByYOperand),
             ))),
-            pl(space0, map(tag_no_case("end"), |_| Token::EndDirective)),
+            pl(
+                space0,
+                map(tag_no_case("end"), |_| (Token::EndDirective, 3)),
+            ),
             pl(space0, identifier_token),
             pl(
                 space0,
@@ -136,46 +139,47 @@ fn lex(input: &str) -> IResult<&str, (Token, u16, u16)> {
             pl(
                 space0,
                 alt((
-                    map(tag("="), |_| Token::EqualsOperator),
-                    map(tag("!="), |_| Token::NotEqualsOperator),
-                    map(tag("!"), |_| Token::BangOperator),
-                    map(tag("~"), |_| Token::ComplementOperator),
-                    map(tag("|"), |_| Token::OrOperator),
-                    map(tag("^"), |_| Token::XorOperator),
-                    map(tag("&"), |_| Token::AndOperator),
-                    map(tag("+"), |_| Token::PlusOperator),
-                    map(tag("-"), |_| Token::MinusOperator),
-                    map(tag("*"), |_| Token::StarOperator),
-                    map(tag("<<"), |_| Token::LeftShiftOperator),
-                    map(tag(">>"), |_| Token::RightShiftOperator),
-                    map(tag(">="), |_| Token::GreaterThanOrEqualToOperator),
-                    map(tag("<="), |_| Token::LessThanOrEqualToOperator),
-                    map(tag(">"), |_| Token::GreaterThanOperator),
-                    map(tag("<"), |_| Token::LessThanOperator),
+                    map(tag("="), |_| (Token::EqualsOperator, 1)),
+                    map(tag("!="), |_| (Token::NotEqualsOperator, 2)),
+                    map(tag("!"), |_| (Token::BangOperator, 1)),
+                    map(tag("~"), |_| (Token::ComplementOperator, 1)),
+                    map(tag("|"), |_| (Token::OrOperator, 1)),
+                    map(tag("^"), |_| (Token::XorOperator, 1)),
+                    map(tag("&"), |_| (Token::AndOperator, 1)),
+                    map(tag("+"), |_| (Token::PlusOperator, 1)),
+                    map(tag("-"), |_| (Token::MinusOperator, 1)),
+                    map(tag("*"), |_| (Token::StarOperator, 1)),
+                    map(tag("<<"), |_| (Token::LeftShiftOperator, 2)),
+                    map(tag(">>"), |_| (Token::RightShiftOperator, 2)),
+                    map(tag(">="), |_| (Token::GreaterThanOrEqualToOperator, 2)),
+                    map(tag("<="), |_| (Token::LessThanOrEqualToOperator, 2)),
+                    map(tag(">"), |_| (Token::GreaterThanOperator, 1)),
+                    map(tag("<"), |_| (Token::LessThanOperator, 1)),
                 )),
             ),
-            pl(space0, map(char('('), |_| Token::OpenParen)),
+            pl(space0, map(char('('), |_| (Token::OpenParen, 1))),
         )),
         alt((
-            pl(space0, map(char(')'), |_| Token::CloseParen)),
+            pl(space0, map(char(')'), |_| (Token::CloseParen, 1))),
             pl(space0, string_literal_token),
-            pn(character_literal_token),
-            pn(map(tag(","), |_| Token::Comma)),
-            pl(space0, map(newline, |_| Token::Newline)),
+            pn(map(character_literal_token, |lit| (lit, 3))),
+            pn(map(tag(","), |_| (Token::Comma, 1))),
+            pl(space0, map(newline, |_| (Token::Newline, 1))),
             pl(space0, invalid_token),
         )),
     ))(input)
 }
 
-/// Returns the token alongside the left and right padding in spaces. This method is for left-padded
-/// tokens and unconditionally returns 0 right padding.
+/// Returns the token alongside the length in bytes consumed by the token, and left and right
+/// padding in spaces. This method is for left-padded tokens and unconditionally returns 0 right
+/// padding.
 fn pl<'a, F, G>(
     space_parser: F,
     token_parser: G,
-) -> impl Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16, u16)>
+) -> impl Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16, u16, u16)>
 where
     F: Fn(&'a str) -> IResult<&'a str, &'a str>,
-    G: Fn(&'a str) -> IResult<&'a str, Token<'a>>,
+    G: Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16)>,
 {
     map(
         pair(
@@ -184,21 +188,21 @@ where
             }),
             token_parser,
         ),
-        |(padding_left, token)| (token, padding_left, 0),
+        |(padding_left, (token, token_length))| (token, token_length, padding_left, 0),
     )
 }
 
-/// Returns the token alongside the left and right padding in spaces. This method is for tokens that
-/// may have padding on both sides of it.
+/// Returns the token alongside the length in bytes consumed by the token, and the left and right
+/// padding in spaces. This method is for tokens that may have padding on both sides of it.
 fn pb<'a, F, F2, G>(
     space_parser_left: F,
     token_parser: G,
     space_parser_right: F2,
-) -> impl Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16, u16)>
+) -> impl Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16, u16, u16)>
 where
     F: Fn(&'a str) -> IResult<&'a str, &'a str>,
     F2: Fn(&'a str) -> IResult<&'a str, &'a str>,
-    G: Fn(&'a str) -> IResult<&'a str, Token<'a>>,
+    G: Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16)>,
 {
     map(
         tuple((
@@ -210,54 +214,74 @@ where
                 u16::try_from(padding.len()).unwrap()
             }),
         )),
-        |(padding_left, token, padding_right)| (token, padding_left, padding_right),
+        |(padding_left, (token, token_length), padding_right)| {
+            (token, token_length, padding_left, padding_right)
+        },
     )
 }
 
 /// Returns the token alongside the left and right padding in spaces. This method is for tokens that
 /// have no padding on either side, and unconditionally return zero for left and right padding.
-fn pn<'a, G>(token_parser: G) -> impl Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16, u16)>
+fn pn<'a, G>(token_parser: G) -> impl Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16, u16, u16)>
 where
-    G: Fn(&'a str) -> IResult<&'a str, Token<'a>>,
+    G: Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16)>,
 {
-    map(token_parser, |token| (token, 0, 0))
+    map(token_parser, |(token, token_len)| (token, token_len, 0, 0))
 }
 
-fn invalid_token(input: &str) -> IResult<&str, Token> {
+fn invalid_token(input: &str) -> IResult<&str, (Token, u16)> {
     map(
         take_while1(|chr: char| !chr.is_ascii() || !(is_space(chr as u8) || chr == '\n')),
-        Token::Invalid,
+        |invalid| {
+            (
+                Token::Invalid(invalid),
+                u16::try_from(invalid.chars().count()).unwrap(),
+            )
+        },
     )(input)
 }
 
-fn comment_token(input: &str) -> IResult<&str, Token> {
+fn comment_token(input: &str) -> IResult<&str, (Token, u16)> {
     map(
         preceded(
             char(';'),
             take_while(|chr: char| chr.is_ascii() && !chr.is_ascii_control()),
         ),
-        Token::Comment,
+        |comment| {
+            (
+                Token::Comment(comment),
+                u16::try_from(1 + comment.len()).unwrap(),
+            )
+        },
     )(input)
 }
 
-fn error_directive_token(input: &str) -> IResult<&str, Token> {
+fn error_directive_token(input: &str) -> IResult<&str, (Token, u16)> {
     map(
-        preceded(
+        pair(
             terminated(tag("ERROR ERROR ERROR"), space1),
             take_while1(|chr: char| chr.is_ascii() && !chr.is_ascii_control()),
         ),
-        Token::ErrorDirective,
+        |(taken, err)| {
+            (
+                Token::ErrorDirective(err),
+                u16::try_from(taken.len() + err.len()).unwrap(),
+            )
+        },
     )(input)
 }
 
 fn offset_operand_token<'a, F>(
     register: &'static str,
     mapper: F,
-) -> impl Fn(&'a str) -> IResult<&'a str, Token<'a>>
+) -> impl Fn(&'a str) -> IResult<&'a str, (Token<'a>, u16)>
 where
-    F: Fn(&'a str) -> Token<'a> + Copy,
+    F: Fn(&'a str) -> Token<'a>,
 {
-    map(preceded(char(','), tag_no_case(register)), mapper)
+    map(
+        preceded(char(','), tag_no_case(register)),
+        move |register| (mapper(register), u16::try_from(register.len()).unwrap()),
+    )
 }
 
 // TODO: Add escaping https://github.com/Geal/nom/issues/1014
@@ -280,7 +304,7 @@ fn mnemonic_implied<'a, F>(
     mapper: F,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Op>
 where
-    F: Copy + Fn(&'a str) -> Op,
+    F: Fn(&'a str) -> Op,
 {
     map(
         terminated(tag_no_case(mnemonic), peek_comment_or_newline),
@@ -293,12 +317,12 @@ fn mnemonic_operand<'a, F>(
     mapper: F,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Op>
 where
-    F: Copy + Fn(&str) -> Op,
+    F: Fn(&str) -> Op,
 {
     map(terminated(tag_no_case(mnemonic), peek(space1)), mapper)
 }
 
-fn mnemonic_token(input: &str) -> IResult<&str, Token> {
+fn mnemonic_token(input: &str) -> IResult<&str, (Token, u16)> {
     map(
         alt((
             alt((
@@ -364,7 +388,7 @@ fn mnemonic_token(input: &str) -> IResult<&str, Token> {
                 mnemonic_implied("tya", |_| Op::Tya),
             )),
         )),
-        Token::Mnemonic,
+        |mnemonic| (Token::Mnemonic(mnemonic), 3),
     )(input)
 }
 
@@ -372,70 +396,88 @@ fn peek_comment_or_newline(input: &str) -> IResult<&str, ()> {
     peek(alt((map(newline, |_| ()), map(comment_token, |_| ()))))(input)
 }
 
-fn macro_positional_arg_token(input: &str) -> IResult<&str, Token> {
+fn macro_positional_arg_token(input: &str) -> IResult<&str, (Token, u16)> {
     map(
         map_res(
             preceded(char('\\'), take_while1(|chr: char| is_digit(chr as u8))),
-            |digits| u8::from_str_radix(digits, 10),
+            |digits| {
+                u8::from_str_radix(digits, 10)
+                    .map(|val| (val, u16::try_from(digits.len() + 1).unwrap()))
+            },
         ),
-        Token::MacroPositionalArg,
+        |(val, digits_len)| (Token::MacroPositionalArg(val), digits_len),
     )(input)
 }
 
-fn hex_literal_token(input: &str) -> IResult<&str, Token> {
+fn hex_literal_token(input: &str) -> IResult<&str, (Token, u16)> {
     map(
-        map_res(preceded(char('$'), hex_digit1), |val| {
-            u16::from_str_radix(val, 16)
+        map_res(preceded(char('$'), hex_digit1), |digits| {
+            u16::from_str_radix(digits, 16)
+                .map(|val| (val, u16::try_from(digits.len() + 1).unwrap()))
         }),
-        Token::HexLiteral,
+        |(val, token_length)| (Token::HexLiteral(val), token_length),
     )(input)
 }
 
-fn dec_literal_token(input: &str) -> IResult<&str, Token> {
-    map(map_res(digit1, |val| u16::from_str_radix(val, 10)), |val| {
-        Token::DecLiteral(val)
-    })(input)
-}
-
-fn oct_literal_token(input: &str) -> IResult<&str, Token> {
+fn dec_literal_token(input: &str) -> IResult<&str, (Token, u16)> {
     map(
-        map_res(preceded(char('@'), oct_digit1), |val| {
-            u16::from_str_radix(val, 8)
+        map_res(digit1, |digits| {
+            u16::from_str_radix(digits, 10).map(|val| (val, u16::try_from(digits.len()).unwrap()))
         }),
-        Token::OctLiteral,
+        |(val, token_length)| (Token::DecLiteral(val), token_length),
     )(input)
 }
 
-fn bin_literal_token(input: &str) -> IResult<&str, Token> {
+fn oct_literal_token(input: &str) -> IResult<&str, (Token, u16)> {
+    map(
+        map_res(preceded(char('@'), oct_digit1), |digits| {
+            u16::from_str_radix(digits, 8).map(|val| (val, u16::try_from(digits.len()).unwrap()))
+        }),
+        |(val, token_length)| (Token::OctLiteral(val), token_length),
+    )(input)
+}
+
+fn bin_literal_token(input: &str) -> IResult<&str, (Token, u16)> {
     map(
         map_res(
             preceded(char('%'), take_while1(|chr| chr == '0' || chr == '1')),
-            |val| u16::from_str_radix(val, 2),
+            |digits| {
+                u16::from_str_radix(digits, 2)
+                    .map(|val| (val, u16::try_from(digits.len() + 1).unwrap()))
+            },
         ),
-        Token::BinLiteral,
+        |(val, token_length)| (Token::BinLiteral(val), token_length),
     )(input)
 }
 
 // TODO: Add escaping https://github.com/Geal/nom/issues/1014
-fn string_literal_token(input: &str) -> IResult<&str, Token> {
+fn string_literal_token(input: &str) -> IResult<&str, (Token, u16)> {
     map(
         delimited(
             char('"'),
             take_while(|chr: char| chr.is_ascii() && !chr.is_ascii_control() && chr != '\"'),
             char('"'),
         ),
-        Token::StringLiteral,
+        |lit| {
+            (
+                Token::StringLiteral(lit),
+                u16::try_from(lit.len() + 2).unwrap(),
+            )
+        },
     )(input)
 }
 
-fn identifier_token(input: &str) -> IResult<&str, Token> {
+fn identifier_token(input: &str) -> IResult<&str, (Token, u16)> {
     map_res(
         take_while1(|chr: char| {
             chr.is_ascii_alphanumeric() || chr == '_' || chr == '\\' || chr == '?'
         }),
         |identifier: &str| {
             if IDENT_REGEX.is_match(identifier) {
-                Ok(Token::Identifier(identifier))
+                Ok((
+                    Token::Identifier(identifier),
+                    u16::try_from(identifier.len()).unwrap(),
+                ))
             } else {
                 Err(())
             }
@@ -443,13 +485,20 @@ fn identifier_token(input: &str) -> IResult<&str, Token> {
     )(input)
 }
 
-fn include_directive_token(input: &str) -> IResult<&str, Token> {
+fn include_directive_token(input: &str) -> IResult<&str, (Token, u16)> {
     map(
-        delimited(
-            tuple((tag_no_case("include"), space1, char('"'))),
-            take_while(|chr: char| chr.is_ascii() && !chr.is_ascii_control() && chr != '\"'),
+        terminated(
+            pair(
+                delimited(tag_no_case("include"), space1, char('"')),
+                take_while(|chr: char| chr.is_ascii() && !chr.is_ascii_control() && chr != '\"'),
+            ),
             char('"'),
         ),
-        |path: &str| Token::IncludeDirective(path),
+        |(spaces, path)| {
+            (
+                Token::IncludeDirective(path),
+                u16::try_from(spaces.len() + path.len() + 9).unwrap(),
+            )
+        },
     )(input)
 }

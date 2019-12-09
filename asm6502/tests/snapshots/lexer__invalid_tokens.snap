@@ -1,0 +1,120 @@
+---
+source: asm6502/tests/lexer.rs
+expression: "Fixture::new(\"invalid_tokens\").tokens()"
+---
+[
+    PositionedToken {
+        token: IfStart,
+        line: 1,
+        span: (
+            1,
+            3,
+        ),
+    },
+    PositionedToken {
+        token: Identifier(
+            "ident",
+        ),
+        line: 1,
+        span: (
+            4,
+            9,
+        ),
+    },
+    PositionedToken {
+        token: EqualsOperator,
+        line: 1,
+        span: (
+            10,
+            11,
+        ),
+    },
+    PositionedToken {
+        token: Invalid(
+            "ḂяїΆῄ",
+        ),
+        line: 1,
+        span: (
+            12,
+            17,
+        ),
+    },
+    PositionedToken {
+        token: Invalid(
+            "```",
+        ),
+        line: 1,
+        span: (
+            18,
+            21,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 1,
+        span: (
+            21,
+            22,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Brk,
+        ),
+        line: 2,
+        span: (
+            5,
+            8,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 2,
+        span: (
+            8,
+            9,
+        ),
+    },
+    PositionedToken {
+        token: Else,
+        line: 3,
+        span: (
+            1,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 3,
+        span: (
+            5,
+            6,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Brk,
+        ),
+        line: 4,
+        span: (
+            5,
+            8,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 4,
+        span: (
+            8,
+            9,
+        ),
+    },
+    PositionedToken {
+        token: IfEnd,
+        line: 5,
+        span: (
+            1,
+            6,
+        ),
+    },
+]

@@ -7,6 +7,11 @@ fn all_tokens() {
     assert_debug_snapshot!(Fixture::new("all_tokens").tokens());
 }
 
+#[test]
+fn invalid_tokens() {
+    assert_debug_snapshot!(Fixture::new("invalid_tokens").tokens());
+}
+
 struct Fixture {
     input: String,
 }
