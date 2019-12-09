@@ -1,4 +1,4 @@
-use crate::Token;
+use crate::{PositionedToken, Token};
 use lazy_static::lazy_static;
 use nom::{
     branch::alt,
@@ -39,7 +39,7 @@ impl<'a> Lexer<'a> {
 }
 
 impl<'a> Iterator for Lexer<'a> {
-    type Item = (Token<'a>, u32, u16, u16);
+    type Item = PositionedToken<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match lex(self.remaining) {
@@ -61,7 +61,7 @@ impl<'a> Iterator for Lexer<'a> {
                     let token_end = token_start + consumed - right_padding;
                     let token_line = self.cur_line;
 
-                    if let Token::Newline = token {
+                    if token == Token::Newline {
                         self.cur_line += 1;
                         self.cur_column = 1;
                     } else {
@@ -71,7 +71,11 @@ impl<'a> Iterator for Lexer<'a> {
                 };
 
                 self.remaining = remaining;
-                Some((token, token_line, token_start, token_end))
+                Some(PositionedToken {
+                    token,
+                    line: token_line,
+                    span: (token_start, token_end),
+                })
             }
             Err(nom::Err::Error(("", _))) => None,
             _ => unreachable!(),
@@ -87,25 +91,21 @@ fn lex(input: &str) -> IResult<&str, (Token, u16, u16)> {
             pl(space0, comment_token),
             pl(space0, error_directive_token),
             pb(
-                space0,
+                space1,
                 map(tag_no_case("equ"), |_| Token::EquDirective),
                 space1,
             ),
             pl(space0, map(tag_no_case("noopt"), |_| Token::NoOptDirective)),
             pl(space1, map(tag_no_case("macro"), |_| Token::MacroStart)),
-            pb(
-                space0,
-                map(tag_no_case("endm"), |_| Token::MacroEnd),
-                space0,
-            ),
+            pl(space0, map(tag_no_case("endm"), |_| Token::MacroEnd)),
             pl(space0, macro_positional_arg_token),
             pl(space0, map(tag("\\?"), |_| Token::MacroExpansionCount)),
             pl(space0, include_directive_token),
             pb(space0, map(tag_no_case("if"), |_| Token::IfStart), space1),
-            pb(space0, map(tag_no_case("else"), |_| Token::Else), space0),
-            pb(space0, map(tag_no_case("endif"), |_| Token::IfEnd), space0),
+            pl(space0, map(tag_no_case("else"), |_| Token::Else)),
+            pl(space0, map(tag_no_case("endif"), |_| Token::IfEnd)),
             pl(space0, mnemonic_token),
-            pn(map(char('#'), |_| Token::ImmediatePrefix)),
+            pl(space1, map(char('#'), |_| Token::ImmediatePrefix)),
             pb(
                 space1,
                 alt((
@@ -115,17 +115,12 @@ fn lex(input: &str) -> IResult<&str, (Token, u16, u16)> {
                 )),
                 space1,
             ),
-            pl(
-                space0,
-                alt((
-                    offset_operand_token("x", |_| Token::OffsetByXOperand),
-                    offset_operand_token("y", |_| Token::OffsetByYOperand),
-                )),
-            ),
+            pn(alt((
+                offset_operand_token("x", |_| Token::OffsetByXOperand),
+                offset_operand_token("y", |_| Token::OffsetByYOperand),
+            ))),
             pl(space0, map(tag_no_case("end"), |_| Token::EndDirective)),
             pl(space0, identifier_token),
-        )),
-        alt((
             pl(
                 space0,
                 terminated(
@@ -138,7 +133,7 @@ fn lex(input: &str) -> IResult<&str, (Token, u16, u16)> {
                     not(identifier_token),
                 ),
             ),
-            pb(
+            pl(
                 space0,
                 alt((
                     map(tag("="), |_| Token::EqualsOperator),
@@ -158,10 +153,11 @@ fn lex(input: &str) -> IResult<&str, (Token, u16, u16)> {
                     map(tag(">"), |_| Token::GreaterThanOperator),
                     map(tag("<"), |_| Token::LessThanOperator),
                 )),
-                space0,
             ),
-            pn(map(char('('), |_| Token::OpenParen)),
-            pn(map(char(')'), |_| Token::CloseParen)),
+            pl(space0, map(char('('), |_| Token::OpenParen)),
+        )),
+        alt((
+            pl(space0, map(char(')'), |_| Token::CloseParen)),
             pl(space0, string_literal_token),
             pn(character_literal_token),
             pn(map(tag(","), |_| Token::Comma)),
@@ -299,7 +295,7 @@ fn mnemonic_operand<'a, F>(
 where
     F: Copy + Fn(&str) -> Op,
 {
-    map(terminated(tag_no_case(mnemonic), space1), mapper)
+    map(terminated(tag_no_case(mnemonic), peek(space1)), mapper)
 }
 
 fn mnemonic_token(input: &str) -> IResult<&str, Token> {

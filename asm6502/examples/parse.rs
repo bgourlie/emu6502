@@ -6,7 +6,7 @@ fn main() -> Result<(), std::io::Error> {
     let mut buffer = String::new();
     file.read_to_string(&mut buffer)?;
     let tokens: Vec<Token> = asm6502::Lexer::new(buffer.as_str())
-        .map(|(token, _, _, _)| token)
+        .map(|i| i.token())
         .collect();
     let (remaining, lines) = asm6502::parse(&tokens).unwrap();
     for (line_num, line) in lines.iter().enumerate() {

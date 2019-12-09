@@ -1,4 +1,4 @@
-use asm6502::Token;
+use asm6502::PositionedToken;
 use insta::assert_debug_snapshot;
 use std::{fs::File, io::Read};
 
@@ -19,7 +19,7 @@ impl Fixture {
         Fixture { input }
     }
 
-    fn tokens(&self) -> Vec<(Token, u32, u16, u16)> {
+    fn tokens(&self) -> Vec<PositionedToken> {
         asm6502::Lexer::new(self.input.as_str()).collect()
     }
 }

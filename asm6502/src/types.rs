@@ -11,7 +11,7 @@ use std::{
     slice::Iter,
 };
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Token<'a> {
     Newline,
     Comment(&'a str),
@@ -61,6 +61,27 @@ pub enum Token<'a> {
     DwDirective,
     IncludeDirective(&'a str),
     Invalid(&'a str),
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct PositionedToken<'a> {
+    pub(crate) token: Token<'a>,
+    pub(crate) line: u32,
+    pub(crate) span: (u16, u16),
+}
+
+impl<'a> PositionedToken<'a> {
+    pub fn token(&self) -> Token<'a> {
+        self.token
+    }
+
+    pub fn line(&self) -> u32 {
+        self.line
+    }
+
+    pub fn span(&self) -> (u16, u16) {
+        self.span
+    }
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]

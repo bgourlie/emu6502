@@ -6,4 +6,4 @@ mod types;
 pub use lexer::Lexer;
 pub use parser::parse;
 pub use resolver::Resolver;
-pub use types::Token;
+pub use types::{PositionedToken, Token};

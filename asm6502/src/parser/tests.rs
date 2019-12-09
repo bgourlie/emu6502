@@ -7,9 +7,7 @@ use std::rc::Rc;
 
 #[test]
 fn test_macro_decl() {
-    let tokens: Vec<Token> = Lexer::new("foo macro\n")
-        .map(|(token, _, _, _)| token)
-        .collect();
+    let tokens: Vec<Token> = Lexer::new("foo macro\n").map(|i| i.token).collect();
     let (_, lines) = parse(&tokens).unwrap();
     assert_eq!(Line::MacroStart("foo"), lines[0]);
 }
@@ -17,7 +15,7 @@ fn test_macro_decl() {
 #[test]
 fn test_macro_end() {
     let tokens: Vec<Token> = Lexer::new("endm ; This is a comment\n")
-        .map(|(token, _, _, _)| token)
+        .map(|i| i.token)
         .collect();
     let (_, lines) = parse(&tokens).unwrap();
     assert_eq!(Line::MacroEnd, lines[0]);
@@ -26,7 +24,7 @@ fn test_macro_end() {
 #[test]
 fn test_macro_invocation() {
     let tokens: Vec<Token> = Lexer::new("some_macro_or_label\n")
-        .map(|(token, _, _, _)| token)
+        .map(|i| i.token)
         .collect();
     let (_, lines) = parse(&tokens).unwrap();
     assert_eq!(
@@ -38,7 +36,7 @@ fn test_macro_invocation() {
 #[test]
 fn test_macro_invocation_with_args() {
     let tokens: Vec<Token> = Lexer::new("some_macro 1,2+2,3,4\n")
-        .map(|(token, _, _, _)| token)
+        .map(|i| i.token)
         .collect();
     let (_, lines) = parse(&tokens).unwrap();
     let expected_args = vec![
@@ -68,7 +66,7 @@ fn test_macro_invocation_with_args() {
 #[test]
 fn test_eq_directive2() {
     let tokens: Vec<Token> = Lexer::new("carry   equ %00000001\n")
-        .map(|(token, _, _, _)| token)
+        .map(|i| i.token)
         .collect();
     let (_, lines) = parse(&tokens).unwrap();
     assert_eq!(1, lines.len());
