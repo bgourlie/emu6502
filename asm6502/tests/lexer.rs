@@ -18,7 +18,7 @@ struct Fixture {
 
 impl Fixture {
     fn new(file: &'static str) -> Fixture {
-        let mut file = File::open(format!("./tests/fixtures/{}.a65", file)).unwrap();
+        let mut file = File::open(format!("./tests/fixtures/{}.txt", file)).unwrap();
         let mut input = String::new();
         file.read_to_string(&mut input).unwrap();
         Fixture { input }
