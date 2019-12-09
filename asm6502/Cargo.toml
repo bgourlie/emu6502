@@ -12,3 +12,6 @@ nom = "5.0"
 regex = "1"
 lazy_static = "1.4.0"
 fnv = "1.0.6"
+
+[dev-dependencies]
+insta = "0.12.0"

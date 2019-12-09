@@ -7,6 +7,7 @@ const ADDRESS_SPACE_MAPPING_START: u16 = 0xa;
 const MAX_ITERATIONS: usize = 300000000;
 
 #[test]
+#[ignore]
 fn opcodes() {
     let mut file = File::open("../test_roms/6502_functional_test.bin").unwrap();
     let mapper = BasicMapper::new(&mut file, ADDRESS_SPACE_MAPPING_START);

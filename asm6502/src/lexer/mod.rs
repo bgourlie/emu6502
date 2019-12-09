@@ -1,6 +1,3 @@
-#[cfg(test)]
-mod tests;
-
 use crate::Token;
 use lazy_static::lazy_static;
 use nom::{
@@ -34,7 +31,7 @@ impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Self {
         Lexer {
             cur_line: 1,
-            cur_column: 0,
+            cur_column: 1,
             remaining_len: input.chars().count(),
             remaining: input,
         }
@@ -47,7 +44,7 @@ impl<'a> Iterator for Lexer<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         match lex(self.remaining) {
             Ok((remaining, (token, left_padding, right_padding))) => {
-                let (token_start, token_end, line) = if let Token::Invalid(chars) = token {
+                let (token_start, token_end, token_line) = if let Token::Invalid(chars) = token {
                     // Invalid tokens may contain non-ascii characters, so we need to count chars
                     // instead of bytes here.
                     let consumed =
@@ -62,17 +59,19 @@ impl<'a> Iterator for Lexer<'a> {
                     self.remaining_len -= usize::from(consumed);
                     let token_start = self.cur_column + left_padding;
                     let token_end = token_start + consumed - right_padding;
-                    let line = self.cur_line;
+                    let token_line = self.cur_line;
 
                     if let Token::Newline = token {
                         self.cur_line += 1;
-                        self.cur_column = 0;
+                        self.cur_column = 1;
+                    } else {
+                        self.cur_column += consumed;
                     }
-                    (token_start, token_end, line)
+                    (token_start, token_end, token_line)
                 };
 
                 self.remaining = remaining;
-                Some((token, line, token_start, token_end))
+                Some((token, token_line, token_start, token_end))
             }
             Err(nom::Err::Error(("", _))) => None,
             _ => unreachable!(),
