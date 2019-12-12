@@ -19,23 +19,21 @@ use nom::{
 };
 use std::rc::Rc;
 
-pub fn maybe_comment_then_newline<'a, T: Into<TokenSlice<'a>>>(
-    input: T,
-) -> IResult<TokenSlice<'a>, ()> {
-    preceded(opt(token::comment), token::newline)(input.into())
+pub fn maybe_comment_then_newline(input: TokenSlice) -> IResult<TokenSlice, ()> {
+    preceded(opt(token::comment), token::newline)(input)
 }
 
-fn macro_decl<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+fn macro_decl(input: TokenSlice) -> IResult<TokenSlice, Line> {
     map(terminated(token::identifier, token::macro_start), |ident| {
         Line::MacroStart(ident)
-    })(input.into())
+    })(input)
 }
 
-fn macro_end<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
-    map(token::macro_end, |_| Line::MacroEnd)(input.into())
+fn macro_end(input: TokenSlice) -> IResult<TokenSlice, Line> {
+    map(token::macro_end, |_| Line::MacroEnd)(input)
 }
 
-fn equals_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+fn equals_operator(input: TokenSlice) -> IResult<TokenSlice, Line> {
     map(
         separated_pair(
             token::identifier,
@@ -43,10 +41,10 @@ fn equals_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<
             expression::expression,
         ),
         |(ident, expr)| Line::Equals(ident, Rc::new(expr)),
-    )(input.into())
+    )(input)
 }
 
-fn equ_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+fn equ_directive(input: TokenSlice) -> IResult<TokenSlice, Line> {
     map(
         separated_pair(
             token::identifier,
@@ -54,68 +52,66 @@ fn equ_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a
             expression::expression,
         ),
         |(ident, expr)| Line::Equ(ident, Rc::new(expr)),
-    )(input.into())
+    )(input)
 }
 
-fn if_statement<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+fn if_statement(input: TokenSlice) -> IResult<TokenSlice, Line> {
     map(preceded(token::r#if, expression::expression), |expr| {
         Line::If(expr)
-    })(input.into())
+    })(input)
 }
 
-fn else_statement<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
-    map(token::r#else, |_| Line::Else)(input.into())
+fn else_statement(input: TokenSlice) -> IResult<TokenSlice, Line> {
+    map(token::r#else, |_| Line::Else)(input)
 }
 
-fn end_if_statement<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
-    map(token::end_if, |_| Line::EndIf)(input.into())
+fn end_if_statement(input: TokenSlice) -> IResult<TokenSlice, Line> {
+    map(token::end_if, |_| Line::EndIf)(input)
 }
 
-fn error_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
-    map(token::error_directive, |msg| Line::Error(msg))(input.into())
+fn error_directive(input: TokenSlice) -> IResult<TokenSlice, Line> {
+    map(token::error_directive, |msg| Line::Error(msg))(input)
 }
 
-fn noopt_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
-    map(token::noopt_directive, |_| Line::NoOpt)(input.into())
+fn noopt_directive(input: TokenSlice) -> IResult<TokenSlice, Line> {
+    map(token::noopt_directive, |_| Line::NoOpt)(input)
 }
 
-fn ds_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+fn ds_directive(input: TokenSlice) -> IResult<TokenSlice, Line> {
     map(
         pair(
             opt(token::identifier),
             preceded(token::ds_directive, expression::expression),
         ),
         |(ident, expr)| Line::Ds(ident, Rc::new(expr)),
-    )(input.into())
+    )(input)
 }
 
-fn db_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+fn db_directive(input: TokenSlice) -> IResult<TokenSlice, Line> {
     map(
         pair(
             opt(token::identifier),
             preceded(token::db_directive, expression_list),
         ),
         |(ident, args)| Line::Db(ident, args),
-    )(input.into())
+    )(input)
 }
 
-fn dw_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+fn dw_directive(input: TokenSlice) -> IResult<TokenSlice, Line> {
     map(
         pair(
             opt(token::identifier),
             preceded(token::dw_directive, expression_list),
         ),
         |(ident, args)| Line::Dw(ident, args),
-    )(input.into())
+    )(input)
 }
 
-fn expression_list<'a, T: Into<TokenSlice<'a>>>(
-    input: T,
-) -> IResult<TokenSlice<'a>, Vec<Rc<Expression<'a>>>> {
-    separated_nonempty_list(token::comma, map(expression::expression, Rc::new))(input.into())
+fn expression_list(input: TokenSlice) -> IResult<TokenSlice, Vec<Rc<Expression>>> {
+    separated_nonempty_list(token::comma, map(expression::expression, Rc::new))(input)
 }
 
-fn macro_invocation<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+fn macro_invocation(input: TokenSlice) -> IResult<TokenSlice, Line> {
     alt((
         map(pair(token::identifier, expression_list), |(ident, args)| {
             Line::MacroInvocation(ident, args)
@@ -124,17 +120,17 @@ fn macro_invocation<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice
             terminated(token::identifier, peek(maybe_comment_then_newline)),
             |ident| Line::MacroInvocationOrLabel(ident),
         ),
-    ))(input.into())
+    ))(input)
 }
 
-fn include_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
-    map(token::include_directive, |file| Line::Include(file))(input.into())
+fn include_directive(input: TokenSlice) -> IResult<TokenSlice, Line> {
+    map(token::include_directive, |file| Line::Include(file))(input)
 }
 
-fn end_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Line<'a>> {
+fn end_directive(input: TokenSlice) -> IResult<TokenSlice, Line> {
     map(preceded(token::end_directive, token::identifier), |label| {
         Line::End(label)
-    })(input.into())
+    })(input)
 }
 
 pub fn parse<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Vec<Line<'a>>> {
