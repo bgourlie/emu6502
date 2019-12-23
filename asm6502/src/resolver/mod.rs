@@ -33,8 +33,8 @@ impl<'a> LivenessContext {
     fn pop(&mut self) -> Result<(), ResolveError<'a>> {
         self.if_stack
             .pop()
+            .map(|_live| ())
             .ok_or_else(|| ResolveError::MismatchedEndIf)
-            .and_then(|_| Ok(()))
     }
 
     fn invert_head(&mut self) -> Result<(), ResolveError<'a>> {
