@@ -144,7 +144,7 @@ pub enum Operand<'a> {
 pub enum Line<'a> {
     Empty,
     Instruction(Option<&'a str>, Op, Operand<'a>),
-    If(Expression<'a>),
+    If(Rc<Expression<'a>>),
     Else,
     EndIf,
     Equals(&'a str, Rc<Expression<'a>>),

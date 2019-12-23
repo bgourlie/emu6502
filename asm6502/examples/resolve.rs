@@ -10,10 +10,10 @@ fn main() -> Result<(), std::io::Error> {
         .map(|i| i.token())
         .collect();
     let (remaining, lines) = asm6502::parse(&tokens).unwrap();
-    let mut resolver = Resolver::new(lines.len());
-    for line in lines.into_iter() {
+    let mut resolver = Resolver::default();
+    for (line_num, line) in lines.iter().enumerate() {
         if let Err(err) = resolver.resolve_line(line) {
-            println!("ERROR\n{:?}", err);
+            println!("{}: {:?}", line_num + 1, err);
         }
     }
     resolver.print_macros();

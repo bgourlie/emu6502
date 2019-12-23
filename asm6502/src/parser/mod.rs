@@ -51,13 +51,13 @@ fn equ_directive(input: TokenSlice) -> IResult<TokenSlice, Line> {
             token::equ_directive,
             expression::expression,
         ),
-        |(ident, expr)| Line::Equ(ident, Rc::new(expr)),
+        |(label, expr)| Line::Equ(label, Rc::new(expr)),
     )(input)
 }
 
 fn if_statement(input: TokenSlice) -> IResult<TokenSlice, Line> {
     map(preceded(token::r#if, expression::expression), |expr| {
-        Line::If(expr)
+        Line::If(Rc::new(expr))
     })(input)
 }
 
