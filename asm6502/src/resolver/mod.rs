@@ -14,6 +14,8 @@ pub enum ResolveError<'a> {
     InvalidShiftOperand,
     MismatchedElse,
     MismatchedEndIf,
+    InvalidMacroDefinition,
+    InvalidEndMacroDefinition,
 }
 
 #[derive(Default)]
@@ -80,14 +82,60 @@ fn test_liveness_context() {
     assert_eq!(true, context.is_live());
 }
 
+#[derive(Debug, PartialEq)]
+struct MacroLine<'a> {
+    line_num: usize,
+    line: &'a Line<'a>,
+}
+
+impl<'a> MacroLine<'a> {
+    fn new(line_num: usize, line: &'a Line<'a>) -> MacroLine {
+        MacroLine { line_num, line }
+    }
+}
+
+#[derive(Default)]
+struct MacroContext<'a> {
+    cur_macro: Option<(&'a str, Vec<MacroLine<'a>>)>,
+}
+
+impl<'a> MacroContext<'a> {
+    fn recording_macro(&self) -> bool {
+        self.cur_macro.is_some()
+    }
+
+    fn add_line(&mut self, line: MacroLine<'a>) {
+        self.cur_macro.as_mut().and_then(|(_macro_name, lines)| {
+            lines.push(line);
+            Some(())
+        });
+    }
+
+    fn start_recording(&mut self, macro_name: &'a str) -> Result<(), ResolveError<'a>> {
+        if self.cur_macro.is_some() {
+            Err(ResolveError::InvalidMacroDefinition)
+        } else {
+            self.cur_macro = Some((macro_name, Vec::new()));
+            Ok(())
+        }
+    }
+
+    fn stop_recording(&mut self) -> Result<(&'a str, Vec<MacroLine<'a>>), ResolveError<'a>> {
+        self.cur_macro
+            .take()
+            .ok_or_else(|| ResolveError::InvalidEndMacroDefinition)
+    }
+}
+
 #[derive(Default)]
 pub struct Resolver<'a> {
     cur_line: usize,
     cur_addr: u16,
     liveness_context: LivenessContext,
+    macro_context: MacroContext<'a>,
     variables: FnvHashMap<&'a str, i32>,
     label_map: FnvHashMap<&'a str, usize>,
-    macro_map: FnvHashMap<&'a str, usize>,
+    macro_map: FnvHashMap<&'a str, Vec<MacroLine<'a>>>,
 }
 
 impl<'a> Resolver<'a> {
@@ -106,9 +154,15 @@ impl<'a> Resolver<'a> {
         match line {
             Line::Instruction(maybe_label, _op, _opcode) => {
                 if self.liveness_context.is_live() {
-                    if let Some(label) = maybe_label {
-                        self.record_label(label)
+                    if !self.macro_context.recording_macro() {
+                        if let Some(label) = maybe_label {
+                            self.record_label(label)
+                        } else {
+                            Ok(())
+                        }
                     } else {
+                        self.macro_context
+                            .add_line(MacroLine::new(self.cur_line, line));
                         Ok(())
                     }
                 } else {
@@ -117,7 +171,13 @@ impl<'a> Resolver<'a> {
             }
             Line::Equ(label, _expr) => {
                 if self.liveness_context.is_live() {
-                    self.record_label(label)
+                    if !self.macro_context.recording_macro() {
+                        self.record_label(label)
+                    } else {
+                        self.macro_context
+                            .add_line(MacroLine::new(self.cur_line, line));
+                        Ok(())
+                    }
                 } else {
                     Ok(())
                 }
@@ -127,42 +187,90 @@ impl<'a> Resolver<'a> {
                     if self.macro_map.contains_key(macro_name) {
                         Err(ResolveError::MacroAlreadyDefined(macro_name))
                     } else {
-                        self.macro_map.insert(macro_name, self.cur_line);
-                        Ok(())
+                        self.macro_context.start_recording(macro_name)
                     }
+                } else {
+                    Ok(())
+                }
+            }
+            Line::MacroEnd => {
+                if self.liveness_context.is_live() {
+                    self.macro_context
+                        .stop_recording()
+                        .and_then(|(macro_name, macro_lines)| {
+                            self.macro_map.insert(macro_name, macro_lines);
+                            Ok(())
+                        })
                 } else {
                     Ok(())
                 }
             }
             Line::Equals(var, expr) => {
                 if self.liveness_context.is_live() {
-                    if self.variables.contains_key(var) {
-                        Err(ResolveError::VariableAlreadyDefined(var))
+                    if !self.macro_context.recording_macro() {
+                        if self.variables.contains_key(var) {
+                            Err(ResolveError::VariableAlreadyDefined(var))
+                        } else {
+                            self.resolve_expr(Rc::clone(expr)).and_then(|val| {
+                                self.variables.insert(var, val);
+                                Ok(())
+                            })
+                        }
                     } else {
-                        self.resolve_expr(Rc::clone(expr)).and_then(|val| {
-                            self.variables.insert(var, val);
-                            Ok(())
-                        })
+                        self.macro_context
+                            .add_line(MacroLine::new(self.cur_line, line));
+                        Ok(())
                     }
                 } else {
                     Ok(())
                 }
             }
-            Line::If(expr) => self
-                .resolve_expr(Rc::clone(expr))
-                .and_then(|resolved| {
-                    self.liveness_context.push(resolved > 0);
+            Line::If(expr) => {
+                if !self.macro_context.recording_macro() {
+                    self.resolve_expr(Rc::clone(expr))
+                        .and_then(|resolved| {
+                            self.liveness_context.push(resolved > 0);
+                            Ok(())
+                        })
+                        .or_else(|err| {
+                            // If we fail to resolve the expression, we unconditionally push false onto the
+                            // liveness context
+                            self.liveness_context.push(false);
+                            Err(err)
+                        })
+                } else {
+                    self.macro_context
+                        .add_line(MacroLine::new(self.cur_line, line));
                     Ok(())
-                })
-                .or_else(|err| {
-                    // If we fail to resolve the expression, we unconditionally push false onto the
-                    // liveness context
-                    self.liveness_context.push(false);
-                    Err(err)
-                }),
-            Line::Else => self.liveness_context.invert_head(),
-            Line::EndIf => self.liveness_context.pop(),
-            _ => Ok(()),
+                }
+            }
+            Line::Else => {
+                if !self.macro_context.recording_macro() {
+                    self.liveness_context.invert_head()
+                } else {
+                    self.macro_context
+                        .add_line(MacroLine::new(self.cur_line, line));
+                    Ok(())
+                }
+            }
+            Line::EndIf => {
+                if !self.macro_context.recording_macro() {
+                    self.liveness_context.pop()
+                } else {
+                    self.macro_context
+                        .add_line(MacroLine::new(self.cur_line, line));
+                    Ok(())
+                }
+            }
+            _ => {
+                if self.liveness_context.is_live() && self.macro_context.recording_macro() {
+                    self.macro_context
+                        .add_line(MacroLine::new(self.cur_line, line));
+                    Ok(())
+                } else {
+                    Ok(())
+                }
+            }
         }
         .map_err(|err| (self.cur_line, err))
     }
@@ -239,8 +347,8 @@ impl<'a> Resolver<'a> {
         println!();
         println!("MACRO DECLARATIONS:");
         println!();
-        for (macro_name, line_index) in self.macro_map.iter() {
-            println!("{}: {}", line_index, macro_name);
+        for (macro_name, macro_lines) in self.macro_map.iter() {
+            println!("{}: {} lines", macro_name, macro_lines.len());
         }
     }
 }
