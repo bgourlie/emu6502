@@ -33,25 +33,14 @@ fn macro_end(input: TokenSlice) -> IResult<TokenSlice, Line> {
     map(token::macro_end, |_| Line::MacroEnd)(input)
 }
 
-fn equals_operator(input: TokenSlice) -> IResult<TokenSlice, Line> {
+fn equals_directive(input: TokenSlice) -> IResult<TokenSlice, Line> {
     map(
         separated_pair(
             token::identifier,
-            token::equals_operator,
+            alt((token::equals_operator, token::equ_operator)),
             expression::expression,
         ),
-        |(ident, expr)| Line::Equals(ident, Rc::new(expr)),
-    )(input)
-}
-
-fn equ_directive(input: TokenSlice) -> IResult<TokenSlice, Line> {
-    map(
-        separated_pair(
-            token::identifier,
-            token::equ_directive,
-            expression::expression,
-        ),
-        |(label, expr)| Line::Equ(label, Rc::new(expr)),
+        |(ident, expr)| Line::Equ(ident, Rc::new(expr)),
     )(input)
 }
 
@@ -140,13 +129,12 @@ pub fn parse<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, V
             alt((
                 macro_decl,
                 macro_end,
-                equals_operator,
+                equals_directive,
                 if_statement,
                 else_statement,
                 end_if_statement,
                 error_directive,
                 noopt_directive,
-                equ_directive,
                 macro_invocation,
                 ds_directive,
                 db_directive,

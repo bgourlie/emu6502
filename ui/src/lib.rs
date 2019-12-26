@@ -74,14 +74,13 @@ fn update<M: Mapper + Debugger + 'static>(
     orders: &mut impl Orders<Msg>,
 ) {
     match msg {
-        Msg::KeyPress(event) => match event.key_code() {
-            83 => {
+        Msg::KeyPress(event) => {
+            if let 83 = event.key_code() {
                 if let State::RomLoaded(_) = model.state {
                     orders.send_msg(Msg::Run(RunStrategy::Steps(1)));
                 }
             }
-            _ => (),
-        },
+        }
         Msg::RomSelected(event) => {
             let file_input: HtmlInputElement = event.target().unwrap().dyn_into().unwrap();
             if let Some(file) = file_input.files().unwrap().get(0) {

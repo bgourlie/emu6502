@@ -147,7 +147,6 @@ pub enum Line<'a> {
     If(Rc<Expression<'a>>),
     Else,
     EndIf,
-    Equals(&'a str, Rc<Expression<'a>>),
     Equ(&'a str, Rc<Expression<'a>>),
     Error(&'a str),
     MacroStart(&'a str),

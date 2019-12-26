@@ -382,7 +382,7 @@ pub fn op(input: TokenSlice) -> IResult<TokenSlice, Op> {
     })
 }
 
-pub fn equ_directive(input: TokenSlice) -> IResult<TokenSlice, ()> {
+pub fn equ_operator(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::EquDirective = token {
             Some(())

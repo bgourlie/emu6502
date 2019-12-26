@@ -187,19 +187,6 @@ impl<'a> Resolver<'a> {
                     Ok(())
                 }
             }
-            Line::Equ(label, _expr) => {
-                if self.liveness_context.is_live() {
-                    if !self.macro_context.recording_macro() {
-                        self.record_label(label)
-                    } else {
-                        self.macro_context
-                            .add_line(MacroLine::new(self.cur_line, line));
-                        Ok(())
-                    }
-                } else {
-                    Ok(())
-                }
-            }
             Line::MacroStart(macro_name) => {
                 if self.liveness_context.is_live() {
                     if self.macro_map.contains_key(macro_name) {
@@ -221,7 +208,7 @@ impl<'a> Resolver<'a> {
                     Ok(())
                 }
             }
-            Line::Equals(var, expr) => {
+            Line::Equ(var, expr) => {
                 if self.liveness_context.is_live() {
                     if !self.macro_context.recording_macro() {
                         if self.variables.contains_key(var) {
