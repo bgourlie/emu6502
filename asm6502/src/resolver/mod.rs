@@ -94,6 +94,23 @@ impl<'a> MacroLine<'a> {
     }
 }
 
+#[derive(Debug)]
+struct Macro<'a> {
+    name: &'a str,
+    invocation_count: u16,
+    lines: Vec<MacroLine<'a>>,
+}
+
+impl<'a> Macro<'a> {
+    fn new(name: &'a str, lines: Vec<MacroLine<'a>>) -> Macro<'a> {
+        Macro {
+            name,
+            invocation_count: 0,
+            lines,
+        }
+    }
+}
+
 #[derive(Default)]
 struct MacroContext<'a> {
     cur_macro: Option<(&'a str, Vec<MacroLine<'a>>)>,
@@ -120,9 +137,10 @@ impl<'a> MacroContext<'a> {
         }
     }
 
-    fn stop_recording(&mut self) -> Result<(&'a str, Vec<MacroLine<'a>>), ResolveError<'a>> {
+    fn stop_recording(&mut self) -> Result<Macro<'a>, ResolveError<'a>> {
         self.cur_macro
             .take()
+            .map(|(name, lines)| Macro::new(name, lines))
             .ok_or_else(|| ResolveError::InvalidEndMacroDefinition)
     }
 }
@@ -135,7 +153,7 @@ pub struct Resolver<'a> {
     macro_context: MacroContext<'a>,
     variables: FnvHashMap<&'a str, i32>,
     label_map: FnvHashMap<&'a str, usize>,
-    macro_map: FnvHashMap<&'a str, Vec<MacroLine<'a>>>,
+    macro_map: FnvHashMap<&'a str, Macro<'a>>,
 }
 
 impl<'a> Resolver<'a> {
@@ -195,12 +213,10 @@ impl<'a> Resolver<'a> {
             }
             Line::MacroEnd => {
                 if self.liveness_context.is_live() {
-                    self.macro_context
-                        .stop_recording()
-                        .and_then(|(macro_name, macro_lines)| {
-                            self.macro_map.insert(macro_name, macro_lines);
-                            Ok(())
-                        })
+                    self.macro_context.stop_recording().and_then(|mac| {
+                        self.macro_map.insert(mac.name, mac);
+                        Ok(())
+                    })
                 } else {
                     Ok(())
                 }
@@ -347,8 +363,8 @@ impl<'a> Resolver<'a> {
         println!();
         println!("MACRO DECLARATIONS:");
         println!();
-        for (macro_name, macro_lines) in self.macro_map.iter() {
-            println!("{}: {} lines", macro_name, macro_lines.len());
+        for (macro_name, mac) in self.macro_map.iter() {
+            println!("{}: {} lines", macro_name, mac.lines.len());
         }
     }
 }
