@@ -3,7 +3,7 @@ use crate::types::{Token, TokenSlice};
 use nom::{bytes::complete::take, combinator::map_res, IResult};
 use shared6502::Op;
 
-pub fn comment<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, &'a str> {
+pub fn comment(input: TokenSlice) -> IResult<TokenSlice, &str> {
     match_token(input, |token| {
         if let Token::Comment(com) = token {
             Some(com)
@@ -13,7 +13,7 @@ pub fn comment<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>,
     })
 }
 
-pub fn identifier<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, &'a str> {
+pub fn identifier(input: TokenSlice) -> IResult<TokenSlice, &str> {
     match_token(input, |token| {
         if let Token::Identifier(ident) = token {
             Some(ident)
@@ -23,7 +23,7 @@ pub fn identifier<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'
     })
 }
 
-pub fn ds_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn ds_directive(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::DsDirective = token {
             Some(())
@@ -33,7 +33,7 @@ pub fn ds_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice
     })
 }
 
-pub fn db_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn db_directive(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::DbDirective = token {
             Some(())
@@ -43,9 +43,7 @@ pub fn db_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice
     })
 }
 
-pub fn include_directive<'a, T: Into<TokenSlice<'a>>>(
-    input: T,
-) -> IResult<TokenSlice<'a>, &'a str> {
+pub fn include_directive(input: TokenSlice) -> IResult<TokenSlice, &str> {
     match_token(input, |token| {
         if let Token::IncludeDirective(file) = token {
             Some(file)
@@ -55,7 +53,7 @@ pub fn include_directive<'a, T: Into<TokenSlice<'a>>>(
     })
 }
 
-pub fn end_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn end_directive(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::EndDirective = token {
             Some(())
@@ -65,7 +63,7 @@ pub fn end_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlic
     })
 }
 
-pub fn r#else<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn r#else(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::Else = token {
             Some(())
@@ -75,7 +73,7 @@ pub fn r#else<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, 
     })
 }
 
-pub fn dw_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn dw_directive(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::DwDirective = token {
             Some(())
@@ -85,7 +83,7 @@ pub fn dw_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice
     })
 }
 
-pub fn macro_pos_arg<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, u8> {
+pub fn macro_pos_arg(input: TokenSlice) -> IResult<TokenSlice, u8> {
     match_token(input, |token| {
         if let Token::MacroPositionalArg(arg_num) = token {
             Some(arg_num)
@@ -95,7 +93,7 @@ pub fn macro_pos_arg<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlic
     })
 }
 
-pub fn comma<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn comma(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::Comma = token {
             Some(())
@@ -105,7 +103,7 @@ pub fn comma<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, (
     })
 }
 
-pub fn r#if<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn r#if(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::IfStart = token {
             Some(())
@@ -115,7 +113,7 @@ pub fn r#if<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()
     })
 }
 
-pub fn end_if<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn end_if(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::IfEnd = token {
             Some(())
@@ -125,7 +123,7 @@ pub fn end_if<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, 
     })
 }
 
-pub fn character_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, char> {
+pub fn character_literal(input: TokenSlice) -> IResult<TokenSlice, char> {
     match_token(input, |token| {
         if let Token::CharacterLiteral(chr) = token {
             Some(chr)
@@ -135,7 +133,7 @@ pub fn character_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<Token
     })
 }
 
-pub fn dec_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, u16> {
+pub fn dec_literal(input: TokenSlice) -> IResult<TokenSlice, u16> {
     match_token(input, |token| {
         if let Token::DecLiteral(val) = token {
             Some(val)
@@ -145,7 +143,7 @@ pub fn dec_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<
     })
 }
 
-pub fn hex_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, u16> {
+pub fn hex_literal(input: TokenSlice) -> IResult<TokenSlice, u16> {
     match_token(input, |token| {
         if let Token::HexLiteral(val) = token {
             Some(val)
@@ -155,7 +153,7 @@ pub fn hex_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<
     })
 }
 
-pub fn bin_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, u16> {
+pub fn bin_literal(input: TokenSlice) -> IResult<TokenSlice, u16> {
     match_token(input, |token| {
         if let Token::BinLiteral(val) = token {
             Some(val)
@@ -165,7 +163,7 @@ pub fn bin_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<
     })
 }
 
-pub fn oct_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, u16> {
+pub fn oct_literal(input: TokenSlice) -> IResult<TokenSlice, u16> {
     match_token(input, |token| {
         if let Token::OctLiteral(val) = token {
             Some(val)
@@ -175,7 +173,7 @@ pub fn oct_literal<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<
     })
 }
 
-pub fn newline<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn newline(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::Newline = token {
             Some(())
@@ -185,7 +183,7 @@ pub fn newline<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>,
     })
 }
 
-pub fn bang_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn bang_operator(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::BangOperator = token {
             Some(())
@@ -194,7 +192,7 @@ pub fn bang_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlic
         }
     })
 }
-pub fn complement_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn complement_operator(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::ComplementOperator = token {
             Some(())
@@ -204,7 +202,7 @@ pub fn complement_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<Tok
     })
 }
 
-pub fn and_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn and_operator(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::AndOperator = token {
             Some(())
@@ -214,7 +212,7 @@ pub fn and_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice
     })
 }
 
-pub fn or_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn or_operator(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::OrOperator = token {
             Some(())
@@ -224,7 +222,7 @@ pub fn or_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<
     })
 }
 
-pub fn xor_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn xor_operator(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::XorOperator = token {
             Some(())
@@ -234,7 +232,7 @@ pub fn xor_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice
     })
 }
 
-pub fn star_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn star_operator(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::StarOperator = token {
             Some(())
@@ -244,7 +242,7 @@ pub fn star_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlic
     })
 }
 
-pub fn plus_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn plus_operator(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::PlusOperator = token {
             Some(())
@@ -254,7 +252,7 @@ pub fn plus_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlic
     })
 }
 
-pub fn equals_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn equals_operator(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::EqualsOperator = token {
             Some(())
@@ -264,7 +262,7 @@ pub fn equals_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSl
     })
 }
 
-pub fn not_equals_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn not_equals_operator(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::NotEqualsOperator = token {
             Some(())
@@ -274,7 +272,7 @@ pub fn not_equals_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<Tok
     })
 }
 
-pub fn minus_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn minus_operator(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::MinusOperator = token {
             Some(())
@@ -284,7 +282,7 @@ pub fn minus_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSli
     })
 }
 
-pub fn greater_than_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn greater_than_operator(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::GreaterThanOperator = token {
             Some(())
@@ -294,9 +292,7 @@ pub fn greater_than_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<T
     })
 }
 
-pub fn greater_than_or_equals_operator<'a, T: Into<TokenSlice<'a>>>(
-    input: T,
-) -> IResult<TokenSlice<'a>, ()> {
+pub fn greater_than_or_equals_operator(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::GreaterThanOrEqualToOperator = token {
             Some(())
@@ -306,7 +302,7 @@ pub fn greater_than_or_equals_operator<'a, T: Into<TokenSlice<'a>>>(
     })
 }
 
-pub fn less_than_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn less_than_operator(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::LessThanOperator = token {
             Some(())
@@ -316,9 +312,7 @@ pub fn less_than_operator<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<Toke
     })
 }
 
-pub fn less_than_or_equals_operator<'a, T: Into<TokenSlice<'a>>>(
-    input: T,
-) -> IResult<TokenSlice<'a>, ()> {
+pub fn less_than_or_equals_operator(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::LessThanOrEqualToOperator = token {
             Some(())
@@ -328,7 +322,7 @@ pub fn less_than_or_equals_operator<'a, T: Into<TokenSlice<'a>>>(
     })
 }
 
-pub fn immediate_prefix<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn immediate_prefix(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::ImmediatePrefix = token {
             Some(())
@@ -338,7 +332,7 @@ pub fn immediate_prefix<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenS
     })
 }
 
-pub fn open_paren<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn open_paren(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::OpenParen = token {
             Some(())
@@ -348,7 +342,7 @@ pub fn open_paren<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'
     })
 }
 
-pub fn close_paren<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn close_paren(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::CloseParen = token {
             Some(())
@@ -358,7 +352,7 @@ pub fn close_paren<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<
     })
 }
 
-pub fn offset_x_suffix<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn offset_x_suffix(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::OffsetByXOperand = token {
             Some(())
@@ -368,7 +362,7 @@ pub fn offset_x_suffix<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSl
     })
 }
 
-pub fn offset_y_suffix<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn offset_y_suffix(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::OffsetByYOperand = token {
             Some(())
@@ -378,7 +372,7 @@ pub fn offset_y_suffix<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSl
     })
 }
 
-pub fn op<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Op> {
+pub fn op(input: TokenSlice) -> IResult<TokenSlice, Op> {
     match_token(input, |token| {
         if let Token::Mnemonic(op) = token {
             Some(op)
@@ -388,7 +382,7 @@ pub fn op<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, Op> 
     })
 }
 
-pub fn equ_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn equ_directive(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::EquDirective = token {
             Some(())
@@ -398,7 +392,7 @@ pub fn equ_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlic
     })
 }
 
-pub fn macro_start<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn macro_start(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::MacroStart = token {
             Some(())
@@ -408,7 +402,7 @@ pub fn macro_start<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<
     })
 }
 
-pub fn macro_end<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn macro_end(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::MacroEnd = token {
             Some(())
@@ -418,7 +412,7 @@ pub fn macro_end<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a
     })
 }
 
-pub fn error_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, &'a str> {
+pub fn error_directive(input: TokenSlice) -> IResult<TokenSlice, &str> {
     match_token(input, |token| {
         if let Token::ErrorDirective(msg) = token {
             Some(msg)
@@ -428,7 +422,7 @@ pub fn error_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSl
     })
 }
 
-pub fn noopt_directive<'a, T: Into<TokenSlice<'a>>>(input: T) -> IResult<TokenSlice<'a>, ()> {
+pub fn noopt_directive(input: TokenSlice) -> IResult<TokenSlice, ()> {
     match_token(input, |token| {
         if let Token::NoOptDirective = token {
             Some(())
