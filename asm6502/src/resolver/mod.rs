@@ -84,12 +84,12 @@ fn test_liveness_context() {
 
 #[derive(Debug, PartialEq)]
 struct MacroLine<'a> {
-    line_num: usize,
+    line_num: u16,
     line: &'a Line<'a>,
 }
 
 impl<'a> MacroLine<'a> {
-    fn new(line_num: usize, line: &'a Line<'a>) -> MacroLine {
+    fn new(line_num: u16, line: &'a Line<'a>) -> MacroLine {
         MacroLine { line_num, line }
     }
 }
@@ -147,12 +147,12 @@ impl<'a> MacroContext<'a> {
 
 #[derive(Default)]
 pub struct Resolver<'a> {
-    cur_line: usize,
+    cur_line: u16,
     cur_addr: u16,
     liveness_context: LivenessContext,
     macro_context: MacroContext<'a>,
     variables: FnvHashMap<&'a str, i32>,
-    label_map: FnvHashMap<&'a str, usize>,
+    label_map: FnvHashMap<&'a str, u16>,
     macro_map: FnvHashMap<&'a str, Macro<'a>>,
 }
 
@@ -166,10 +166,28 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    pub fn resolve_line(&mut self, line: &'a Line<'a>) -> Result<(), (usize, ResolveError<'a>)> {
+    pub fn resolve_line(&mut self, line: &'a Line<'a>) -> Result<(), (u16, ResolveError<'a>)> {
         self.cur_line += 1;
 
         match line {
+            Line::MacroInvocationOrLabel(macro_name_or_label) => {
+                if self.liveness_context.is_live() {
+                    if !self.macro_context.recording_macro() {
+                        if let Some(_mac) = self.macro_map.get(macro_name_or_label) {
+                            // TODO: Macro invocation
+                            Ok(())
+                        } else {
+                            self.record_label(macro_name_or_label)
+                        }
+                    } else {
+                        self.macro_context
+                            .add_line(MacroLine::new(self.cur_line, line));
+                        Ok(())
+                    }
+                } else {
+                    Ok(())
+                }
+            }
             Line::Instruction(maybe_label, _op, _opcode) => {
                 if self.liveness_context.is_live() {
                     if !self.macro_context.recording_macro() {
@@ -284,8 +302,10 @@ impl<'a> Resolver<'a> {
             Expression::CurrentAddress => Ok(i32::from(self.cur_addr)),
             Expression::Symbol(Symbol::MacroArg(_arg_num)) => unimplemented!(),
             Expression::Symbol(Symbol::Named(name)) => {
-                if let Some(val) = self.variables.get(name) {
-                    Ok(*val)
+                if let Some(val) = self.variables.get(name).copied() {
+                    Ok(val)
+                } else if let Some(val) = self.label_map.get(name).copied() {
+                    Ok(i32::from(val))
                 } else {
                     Err(ResolveError::SymbolNotDefined(name))
                 }

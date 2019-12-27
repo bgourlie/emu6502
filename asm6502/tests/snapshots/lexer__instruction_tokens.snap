@@ -1,0 +1,1014 @@
+---
+source: asm6502/tests/lexer.rs
+expression: "Fixture::new(\"instruction_tokens\").tokens()"
+---
+[
+    PositionedToken {
+        token: Mnemonic(
+            Adc,
+        ),
+        line: 1,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 1,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            And,
+        ),
+        line: 2,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 2,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Asl,
+        ),
+        line: 3,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 3,
+        span: (
+            5,
+            6,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Bcc,
+        ),
+        line: 4,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 4,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Bcs,
+        ),
+        line: 5,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 5,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Beq,
+        ),
+        line: 6,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 6,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Bit,
+        ),
+        line: 7,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 7,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Bmi,
+        ),
+        line: 8,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 8,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Bne,
+        ),
+        line: 9,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 9,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Bpl,
+        ),
+        line: 10,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 10,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Brk,
+        ),
+        line: 11,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 11,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Bvc,
+        ),
+        line: 12,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 12,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Bvs,
+        ),
+        line: 13,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 13,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Clc,
+        ),
+        line: 14,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 14,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Cld,
+        ),
+        line: 15,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 15,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Cli,
+        ),
+        line: 16,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 16,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Clv,
+        ),
+        line: 17,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 17,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Cmp,
+        ),
+        line: 18,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 18,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Cpx,
+        ),
+        line: 19,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 19,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Cpy,
+        ),
+        line: 20,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 20,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Dec,
+        ),
+        line: 21,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 21,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Dex,
+        ),
+        line: 22,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 22,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Dey,
+        ),
+        line: 23,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 23,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Eor,
+        ),
+        line: 24,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 24,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Inc,
+        ),
+        line: 25,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 25,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Inx,
+        ),
+        line: 26,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 26,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Iny,
+        ),
+        line: 27,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 27,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Jmp,
+        ),
+        line: 28,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 28,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Jsr,
+        ),
+        line: 29,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 29,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Lda,
+        ),
+        line: 30,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 30,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Ldx,
+        ),
+        line: 31,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 31,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Ldy,
+        ),
+        line: 32,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 32,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Lsr,
+        ),
+        line: 33,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 33,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Nop,
+        ),
+        line: 34,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 34,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Ora,
+        ),
+        line: 35,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 35,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Pha,
+        ),
+        line: 36,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 36,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Php,
+        ),
+        line: 37,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 37,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Pla,
+        ),
+        line: 38,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 38,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Plp,
+        ),
+        line: 39,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 39,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Rol,
+        ),
+        line: 40,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 40,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Ror,
+        ),
+        line: 41,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 41,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Rti,
+        ),
+        line: 42,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 42,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Rts,
+        ),
+        line: 43,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 43,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Sbc,
+        ),
+        line: 44,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 44,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Sec,
+        ),
+        line: 45,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 45,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Sed,
+        ),
+        line: 46,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 46,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Sei,
+        ),
+        line: 47,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 47,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Sta,
+        ),
+        line: 48,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 48,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Stx,
+        ),
+        line: 49,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 49,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Sty,
+        ),
+        line: 50,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 50,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Tax,
+        ),
+        line: 51,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 51,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Tay,
+        ),
+        line: 52,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 52,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Tsx,
+        ),
+        line: 53,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 53,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Txa,
+        ),
+        line: 54,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 54,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Txs,
+        ),
+        line: 55,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 55,
+        span: (
+            4,
+            5,
+        ),
+    },
+    PositionedToken {
+        token: Mnemonic(
+            Tya,
+        ),
+        line: 56,
+        span: (
+            1,
+            4,
+        ),
+    },
+    PositionedToken {
+        token: Newline,
+        line: 56,
+        span: (
+            4,
+            5,
+        ),
+    },
+]

@@ -10,6 +10,14 @@
             "problemMatcher": [
                 "$rustc"
             ]
+        },
+        {
+            "label": "run tests",
+            "type": "shell",
+            "command": "cargo test",
+            "problemMatcher": [
+                "$rustc"
+            ]
         }
     ]
 }
