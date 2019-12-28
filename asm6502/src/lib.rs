@@ -1,3 +1,5 @@
+#![type_length_limit = "1575113"] // See https://github.com/rust-lang/rust/issues/54540 (due to abundance of closures in lexer)
+
 mod lexer;
 mod parser;
 mod resolver;
