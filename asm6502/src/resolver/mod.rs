@@ -248,17 +248,22 @@ impl<'a> Resolver<'a> {
             }
             Line::If(expr) => {
                 if !self.macro_context.recording_macro() {
-                    self.resolve_expr(Rc::clone(expr))
-                        .and_then(|resolved| {
-                            self.liveness_context.push(resolved > 0);
-                            Ok(())
-                        })
-                        .or_else(|err| {
-                            // If we fail to resolve the expression, we unconditionally push false onto the
-                            // liveness context
-                            self.liveness_context.push(false);
-                            Err(err)
-                        })
+                    if self.liveness_context.is_live() {
+                        self.resolve_expr(Rc::clone(expr))
+                            .and_then(|resolved| {
+                                self.liveness_context.push(resolved > 0);
+                                Ok(())
+                            })
+                            .or_else(|err| {
+                                // If we fail to resolve the expression, we unconditionally push false onto the
+                                // liveness context
+                                self.liveness_context.push(false);
+                                Err(err)
+                            })
+                    } else {
+                        self.liveness_context.push(false);
+                        Ok(())
+                    }
                 } else {
                     self.macro_context
                         .add_line(MacroLine::new(self.cur_line, line));
