@@ -152,16 +152,16 @@ pub struct Resolver<'a> {
     liveness_context: LivenessContext,
     macro_context: MacroContext<'a>,
     variables: FnvHashMap<&'a str, i32>,
-    label_map: FnvHashMap<&'a str, u16>,
-    macro_map: FnvHashMap<&'a str, Macro<'a>>,
+    labels: FnvHashMap<&'a str, u16>,
+    macros: FnvHashMap<&'a str, Macro<'a>>,
 }
 
 impl<'a> Resolver<'a> {
     fn record_label(&mut self, label: &'a str) -> Result<(), ResolveError<'a>> {
-        if self.label_map.contains_key(label) {
+        if self.labels.contains_key(label) {
             Err(ResolveError::LabelAlreadyDefined(label))
         } else {
-            self.label_map.insert(label, self.cur_line);
+            self.labels.insert(label, self.cur_line);
             Ok(())
         }
     }
@@ -173,7 +173,7 @@ impl<'a> Resolver<'a> {
             Line::MacroInvocationOrLabel(macro_name_or_label) => {
                 if self.liveness_context.is_live() {
                     if !self.macro_context.recording_macro() {
-                        if let Some(_mac) = self.macro_map.get(macro_name_or_label) {
+                        if let Some(_mac) = self.macros.get(macro_name_or_label) {
                             // TODO: Macro invocation
                             Ok(())
                         } else {
@@ -207,7 +207,7 @@ impl<'a> Resolver<'a> {
             }
             Line::MacroStart(macro_name) => {
                 if self.liveness_context.is_live() {
-                    if self.macro_map.contains_key(macro_name) {
+                    if self.macros.contains_key(macro_name) {
                         Err(ResolveError::MacroAlreadyDefined(macro_name))
                     } else {
                         self.macro_context.start_recording(macro_name)
@@ -219,7 +219,7 @@ impl<'a> Resolver<'a> {
             Line::MacroEnd => {
                 if self.liveness_context.is_live() {
                     self.macro_context.stop_recording().and_then(|mac| {
-                        self.macro_map.insert(mac.name, mac);
+                        self.macros.insert(mac.name, mac);
                         Ok(())
                     })
                 } else {
@@ -309,7 +309,7 @@ impl<'a> Resolver<'a> {
             Expression::Symbol(Symbol::Named(name)) => {
                 if let Some(val) = self.variables.get(name).copied() {
                     Ok(val)
-                } else if let Some(val) = self.label_map.get(name).copied() {
+                } else if let Some(val) = self.labels.get(name).copied() {
                     Ok(i32::from(val))
                 } else {
                     Err(ResolveError::SymbolNotDefined(name))
@@ -366,16 +366,16 @@ impl<'a> Resolver<'a> {
         }
 
         println!();
-        println!("LABEL DEFINITIONS ({}):", self.label_map.len());
+        println!("LABEL DEFINITIONS ({}):", self.labels.len());
         println!();
-        for (label, line) in self.label_map.iter() {
+        for (label, line) in self.labels.iter() {
             println!("{}: {:?}", label, line);
         }
 
         println!();
         println!("MACRO DECLARATIONS:");
         println!();
-        for (macro_name, mac) in self.macro_map.iter() {
+        for (macro_name, mac) in self.macros.iter() {
             println!("{}: {} lines", macro_name, mac.lines.len());
         }
     }
