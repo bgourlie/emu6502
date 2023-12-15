@@ -1,17 +1,14 @@
-#![feature(const_generics)]
+pub fn add(left: usize, right: usize) -> usize {
+    left + right
+}
 
 #[cfg(test)]
-mod functional_tests;
+mod tests {
+    use super::*;
 
-mod addressing_modes;
-mod cpu;
-mod debugger;
-mod mapper;
-mod opcodes;
-
-pub use crate::{
-    cpu::{Cpu, DebuggableCpu},
-    debugger::Debugger,
-    mapper::BasicMapper,
-    mapper::Mapper,
-};
+    #[test]
+    fn it_works() {
+        let result = add(2, 2);
+        assert_eq!(result, 4);
+    }
+}

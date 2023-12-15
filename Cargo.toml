@@ -1,19 +1,5 @@
 [workspace]
 
 members = [
-  "emu6502",
-  "disasm6502",
-  "ui"
+    "emu6502",
 ]
-
-[profile.release]
-opt-level = 3
-lto = true
-debug = true
-debug-assertions = false
-
-[profile.bench]
-opt-level = 3
-lto = true
-debug = false
-debug-assertions = false
